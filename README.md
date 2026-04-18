@@ -3,4 +3,4 @@ application for contractor companies and prices for all divisions in market of c
 
 ## Project folder
 
-The repository now includes a dedicated project folder at `/project`.
+The repository now includes a dedicated project folder at `/project` for your project files.
