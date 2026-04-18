@@ -1,5 +1,5 @@
 {
-  "name": "civix",
+  "name": "taseera",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -10,12 +10,14 @@
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "xlsx": "^0.18.5"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "set \"DISABLE_ESLINT_PLUGIN=true\" && react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "import:pricing": "node scripts/importWorkbook.js",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
@@ -35,5 +37,11 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.2",
+    "autoprefixer": "^10.4.27",
+    "postcss": "^8.5.9",
+    "tailwindcss": "^3.4.19"
   }
 }
