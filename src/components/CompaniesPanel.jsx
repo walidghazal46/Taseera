@@ -167,7 +167,7 @@ function CompanyReviewPage({ company, onBack }) {
 
       <div className="mt-2 rounded-[14px] border border-[#eadfca] bg-white px-3 py-2">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] font-bold text-slate-900">تجارب العملاء</p>
+          <p className="text-[10px] font-bold text-slate-900">التقييم وتجارب العملاء</p>
           <span className="text-[9px] text-slate-500">3 تقييمات</span>
         </div>
         <div className="mt-2 grid gap-1.5">
@@ -259,7 +259,7 @@ function CompanyCard({ company, selected, onSelectCompany, onShowDetails }) {
               onClick={() => onShowDetails(company.id)}
               className="rounded-full border border-[#d8b16c] bg-white px-2.5 py-0.5 text-[9px] font-semibold text-[#b8893d] shadow-sm"
             >
-              عرض التفاصيل
+              التقييم
             </button>
           </div>
         </div>
@@ -353,7 +353,7 @@ export default function CompaniesPanel({
 
   useEffect(() => {
     setDetailCompanyId(null);
-  }, [directoryPage, activeSection, query]);
+  }, [directoryPage, query]);
 
   const submitCompany = (event) => {
     event.preventDefault();
@@ -392,104 +392,129 @@ export default function CompaniesPanel({
     });
   };
 
+  const openDetailPage = (companyId) => {
+    setDetailCompanyId(companyId);
+    setActiveSection("details");
+  };
+
+  const closeDetailPage = () => {
+    setDetailCompanyId(null);
+    setActiveSection("directory");
+  };
+
   return (
     <div className="grid h-full min-h-0 grid-rows-[auto_1fr] gap-2 overflow-hidden">
-      <div className="rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,#1a2f56_0%,#132443_100%)] p-3 shadow-[0_20px_40px_rgba(9,18,42,0.28)]">
-        <div className="flex gap-1.5 rounded-[16px] bg-white/10 p-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveSection(tab.id)}
-              className={`flex-1 rounded-[12px] px-2 py-1.5 text-[10px] font-bold transition ${
-                activeSection === tab.id ? "bg-[#d8b16c] text-white" : "text-white/75"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {activeSection === "directory" ? (
-          <div className="mt-2 grid gap-2">
-            <SearchBar
-              placeholder="ابحث باسم الشركة أو التخصص أو المدينة"
-              value={query}
-              onChange={handleQueryChange}
-            />
-            <div className="grid grid-cols-3 gap-2">
-              <StatCard label="إجمالي الشركات" value={summary.total} />
-              <StatCard label="مقاولين" value={summary.contractors} />
-              <StatCard label="استشاريين" value={summary.consultants} />
-            </div>
+      {activeSection !== "details" ? (
+        <div className="rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,#1a2f56_0%,#132443_100%)] p-3 shadow-[0_20px_40px_rgba(9,18,42,0.28)]">
+          <div className="flex gap-1.5 rounded-[16px] bg-white/10 p-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveSection(tab.id)}
+                className={`flex-1 rounded-[12px] px-2 py-1.5 text-[10px] font-bold transition ${
+                  activeSection === tab.id ? "bg-[#d8b16c] text-white" : "text-white/75"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
-        ) : null}
-      </div>
+
+          {activeSection === "directory" ? (
+            <div className="mt-2 grid gap-2">
+              <SearchBar
+                placeholder="ابحث باسم الشركة أو التخصص أو المدينة"
+                value={query}
+                onChange={handleQueryChange}
+              />
+              <div className="grid grid-cols-3 gap-2">
+                <StatCard label="إجمالي الشركات" value={summary.total} />
+                <StatCard label="مقاولين" value={summary.contractors} />
+                <StatCard label="استشاريين" value={summary.consultants} />
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <div className="rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,#1a2f56_0%,#132443_100%)] p-3 shadow-[0_20px_40px_rgba(9,18,42,0.28)]">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-[10px] text-[#d8b16c]">تفاصيل الشركة</p>
+              <h3 className="mt-1 text-[15px] font-bold text-white">التقييم وتجارب العملاء</h3>
+            </div>
+            <button
+              type="button"
+              onClick={closeDetailPage}
+              className="rounded-full border border-white/20 px-3 py-1 text-[10px] font-bold text-white/85"
+            >
+              رجوع
+            </button>
+          </div>
+        </div>
+      )}
 
       {activeSection === "directory" ? (
         <div className="flex min-h-0 flex-col gap-2 overflow-y-auto pr-1 pb-2">
-          {detailCompany ? (
-            <CompanyReviewPage
-              company={detailCompany}
-              onBack={() => setDetailCompanyId(null)}
+          <div className="flex items-center justify-between rounded-[14px] border border-[#eadfca] bg-white px-3 py-1.5 text-[10px] shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+            <p className="text-slate-500">
+              يعرض الآن{" "}
+              <span className="font-bold text-slate-900">{pagedCompanies.length}</span>{" "}
+              من أصل{" "}
+              <span className="font-bold text-slate-900">{filteredCompanies.length}</span>
+            </p>
+            <p className="font-semibold text-[#b8893d]">
+              المتبقي {Math.max(filteredCompanies.length - directoryPage * directoryPageSize, 0)}
+            </p>
+          </div>
+          {pagedCompanies.map((entry) => (
+            <CompanyCard
+              key={entry.id}
+              company={entry}
+              selected={selectedCompanyId === entry.id}
+              onSelectCompany={onSelectCompany}
+              onShowDetails={openDetailPage}
             />
-          ) : (
-            <>
-              <div className="flex items-center justify-between rounded-[14px] border border-[#eadfca] bg-white px-3 py-1.5 text-[10px] shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
-                <p className="text-slate-500">
-                  يعرض الآن{" "}
-                  <span className="font-bold text-slate-900">{pagedCompanies.length}</span>{" "}
-                  من أصل{" "}
-                  <span className="font-bold text-slate-900">{filteredCompanies.length}</span>
-                </p>
-                <p className="font-semibold text-[#b8893d]">
-                  المتبقي {Math.max(filteredCompanies.length - directoryPage * directoryPageSize, 0)}
-                </p>
-              </div>
-              {pagedCompanies.map((entry) => (
-                <CompanyCard
-                  key={entry.id}
-                  company={entry}
-                  selected={selectedCompanyId === entry.id}
-                  onSelectCompany={onSelectCompany}
-                  onShowDetails={setDetailCompanyId}
-                />
-              ))}
-              <div className="flex items-center justify-between gap-2 rounded-[16px] border border-[#eadfca] bg-white px-3 py-2 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
-                <button
-                  type="button"
-                  onClick={() => setDirectoryPage((current) => Math.max(1, current - 1))}
-                  disabled={directoryPage === 1}
-                  className={`rounded-[12px] px-3 py-1 text-[10px] font-bold ${
-                    directoryPage === 1
-                      ? "cursor-not-allowed bg-slate-100 text-slate-400"
-                      : "border border-[#d8b16c] bg-white text-[#b8893d]"
-                  }`}
-                >
-                  السابق
-                </button>
-                <p className="text-[10px] text-slate-500">
-                  صفحة {directoryPage} من {totalDirectoryPages}
-                </p>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setDirectoryPage((current) =>
-                      Math.min(totalDirectoryPages, current + 1)
-                    )
-                  }
-                  disabled={directoryPage === totalDirectoryPages}
-                  className={`rounded-[12px] px-3 py-1 text-[10px] font-bold ${
-                    directoryPage === totalDirectoryPages
-                      ? "cursor-not-allowed bg-slate-100 text-slate-400"
-                      : "bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] text-white"
-                  }`}
-                >
-                  التالي
-                </button>
-              </div>
-            </>
-          )}
+          ))}
+          <div className="flex items-center justify-between gap-2 rounded-[16px] border border-[#eadfca] bg-white px-3 py-2 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+            <button
+              type="button"
+              onClick={() => setDirectoryPage((current) => Math.max(1, current - 1))}
+              disabled={directoryPage === 1}
+              className={`rounded-[12px] px-3 py-1 text-[10px] font-bold ${
+                directoryPage === 1
+                  ? "cursor-not-allowed bg-slate-100 text-slate-400"
+                  : "border border-[#d8b16c] bg-white text-[#b8893d]"
+              }`}
+            >
+              السابق
+            </button>
+            <p className="text-[10px] text-slate-500">
+              صفحة {directoryPage} من {totalDirectoryPages}
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                setDirectoryPage((current) =>
+                  Math.min(totalDirectoryPages, current + 1)
+                )
+              }
+              disabled={directoryPage === totalDirectoryPages}
+              className={`rounded-[12px] px-3 py-1 text-[10px] font-bold ${
+                directoryPage === totalDirectoryPages
+                  ? "cursor-not-allowed bg-slate-100 text-slate-400"
+                  : "bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] text-white"
+              }`}
+            >
+              التالي
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {activeSection === "details" ? (
+        <div className="overflow-y-auto pr-1 pb-2">
+          <CompanyReviewPage company={detailCompany} onBack={closeDetailPage} />
         </div>
       ) : null}
 

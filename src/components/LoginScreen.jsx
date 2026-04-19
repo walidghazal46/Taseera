@@ -37,7 +37,7 @@ export default function LoginScreen({
               <div className="pt-8 text-center">
                 <div className="mx-auto w-72 bg-transparent p-0 shadow-none ring-0">
                   <img
-                    src="/taseera-logo.png"
+                    src="./taseera-logo.png"
                     alt="Taseera"
                     className="block w-full object-contain"
                     style={{

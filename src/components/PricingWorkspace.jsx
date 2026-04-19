@@ -376,12 +376,12 @@ export default function PricingWorkspace({
                         <span className="text-[13px] leading-none">{item.icon}</span>
                       </div>
                       <div className="flex items-center justify-between text-[8px] text-slate-500">
-                        <span>{item.code}</span>
+                        <span>{item.marketAverage}</span>
                         <span>{item.unit}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-[9px] font-semibold leading-none text-[#b8893d]">
-                          {`متوسط ${item.marketAverage}`}
+                          {item.code}
                         </span>
                         <span className="rounded-full bg-[#d5ab61] px-1.5 py-0.5 text-[8px] font-bold leading-none text-white">
                           فتح
@@ -439,7 +439,7 @@ export default function PricingWorkspace({
           </div>
           {selectedItem.source?.sourceName ? (
             <p className="mt-1 text-[9px] text-white/70">
-              مستورد من {selectedItem.source.sourceName} - {selectedItem.source.currency}
+              {selectedItem.source.sourceName} - {selectedItem.source.currency}
             </p>
           ) : null}
         </div>
