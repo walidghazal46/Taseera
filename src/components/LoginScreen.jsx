@@ -1,5 +1,11 @@
 import { useState } from "react";
 import { getAppText } from "../data/appText";
+import { auth } from "../firebase";
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
+} from "firebase/auth";
 
 export default function LoginScreen({
   onLogin,
@@ -17,6 +23,7 @@ export default function LoginScreen({
     confirmPassword: "",
   });
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const text = getAppText(language);
   const isLight = theme === "light";
 
@@ -25,7 +32,7 @@ export default function LoginScreen({
     setError("");
   };
 
-  const submit = () => {
+  const submit = async () => {
     if (!formState.email.trim() || !formState.password.trim()) {
       setError(
         language === "en"
@@ -40,7 +47,6 @@ export default function LoginScreen({
         setError(language === "en" ? "Full name is required." : "الاسم الكامل مطلوب.");
         return;
       }
-
       if (formState.password !== formState.confirmPassword) {
         setError(
           language === "en"
@@ -51,10 +57,46 @@ export default function LoginScreen({
       }
     }
 
-    onLogin("authenticated", {
-      userName: formState.fullName.trim() || formState.email.split("@")[0],
-      userEmail: formState.email.trim(),
-    });
+    setLoading(true);
+    setError("");
+    try {
+      if (mode === "register") {
+        const credential = await createUserWithEmailAndPassword(
+          auth,
+          formState.email.trim(),
+          formState.password
+        );
+        await updateProfile(credential.user, {
+          displayName: formState.fullName.trim(),
+        });
+        onLogin("authenticated", {
+          userName: formState.fullName.trim(),
+          userEmail: formState.email.trim(),
+        });
+      } else {
+        const credential = await signInWithEmailAndPassword(
+          auth,
+          formState.email.trim(),
+          formState.password
+        );
+        onLogin("authenticated", {
+          userName: credential.user.displayName || credential.user.email.split("@")[0],
+          userEmail: credential.user.email,
+        });
+      }
+    } catch (err) {
+      const msg = {
+        "auth/user-not-found": language === "en" ? "No account with this email." : "لا يوجد حساب بهذا البريد.",
+        "auth/wrong-password": language === "en" ? "Incorrect password." : "كلمة المرور غير صحيحة.",
+        "auth/email-already-in-use": language === "en" ? "Email already registered." : "البريد مسجّل مسبقاً.",
+        "auth/invalid-email": language === "en" ? "Invalid email address." : "بريد إلكتروني غير صالح.",
+        "auth/weak-password": language === "en" ? "Password must be at least 6 characters." : "كلمة المرور يجب أن تكون 6 أحرف على الأقل.",
+        "auth/invalid-credential": language === "en" ? "Incorrect email or password." : "البريد أو كلمة المرور غير صحيحة.",
+      }[err.code];
+      setError(msg || (language === "en" ? "An error occurred. Try again." : "حدث خطأ، حاول مجدداً."));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -153,9 +195,12 @@ export default function LoginScreen({
                 <button
                   type="button"
                   onClick={submit}
-                  className="mt-3 w-full rounded-full bg-[linear-gradient(135deg,#0A4C87_0%,#002D5A_100%)] px-3 py-2.5 text-[14px] font-bold text-white"
+                  disabled={loading}
+                  className="mt-3 w-full rounded-full bg-[linear-gradient(135deg,#0A4C87_0%,#002D5A_100%)] px-3 py-2.5 text-[14px] font-bold text-white disabled:opacity-60"
                 >
-                  {mode === "register" ? text.login.submitRegister : text.login.submitLogin}
+                  {loading
+                    ? (language === "en" ? "Please wait…" : "جارٍ التحميل…")
+                    : (mode === "register" ? text.login.submitRegister : text.login.submitLogin)}
                 </button>
                 {error && (
                   <p className="mt-2 text-center text-[13px] font-semibold text-red-600">{error}</p>
