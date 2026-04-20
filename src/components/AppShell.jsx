@@ -50,10 +50,10 @@ export default function AppShell({
               }`}
             >
               <div>
-                <p className="text-[10px] uppercase tracking-[0.24em] text-[#d9b36a]">
+                <p className="text-[22px] uppercase tracking-[0.24em] text-[#d9b36a]">
                   Taseera
                 </p>
-                <p className="mt-0.5 text-[10px] font-medium text-slate-200">
+                <p className="mt-0.5 text-[22px] font-medium text-slate-200">
                   Construction Pricing Intelligence
                 </p>
               </div>
@@ -79,20 +79,20 @@ export default function AppShell({
                     key={item.id}
                     type="button"
                     onClick={() => onNavigate(item.id)}
-                    className={`grid min-h-[48px] place-items-center gap-1 rounded-[12px] px-1 py-1.5 text-center text-[8px] font-medium transition ${
+                    className={`grid min-h-[48px] place-items-center gap-1 rounded-[12px] px-1 py-1.5 text-center text-[17px] font-medium transition ${
                       isActive
                         ? "bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] text-white shadow-lg shadow-slate-950/20"
                         : "text-slate-500 hover:bg-[#f6efe4]"
                     }`}
                   >
                     <span
-                      className={`grid h-10 w-10 place-items-center rounded-full text-[10px] ${
+                      className={`grid h-10 w-10 place-items-center rounded-full text-[22px] ${
                         isActive ? "bg-white/10 text-[#d9b36a]" : "bg-[#f5ede0] text-slate-500"
                       }`}
                     >
                       <Icon className="h-[1.3rem] w-[1.3rem]" />
                     </span>
-                    <span className="leading-3 min-[390px]:text-[9px]">{item.label}</span>
+                    <span className="leading-3 min-[390px]:text-[21px]">{item.label}</span>
                   </button>
                 );
               })}

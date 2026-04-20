@@ -93,12 +93,12 @@ function Stars({ rating }) {
 function InputField({ label, value, onChange, placeholder }) {
   return (
     <label className="grid gap-1">
-      <span className="text-[10px] font-semibold text-slate-600">{label}</span>
+      <span className="text-[22px] font-semibold text-slate-600">{label}</span>
       <input
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="rounded-[12px] border border-[#eadfca] bg-white px-3 py-2 text-[10px] text-slate-900 outline-none min-[390px]:text-[11px]"
+        className="rounded-[12px] border border-[#eadfca] bg-white px-3 py-2 text-[22px] text-slate-900 outline-none min-[390px]:text-[23px]"
       />
     </label>
   );
@@ -224,7 +224,7 @@ export default function SuppliersPanel({
               key={tab.id}
               type="button"
               onClick={() => suppliersNavigation.navigate({ section: tab.id })}
-              className={`flex-1 rounded-[12px] px-2 py-1.5 text-[9px] font-bold transition min-[390px]:text-[10px] ${
+              className={`flex-1 rounded-[12px] px-2 py-1.5 text-[21px] font-bold transition min-[390px]:text-[22px] ${
                 activeSection === tab.id ? "bg-[#d8b16c] text-white" : "text-white/75"
               }`}
             >
@@ -238,8 +238,8 @@ export default function SuppliersPanel({
         <div className="flex min-h-0 flex-col gap-1.5 overflow-y-auto pr-1 pb-2">
           <div className="rounded-[16px] border border-[#eadfca] bg-white px-3 py-2 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[10px] font-bold text-slate-900">{copy.supplierSpecialties}</p>
-              <p className="text-[9px] text-slate-500 min-[390px]:text-[10px]">
+              <p className="text-[22px] font-bold text-slate-900">{copy.supplierSpecialties}</p>
+              <p className="text-[21px] text-slate-500 min-[390px]:text-[22px]">
                 {copy.showingNow} {pagedSuppliers.length} {copy.outOf} {filteredSuppliers.length}
               </p>
             </div>
@@ -248,7 +248,7 @@ export default function SuppliersPanel({
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder={copy.searchPlaceholder}
-                className="w-full bg-transparent text-[10px] text-slate-700 placeholder:text-slate-400 outline-none min-[390px]:text-[11px]"
+                className="w-full bg-transparent text-[22px] text-slate-700 placeholder:text-slate-400 outline-none min-[390px]:text-[23px]"
               />
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -257,7 +257,7 @@ export default function SuppliersPanel({
                   key={group.label}
                   type="button"
                   onClick={() => setActiveGroup(group.label)}
-                  className={`rounded-full px-2.5 py-1 text-[8px] font-bold transition min-[390px]:text-[9px] ${
+                  className={`rounded-full px-2.5 py-1 text-[17px] font-bold transition min-[390px]:text-[21px] ${
                     activeGroup === group.label
                       ? "bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] text-white"
                       : "border border-[#eadfca] bg-[#fff8ee] text-slate-600"
@@ -275,23 +275,23 @@ export default function SuppliersPanel({
               className="rounded-[16px] border border-[#eadfca] bg-white p-2 shadow-[0_10px_20px_rgba(15,23,42,0.06)]"
             >
               <div className="flex items-start gap-1">
-                <div className="grid h-6 w-6 place-items-center rounded-[9px] bg-[linear-gradient(135deg,#1b2f56_0%,#10213e_100%)] text-[11px] font-bold text-[#d8b16c]">
+                <div className="grid h-6 w-6 place-items-center rounded-[9px] bg-[linear-gradient(135deg,#1b2f56_0%,#10213e_100%)] text-[23px] font-bold text-[#d8b16c]">
                   {supplier.logo}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-start justify-between gap-1.5">
                     <div>
-                      <h3 className="text-[10px] font-bold leading-4 text-slate-900 min-[390px]:text-[11px]">{supplier.name}</h3>
-                      <p className="mt-0.5 text-[8px] font-semibold leading-3 text-[#b8893d]">
+                      <h3 className="text-[22px] font-bold leading-4 text-slate-900 min-[390px]:text-[23px]">{supplier.name}</h3>
+                      <p className="mt-0.5 text-[17px] font-semibold leading-3 text-[#b8893d]">
                         {supplier.group}
                       </p>
-                      <p className="mt-0.5 text-[8px] leading-3 text-slate-500">
+                      <p className="mt-0.5 text-[17px] leading-3 text-slate-500">
                         {copy.materials}: {supplier.materials?.join("، ") || supplier.category}
                       </p>
                     </div>
                     <div className="text-left">
-                      <p className="text-[8px] text-slate-400">{copy.rating}</p>
-                      <p className="text-[9px] font-bold text-[#b8893d] min-[390px]:text-[10px]">{supplier.rating || "-"}</p>
+                      <p className="text-[17px] text-slate-400">{copy.rating}</p>
+                      <p className="text-[21px] font-bold text-[#b8893d] min-[390px]:text-[22px]">{supplier.rating || "-"}</p>
                     </div>
                   </div>
 
@@ -303,7 +303,7 @@ export default function SuppliersPanel({
                     <button
                       type="button"
                       onClick={() => setSelectedSupplier(supplier)}
-                      className="flex-1 rounded-full border border-[#d8b16c] px-2 py-1 text-[9px] font-semibold leading-4 text-[#b8893d]"
+                      className="flex-1 rounded-full border border-[#d8b16c] px-2 py-1 text-[21px] font-semibold leading-4 text-[#b8893d]"
                     >
                       {copy.contact}
                     </button>
@@ -315,7 +315,7 @@ export default function SuppliersPanel({
                           source: "supplier-directory",
                         })
                       }
-                      className={`flex-1 rounded-full px-2 py-1 text-[9px] font-semibold leading-4 ${
+                      className={`flex-1 rounded-full px-2 py-1 text-[21px] font-semibold leading-4 ${
                         authMode === "guest"
                           ? "cursor-not-allowed bg-slate-300 text-white"
                           : "bg-[linear-gradient(135deg,#d8b16c_0%,#b88c45_100%)] text-white"
@@ -326,7 +326,7 @@ export default function SuppliersPanel({
                     </button>
                   </div>
                   {authMode === "guest" ? (
-                    <p className="mt-0.5 text-[7px] leading-3 text-slate-500">
+                    <p className="mt-0.5 text-[16px] leading-3 text-slate-500">
                       {copy.guestRfqHint}
                     </p>
                   ) : null}
@@ -339,7 +339,7 @@ export default function SuppliersPanel({
               type="button"
               onClick={() => setDirectoryPage((current) => Math.max(1, current - 1))}
               disabled={directoryPage === 1}
-              className={`rounded-[12px] px-3 py-1 text-[9px] font-bold min-[390px]:text-[10px] ${
+              className={`rounded-[12px] px-3 py-1 text-[21px] font-bold min-[390px]:text-[22px] ${
                 directoryPage === 1
                   ? "cursor-not-allowed bg-slate-100 text-slate-400"
                   : "border border-[#d8b16c] bg-white text-[#b8893d]"
@@ -347,7 +347,7 @@ export default function SuppliersPanel({
             >
               {copy.previous}
             </button>
-            <p className="text-[9px] text-slate-500 min-[390px]:text-[10px]">
+            <p className="text-[21px] text-slate-500 min-[390px]:text-[22px]">
               {copy.page} {directoryPage} {copy.outOf} {totalPages}
             </p>
             <button
@@ -356,7 +356,7 @@ export default function SuppliersPanel({
                 setDirectoryPage((current) => Math.min(totalPages, current + 1))
               }
               disabled={directoryPage === totalPages}
-              className={`rounded-[12px] px-3 py-1 text-[9px] font-bold min-[390px]:text-[10px] ${
+              className={`rounded-[12px] px-3 py-1 text-[21px] font-bold min-[390px]:text-[22px] ${
                 directoryPage === totalPages
                   ? "cursor-not-allowed bg-slate-100 text-slate-400"
                   : "bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] text-white"
@@ -366,7 +366,7 @@ export default function SuppliersPanel({
             </button>
           </div>
           {!pagedSuppliers.length ? (
-            <div className="rounded-[16px] border border-dashed border-[#eadfca] bg-white px-3 py-5 text-center text-[10px] text-slate-500">
+            <div className="rounded-[16px] border border-dashed border-[#eadfca] bg-white px-3 py-5 text-center text-[22px] text-slate-500">
               {copy.noResults}
             </div>
           ) : null}
@@ -376,7 +376,7 @@ export default function SuppliersPanel({
           onSubmit={submitSupplier}
           className="grid gap-2 overflow-y-auto rounded-[18px] border border-[#eadfca] bg-white p-3 shadow-[0_14px_30px_rgba(15,23,42,0.08)]"
         >
-          <p className="text-[10px] font-bold text-slate-900 min-[390px]:text-[11px]">{copy.addSupplierTitle}</p>
+          <p className="text-[22px] font-bold text-slate-900 min-[390px]:text-[23px]">{copy.addSupplierTitle}</p>
           <InputField
             label={copy.supplierName}
             value={formState.name}
@@ -439,7 +439,7 @@ export default function SuppliersPanel({
           />
           <button
             type="submit"
-            className="rounded-[14px] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] px-3 py-2 text-[11px] font-bold text-white"
+            className="rounded-[14px] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] px-3 py-2 text-[23px] font-bold text-white"
           >
             {copy.saveSupplier}
           </button>
@@ -454,48 +454,48 @@ export default function SuppliersPanel({
         >
           <div className="grid gap-2">
             <div className="rounded-[10px] bg-slate-50 p-2.5">
-              <p className="text-[10px] text-slate-500">{copy.specialty}</p>
+              <p className="text-[22px] text-slate-500">{copy.specialty}</p>
               <p className="mt-1 text-xs font-semibold text-slate-900">{selectedSupplier.category}</p>
             </div>
             <div className="rounded-[10px] bg-slate-50 p-2.5">
-              <p className="text-[10px] text-slate-500">{copy.summary}</p>
+              <p className="text-[22px] text-slate-500">{copy.summary}</p>
               <p className="mt-1 text-xs leading-5 text-slate-700">{selectedSupplier.description}</p>
             </div>
             <div className="rounded-[10px] bg-slate-50 p-2.5">
-              <p className="text-[10px] text-slate-500">{copy.location}</p>
+              <p className="text-[22px] text-slate-500">{copy.location}</p>
               <p className="mt-1 text-xs font-semibold text-slate-900">{selectedSupplier.location}</p>
             </div>
             <div className="rounded-[10px] bg-slate-50 p-2.5">
-              <p className="text-[10px] text-slate-500">{copy.phone}</p>
+              <p className="text-[22px] text-slate-500">{copy.phone}</p>
               <p className="mt-1 text-xs font-semibold text-slate-900">{selectedSupplier.phone}</p>
             </div>
             <div className="rounded-[10px] bg-slate-50 p-2.5">
-              <p className="text-[10px] text-slate-500">{copy.email}</p>
+              <p className="text-[22px] text-slate-500">{copy.email}</p>
               <p className="mt-1 text-xs font-semibold text-slate-900">{selectedSupplier.email}</p>
             </div>
             <div className="rounded-[10px] bg-slate-50 p-2.5">
-              <p className="text-[10px] text-slate-500">{copy.website}</p>
+              <p className="text-[22px] text-slate-500">{copy.website}</p>
               <p className="mt-1 text-xs font-semibold text-slate-900">{selectedSupplier.website}</p>
             </div>
             <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-3">
               <button
                 type="button"
                 onClick={() => onContactSupplier?.(selectedSupplier, "phone")}
-                className="rounded-[10px] border border-[#d8b16c] bg-white px-3 py-2 text-[10px] font-bold text-[#b8893d]"
+                className="rounded-[10px] border border-[#d8b16c] bg-white px-3 py-2 text-[22px] font-bold text-[#b8893d]"
               >
                 {copy.call}
               </button>
               <button
                 type="button"
                 onClick={() => onContactSupplier?.(selectedSupplier, "email")}
-                className="rounded-[10px] border border-[#d8b16c] bg-white px-3 py-2 text-[10px] font-bold text-[#b8893d]"
+                className="rounded-[10px] border border-[#d8b16c] bg-white px-3 py-2 text-[22px] font-bold text-[#b8893d]"
               >
                 {copy.mail}
               </button>
               <button
                 type="button"
                 onClick={() => onContactSupplier?.(selectedSupplier, "share")}
-                className="rounded-[10px] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] px-3 py-2 text-[10px] font-bold text-white"
+                className="rounded-[10px] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] px-3 py-2 text-[22px] font-bold text-white"
               >
                 {copy.share}
               </button>

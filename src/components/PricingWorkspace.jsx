@@ -194,10 +194,10 @@ function SectionTitle({ icon, title, value, tone = "text-slate-900" }) {
         <span className="grid h-5 w-5 place-items-center rounded-full bg-[#f4ecdf] text-[#b8893d]">
           {icon}
         </span>
-        <p className="text-[10px] font-bold text-slate-900 min-[390px]:text-[11px]">{title}</p>
+        <p className="text-[22px] font-bold text-slate-900 min-[390px]:text-[23px]">{title}</p>
       </div>
       {value ? (
-        <p className={`text-[10px] font-bold ${tone} min-[390px]:text-[11px]`}>{value}</p>
+        <p className={`text-[22px] font-bold ${tone} min-[390px]:text-[23px]`}>{value}</p>
       ) : null}
     </div>
   );
@@ -215,29 +215,29 @@ function ResourceRow({ line, onPriceChange, expanded, onToggleFormula, copy }) {
     <div className="rounded-[10px] bg-white px-2 py-1.5 shadow-sm">
       <div className="grid grid-cols-[1.6fr_.75fr_.95fr_1fr] items-center gap-1 min-[390px]:grid-cols-[1.8fr_.8fr_.9fr_1fr]">
         <div className="min-w-0">
-          <p className="truncate text-[9px] font-semibold text-slate-900 min-[390px]:text-[10px]">
+          <p className="truncate text-[21px] font-semibold text-slate-900 min-[390px]:text-[22px]">
             {line.resource?.icon} {line.resource?.name}
           </p>
-          <p className="text-[8px] text-slate-500 min-[390px]:text-[9px]">
+          <p className="text-[17px] text-slate-500 min-[390px]:text-[21px]">
             {line.consumptionRate} {line.resource?.unit}
           </p>
         </div>
-        <p className="text-[9px] text-slate-600 min-[390px]:text-[10px]">{categoryLabel}</p>
+        <p className="text-[21px] text-slate-600 min-[390px]:text-[22px]">{categoryLabel}</p>
         <input
           value={line.unitPrice}
           onChange={(event) => onPriceChange(line.resource.id, event.target.value)}
-          className="w-full rounded-[8px] border border-[#eadfca] px-1.5 py-1 text-[9px] outline-none min-[390px]:text-[10px]"
+          className="w-full rounded-[8px] border border-[#eadfca] px-1.5 py-1 text-[21px] outline-none min-[390px]:text-[22px]"
         />
         <button
           type="button"
           onClick={() => onToggleFormula(line.resourceId)}
-          className="text-left text-[9px] font-bold text-slate-900 min-[390px]:text-[10px]"
+          className="text-left text-[21px] font-bold text-slate-900 min-[390px]:text-[22px]"
         >
           {money(line.lineCost, copy)}
         </button>
       </div>
       {expanded ? (
-        <div className="mt-1 rounded-[8px] bg-[#faf6ef] px-2 py-1 text-[8px] text-slate-600 min-[390px]:text-[9px]">
+        <div className="mt-1 rounded-[8px] bg-[#faf6ef] px-2 py-1 text-[17px] text-slate-600 min-[390px]:text-[21px]">
           {`${line.consumptionRate} × ${Number(line.unitPrice).toLocaleString("en-US")} × ${line.locationFactor} = ${Number(line.lineCost).toLocaleString("en-US")} ${copy.currency}`}
         </div>
       ) : null}
@@ -250,9 +250,9 @@ function CostPill({ icon, label, value, copy }) {
     <div className="flex items-center justify-between rounded-[10px] bg-white px-2 py-1.5 shadow-sm">
       <div className="flex items-center gap-1.5">
         <span className="text-[#b8893d]">{icon}</span>
-        <span className="text-[10px] text-slate-600">{label}</span>
+        <span className="text-[22px] text-slate-600">{label}</span>
       </div>
-      <span className="text-[10px] font-bold text-slate-900">{money(value, copy)}</span>
+      <span className="text-[22px] font-bold text-slate-900">{money(value, copy)}</span>
     </div>
   );
 }
@@ -267,12 +267,12 @@ function CategoryCard({ label, count, icon, active, onClick }) {
       }`}
     >
       <div className="flex items-center justify-between gap-1.5">
-        <span className="rounded-full bg-[#f4ecdf] px-2 py-0.5 text-[8px] font-bold text-[#b8893d] min-[390px]:text-[9px]">
+        <span className="rounded-full bg-[#f4ecdf] px-2 py-0.5 text-[17px] font-bold text-[#b8893d] min-[390px]:text-[21px]">
           {count}
         </span>
         <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-          <p className="truncate text-[10px] font-bold text-slate-900 min-[390px]:text-[11px]">{label}</p>
-          <span className="shrink-0 text-[14px] leading-none min-[390px]:text-[16px]">{icon}</span>
+          <p className="truncate text-[22px] font-bold text-slate-900 min-[390px]:text-[23px]">{label}</p>
+          <span className="shrink-0 text-[30px] leading-none min-[390px]:text-[35px]">{icon}</span>
         </div>
       </div>
     </button>
@@ -374,7 +374,7 @@ export default function PricingWorkspace({
     [categoryCatalog]
   );
 
-  const pageSize = 10;
+  const pageSize = 3;
   const totalItemPages = Math.max(1, Math.ceil(filteredCatalog.length / pageSize));
   const pagedCatalog = filteredCatalog.slice((itemsPage - 1) * pageSize, itemsPage * pageSize);
 
@@ -435,7 +435,7 @@ export default function PricingWorkspace({
               key={section.id}
               type="button"
               onClick={() => pricingNavigation.navigate({ section: section.id })}
-              className={`flex-1 rounded-[11px] px-2 py-1.5 text-[10px] font-bold transition ${
+              className={`flex-1 rounded-[11px] px-2 py-1.5 text-[22px] font-bold transition ${
                 activeSection === section.id ? "bg-[#d8b16c] text-white" : "text-white/75"
               }`}
             >
@@ -468,12 +468,12 @@ export default function PricingWorkspace({
               </div>
 
               <div className="rounded-[18px] border border-[#eadfca] bg-white p-2 shadow-[0_14px_30px_rgba(15,23,42,0.08)]">
-                <div className="mb-2 rounded-[14px] bg-[#fff8ec] px-3 py-2 text-[10px] text-slate-700">
+                <div className="mb-2 rounded-[14px] bg-[#fff8ec] px-3 py-2 text-[22px] text-slate-700">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-bold text-slate-900">{project?.name || copy.noProject}</span>
                     <span className="text-[#b8893d]">{company?.name || copy.chooseCompany}</span>
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center justify-between gap-1 text-[8px] text-slate-500 min-[390px]:text-[9px]">
+                  <div className="mt-1 flex flex-wrap items-center justify-between gap-1 text-[17px] text-slate-500 min-[390px]:text-[21px]">
                     <span>{copy.savedAnalyses}: {savedAnalyses?.length || 0}</span>
                     <span>{copy.rfqs}: {rfqRequests?.length || 0}</span>
                   </div>
@@ -489,7 +489,7 @@ export default function PricingWorkspace({
                       key={tab.id}
                       type="button"
                       onClick={() => setItemsView(tab.id)}
-                      className={`flex-1 rounded-[11px] px-2 py-1.5 text-[10px] font-bold transition ${
+                      className={`flex-1 rounded-[11px] px-2 py-1.5 text-[22px] font-bold transition ${
                         itemsView === tab.id
                           ? "bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] text-white"
                           : "text-slate-600"
@@ -497,7 +497,7 @@ export default function PricingWorkspace({
                     >
                       <span className="flex items-center justify-center gap-1">
                         <span>{tab.label}</span>
-                        <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[8px]">
+                        <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[17px]">
                           {tab.count}
                         </span>
                       </span>
@@ -507,7 +507,7 @@ export default function PricingWorkspace({
 
                 <div className="mt-2 rounded-[12px] bg-[#fff8ee] px-2 py-2">
                   <div className="flex items-center gap-2">
-                    <p className="whitespace-nowrap text-[10px] font-semibold text-slate-700">
+                    <p className="whitespace-nowrap text-[22px] font-semibold text-slate-700">
                       {translateCategoryLabel(filter, language)}
                     </p>
                     <div className="flex-1 rounded-[10px] border border-[#eadfca] bg-white px-2 py-1">
@@ -515,11 +515,11 @@ export default function PricingWorkspace({
                         value={searchTerm}
                         onChange={(event) => setSearchTerm(event.target.value)}
                         placeholder={`${copy.searchIn} ${translateCategoryLabel(filter, language)}`}
-                        className="w-full bg-transparent text-[10px] text-slate-700 placeholder:text-slate-400 outline-none"
+                        className="w-full bg-transparent text-[22px] text-slate-700 placeholder:text-slate-400 outline-none"
                       />
                     </div>
                   </div>
-                  <div className="mt-1 flex items-center justify-between text-[10px]">
+                  <div className="mt-1 flex items-center justify-between text-[22px]">
                     <p className="text-[#b8893d]">{filteredCatalog.length} {copy.visibleItems}</p>
                     <p className="text-slate-500">
                       {copy.page} {itemsPage} {copy.of} {totalItemPages}
@@ -542,10 +542,10 @@ export default function PricingWorkspace({
                           : "border-[#eadfca] bg-white"
                       }`}
                     >
-                      <span className="grid h-7 w-7 place-items-center rounded-full bg-[#f7efe2] text-[13px] leading-none">
+                      <span className="grid h-7 w-7 place-items-center rounded-full bg-[#f7efe2] text-[29px] leading-none">
                         {item.icon}
                       </span>
-                      <p className="line-clamp-2 min-h-[2.15rem] text-[10px] font-bold leading-4 text-slate-900">
+                      <p className="line-clamp-2 min-h-[2.15rem] text-[22px] font-bold leading-4 text-slate-900">
                         {item.name}
                       </p>
                     </button>
@@ -557,7 +557,7 @@ export default function PricingWorkspace({
                     type="button"
                     onClick={() => setItemsPage((current) => Math.max(1, current - 1))}
                     disabled={itemsPage === 1}
-                    className={`rounded-[12px] px-3 py-1.5 text-[10px] font-bold ${
+                    className={`rounded-[12px] px-3 py-1.5 text-[22px] font-bold ${
                       itemsPage === 1
                         ? "cursor-not-allowed bg-slate-100 text-slate-400"
                         : "border border-[#d8b16c] bg-white text-[#b8893d]"
@@ -569,7 +569,7 @@ export default function PricingWorkspace({
                     type="button"
                     onClick={() => setItemsPage((current) => Math.min(totalItemPages, current + 1))}
                     disabled={itemsPage === totalItemPages}
-                    className={`rounded-[12px] px-3 py-1.5 text-[10px] font-bold ${
+                    className={`rounded-[12px] px-3 py-1.5 text-[22px] font-bold ${
                       itemsPage === totalItemPages
                         ? "cursor-not-allowed bg-slate-100 text-slate-400"
                         : "bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] text-white"
@@ -581,7 +581,7 @@ export default function PricingWorkspace({
               </div>
 
               {!filteredCatalog.length ? (
-                <div className="rounded-[14px] border border-dashed border-[#dec89a] bg-[#fffdfa] px-3 py-4 text-center text-[11px] text-slate-500">
+                <div className="rounded-[14px] border border-dashed border-[#dec89a] bg-[#fffdfa] px-3 py-4 text-center text-[23px] text-slate-500">
                   {copy.noSearchResults}
                 </div>
               ) : null}
@@ -592,16 +592,16 @@ export default function PricingWorkspace({
             <div className="rounded-[20px] border border-[#dec89a] bg-white p-2 shadow-[0_16px_34px_rgba(15,23,42,0.1)]">
               <div className="rounded-[16px] bg-[linear-gradient(180deg,#1b2f56_0%,#132443_100%)] px-3 py-2 text-white">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[9px] text-[#d8b16c] min-[390px]:text-[10px]">{selectedItem.code}</span>
-                  <p className="truncate text-[12px] font-bold min-[390px]:text-[13px]">{selectedItem.name}</p>
+                  <span className="text-[21px] text-[#d8b16c] min-[390px]:text-[22px]">{selectedItem.code}</span>
+                  <p className="truncate text-[27px] font-bold min-[390px]:text-[29px]">{selectedItem.name}</p>
                   <span className="text-[#d8b16c]">›</span>
                 </div>
                 {selectedItem.source?.sourceName ? (
-                  <p className="mt-1 text-[9px] text-white/70">
+                  <p className="mt-1 text-[21px] text-white/70">
                     {selectedItem.source.sourceName} - {selectedItem.source.currency}
                   </p>
                 ) : null}
-                <p className="mt-1 text-[9px] text-white/70">
+                <p className="mt-1 text-[21px] text-white/70">
                   {project?.name || copy.noSourceProject} - {company?.name || copy.noSourceCompany}
                 </p>
               </div>
@@ -617,31 +617,31 @@ export default function PricingWorkspace({
                       />
                       <div className="mt-1 grid grid-cols-2 gap-1 min-[400px]:grid-cols-4">
                         <div className="rounded-[10px] bg-white px-2 py-1 shadow-sm">
-                          <p className="text-[9px] text-slate-500">{copy.quantity}</p>
+                          <p className="text-[21px] text-slate-500">{copy.quantity}</p>
                           <input
                             value={quantity}
                             onChange={(event) => setQuantity(event.target.value)}
-                            className="mt-0.5 w-full border-0 p-0 text-[12px] font-bold text-slate-900 outline-none"
+                            className="mt-0.5 w-full border-0 p-0 text-[27px] font-bold text-slate-900 outline-none"
                           />
                         </div>
                         <div className="rounded-[10px] bg-white px-2 py-1 shadow-sm">
-                          <p className="text-[9px] text-slate-500">{copy.overhead}</p>
-                          <p className="mt-0.5 text-[11px] font-bold text-slate-900">%{settings?.overheadPercent ?? 0}</p>
+                          <p className="text-[21px] text-slate-500">{copy.overhead}</p>
+                          <p className="mt-0.5 text-[23px] font-bold text-slate-900">%{settings?.overheadPercent ?? 0}</p>
                         </div>
                         <div className="rounded-[10px] bg-white px-2 py-1 shadow-sm">
-                          <p className="text-[9px] text-slate-500">{copy.profit}</p>
+                          <p className="text-[21px] text-slate-500">{copy.profit}</p>
                           <div className="mt-0.5 flex items-center justify-center gap-0.5">
-                            <span className="text-[11px] font-bold text-slate-900">%</span>
+                            <span className="text-[23px] font-bold text-slate-900">%</span>
                             <input
                               value={profit}
                               onChange={(event) => setProfit(event.target.value)}
-                              className="w-full border-0 bg-transparent p-0 text-center text-[12px] font-bold text-slate-900 outline-none"
+                              className="w-full border-0 bg-transparent p-0 text-center text-[27px] font-bold text-slate-900 outline-none"
                             />
                           </div>
                         </div>
                         <div className="rounded-[10px] bg-white px-2 py-1 shadow-sm">
-                          <p className="text-[9px] text-slate-500">{copy.factor}</p>
-                          <p className="mt-0.5 text-[11px] font-bold text-slate-900">{settings?.locationFactor ?? 1}</p>
+                          <p className="text-[21px] text-slate-500">{copy.factor}</p>
+                          <p className="mt-0.5 text-[23px] font-bold text-slate-900">{settings?.locationFactor ?? 1}</p>
                         </div>
                       </div>
                     </div>
@@ -690,8 +690,8 @@ export default function PricingWorkspace({
                       <div className="mt-1.5 grid gap-1">
                         {result.indirectLines.map((line) => (
                           <div key={line.name} className="flex items-center justify-between rounded-[10px] bg-white px-2 py-1.5 shadow-sm">
-                            <span className="text-[10px] text-slate-600">{line.name}</span>
-                            <span className="text-[10px] font-bold text-slate-900">{money(line.value, copy)}</span>
+                            <span className="text-[22px] text-slate-600">{line.name}</span>
+                            <span className="text-[22px] font-bold text-slate-900">{money(line.value, copy)}</span>
                           </div>
                         ))}
                       </div>
@@ -703,7 +703,7 @@ export default function PricingWorkspace({
                         title={copy.marketPrices}
                         value={money(selectedItem.marketAverage, copy)}
                       />
-                      <div className="mt-0.5 flex items-center justify-between text-[10px]">
+                      <div className="mt-0.5 flex items-center justify-between text-[22px]">
                         <div className="flex items-center gap-1.5">
                           <Indicator tone={selectedItem.marketStatusColor} />
                           <span className="font-semibold text-slate-700">
@@ -726,16 +726,16 @@ export default function PricingWorkspace({
                       />
                       <div className="mt-1 grid grid-cols-1 gap-1 min-[390px]:grid-cols-3">
                         <div className="rounded-[10px] bg-white/60 px-2 py-1">
-                          <p className="text-[9px] text-slate-700">{copy.unitPrice}</p>
-                          <p className="mt-0.5 text-[11px] font-bold">{money(result.costBeforeProfit, copy)}</p>
+                          <p className="text-[21px] text-slate-700">{copy.unitPrice}</p>
+                          <p className="mt-0.5 text-[23px] font-bold">{money(result.costBeforeProfit, copy)}</p>
                         </div>
                         <div className="rounded-[10px] bg-white/60 px-2 py-1">
-                          <p className="text-[9px] text-slate-700">{copy.profit}</p>
-                          <p className="mt-0.5 text-[11px] font-bold">{money(result.profitValue, copy)}</p>
+                          <p className="text-[21px] text-slate-700">{copy.profit}</p>
+                          <p className="mt-0.5 text-[23px] font-bold">{money(result.profitValue, copy)}</p>
                         </div>
                         <div className="rounded-[10px] bg-white/60 px-2 py-1">
-                          <p className="text-[9px] text-slate-700">{copy.total}</p>
-                          <p className="mt-0.5 text-[11px] font-bold">{money(result.finalUnitPrice, copy)}</p>
+                          <p className="text-[21px] text-slate-700">{copy.total}</p>
+                          <p className="mt-0.5 text-[23px] font-bold">{money(result.finalUnitPrice, copy)}</p>
                         </div>
                       </div>
                     </div>
@@ -751,7 +751,7 @@ export default function PricingWorkspace({
                             profit,
                           })
                         }
-                        className={`rounded-full px-3 py-1.5 text-[10px] font-bold ${
+                        className={`rounded-full px-3 py-1.5 text-[22px] font-bold ${
                           authMode === "guest"
                             ? "cursor-not-allowed border border-[#e8dcc6] bg-slate-100 text-slate-400"
                             : "border border-[#d8b16c] bg-white text-[#b8893d]"
@@ -768,7 +768,7 @@ export default function PricingWorkspace({
                             source: "pricing-workspace",
                           })
                         }
-                        className={`rounded-full px-3 py-1.5 text-[10px] font-bold ${
+                        className={`rounded-full px-3 py-1.5 text-[22px] font-bold ${
                           authMode === "guest"
                             ? "cursor-not-allowed bg-slate-300 text-white"
                             : "bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] text-white"
@@ -780,7 +780,7 @@ export default function PricingWorkspace({
                     </div>
 
                     {authMode === "guest" ? (
-                      <div className="rounded-[12px] border border-[#eadfca] bg-[#fff7eb] px-2.5 py-1.5 text-[10px] text-slate-600">
+                      <div className="rounded-[12px] border border-[#eadfca] bg-[#fff7eb] px-2.5 py-1.5 text-[22px] text-slate-600">
                         {copy.guestHint}
                       </div>
                     ) : null}
@@ -793,7 +793,7 @@ export default function PricingWorkspace({
                         title={copy.marketPrices}
                         value={money(selectedItem.marketAverage, copy)}
                       />
-                      <div className="mt-1 flex items-center justify-between text-[10px]">
+                      <div className="mt-1 flex items-center justify-between text-[22px]">
                         <div className="flex items-center gap-1.5">
                           <Indicator tone={selectedItem.marketStatusColor} />
                           <span className="font-semibold text-slate-700">
@@ -807,20 +807,20 @@ export default function PricingWorkspace({
 
                     <div className="grid grid-cols-1 gap-1.5 min-[390px]:grid-cols-3">
                       <div className="rounded-[12px] border border-[#eadfca] bg-white px-2 py-2 text-center shadow-sm">
-                        <p className="text-[9px] text-slate-500">{copy.consultant}</p>
-                        <p className="mt-0.5 text-[11px] font-bold text-slate-900">
+                        <p className="text-[21px] text-slate-500">{copy.consultant}</p>
+                        <p className="mt-0.5 text-[23px] font-bold text-slate-900">
                           {money(selectedItem.source?.consultantPrice || selectedItem.marketAverage, copy)}
                         </p>
                       </div>
                       <div className="rounded-[12px] border border-[#eadfca] bg-white px-2 py-2 text-center shadow-sm">
-                        <p className="text-[9px] text-slate-500">{copy.average}</p>
-                        <p className="mt-0.5 text-[11px] font-bold text-[#b8893d]">
+                        <p className="text-[21px] text-slate-500">{copy.average}</p>
+                        <p className="mt-0.5 text-[23px] font-bold text-[#b8893d]">
                           {money(selectedItem.marketAverage, copy)}
                         </p>
                       </div>
                       <div className="rounded-[12px] border border-[#eadfca] bg-white px-2 py-2 text-center shadow-sm">
-                        <p className="text-[9px] text-slate-500">{copy.designer}</p>
-                        <p className="mt-0.5 text-[11px] font-bold text-slate-900">
+                        <p className="text-[21px] text-slate-500">{copy.designer}</p>
+                        <p className="mt-0.5 text-[23px] font-bold text-slate-900">
                           {money(selectedItem.source?.designerPrice || selectedItem.marketAverage, copy)}
                         </p>
                       </div>
@@ -834,14 +834,14 @@ export default function PricingWorkspace({
                       />
                       <div className="mt-1 grid gap-1">
                         <div className="flex items-center justify-between rounded-[10px] bg-white px-2 py-1.5 shadow-sm">
-                          <span className="text-[10px] text-slate-600">{copy.subcategory}</span>
-                          <span className="text-[10px] font-bold text-slate-900">
+                          <span className="text-[22px] text-slate-600">{copy.subcategory}</span>
+                          <span className="text-[22px] font-bold text-slate-900">
                             {selectedItem.source?.sourceCategory || copy.coreItem}
                           </span>
                         </div>
                         <div className="flex items-center justify-between rounded-[10px] bg-white px-2 py-1.5 shadow-sm">
-                          <span className="text-[10px] text-slate-600">{copy.file}</span>
-                          <span className="max-w-[60%] truncate text-[10px] font-bold text-slate-900">
+                          <span className="text-[22px] text-slate-600">{copy.file}</span>
+                          <span className="max-w-[60%] truncate text-[22px] font-bold text-slate-900">
                             {selectedItem.source?.sourceName || copy.defaultCatalog}
                           </span>
                         </div>
@@ -852,7 +852,7 @@ export default function PricingWorkspace({
                       <button
                         type="button"
                         onClick={() => pricingNavigation.navigate({ section: "analysis" })}
-                        className="rounded-full border border-[#d8b16c] bg-white px-3 py-1.5 text-[10px] font-bold text-[#b8893d]"
+                        className="rounded-full border border-[#d8b16c] bg-white px-3 py-1.5 text-[22px] font-bold text-[#b8893d]"
                       >
                         {copy.backToAnalysis}
                       </button>
@@ -864,7 +864,7 @@ export default function PricingWorkspace({
                             source: "market-comparison",
                           })
                         }
-                        className={`rounded-full px-3 py-1.5 text-[10px] font-bold ${
+                        className={`rounded-full px-3 py-1.5 text-[22px] font-bold ${
                           authMode === "guest"
                             ? "cursor-not-allowed bg-slate-300 text-white"
                             : "bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] text-white"

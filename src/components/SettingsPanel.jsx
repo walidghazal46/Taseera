@@ -78,7 +78,7 @@ function ToneToggle({ active, onClick, children }) {
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-[10px] border px-2 py-0.5 text-[8px] font-bold transition min-[390px]:text-[9px] ${
+      className={`rounded-[10px] border px-2 py-0.5 text-[17px] font-bold transition min-[390px]:text-[21px] ${
         active
           ? "border-[#b8893d] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] text-white"
           : "border-[#eadfca] bg-white text-slate-600"
@@ -94,7 +94,7 @@ function SwitchPill({ active, onClick, children }) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex min-h-[28px] flex-1 items-center justify-center rounded-[8px] px-2 py-1.5 text-[8px] font-bold leading-4 transition min-[390px]:text-[9px] ${
+      className={`flex min-h-[28px] flex-1 items-center justify-center rounded-[8px] px-2 py-1.5 text-[17px] font-bold leading-4 transition min-[390px]:text-[21px] ${
         active
           ? "bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] text-white"
           : "bg-white text-slate-600"
@@ -109,10 +109,10 @@ function SectionCard({ title, icon, children }) {
   return (
     <div className="rounded-[14px] border border-[#eadfca] bg-white px-3 py-2 shadow-[0_10px_22px_rgba(15,23,42,0.06)]">
       <div className="flex items-center gap-1.5">
-        <span className="grid h-5 w-5 place-items-center rounded-full bg-[#f6efe4] text-[10px] text-[#b8893d]">
+        <span className="grid h-5 w-5 place-items-center rounded-full bg-[#f6efe4] text-[22px] text-[#b8893d]">
           {icon}
         </span>
-        <p className="text-[10px] font-bold text-slate-900 min-[390px]:text-[11px]">{title}</p>
+        <p className="text-[22px] font-bold text-slate-900 min-[390px]:text-[23px]">{title}</p>
       </div>
       <div className="mt-2">{children}</div>
     </div>
@@ -131,8 +131,8 @@ function UtilityButton({ title, subtitle, onClick, active }) {
       }`}
     >
       <div>
-        <p className="text-[10px] font-bold text-slate-900 min-[390px]:text-[11px]">{title}</p>
-            <p className="mt-0.5 text-[8px] leading-4 text-slate-500 min-[390px]:text-[9px]">{subtitle}</p>
+        <p className="text-[22px] font-bold text-slate-900 min-[390px]:text-[23px]">{title}</p>
+            <p className="mt-0.5 text-[17px] leading-4 text-slate-500 min-[390px]:text-[21px]">{subtitle}</p>
       </div>
       <span className="text-[#b8893d]">‹</span>
     </button>
@@ -151,10 +151,10 @@ function PermissionBadge({ permission, onRequest, onOpenSettings, copy }) {
     <div className={`rounded-[12px] border px-3 py-2 ${toneClass}`}>
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-[10px] font-bold min-[390px]:text-[11px]">{permission.label}</p>
-          <p className="mt-0.5 text-[8px] leading-4 min-[390px]:text-[9px]">{permission.description}</p>
+          <p className="text-[22px] font-bold min-[390px]:text-[23px]">{permission.label}</p>
+          <p className="mt-0.5 text-[17px] leading-4 min-[390px]:text-[21px]">{permission.description}</p>
         </div>
-        <span className="rounded-full bg-white/70 px-2 py-0.5 text-[8px] font-bold min-[390px]:text-[9px]">
+        <span className="rounded-full bg-white/70 px-2 py-0.5 text-[17px] font-bold min-[390px]:text-[21px]">
           {permission.status === "granted"
             ? copy.permissionEnabled
             : permission.status === "denied"
@@ -169,7 +169,7 @@ function PermissionBadge({ permission, onRequest, onOpenSettings, copy }) {
           <button
             type="button"
             onClick={onRequest}
-            className="rounded-[10px] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] px-3 py-1.5 text-[8px] font-bold text-white min-[390px]:text-[9px]"
+            className="rounded-[10px] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] px-3 py-1.5 text-[17px] font-bold text-white min-[390px]:text-[21px]"
           >
             {copy.requestPermission}
           </button>
@@ -177,7 +177,7 @@ function PermissionBadge({ permission, onRequest, onOpenSettings, copy }) {
             <button
               type="button"
               onClick={onOpenSettings}
-              className="rounded-[10px] border border-[#d8b16c] bg-white px-3 py-1.5 text-[8px] font-bold text-[#b8893d] min-[390px]:text-[9px]"
+              className="rounded-[10px] border border-[#d8b16c] bg-white px-3 py-1.5 text-[17px] font-bold text-[#b8893d] min-[390px]:text-[21px]"
             >
               {copy.openSettings}
             </button>
@@ -191,13 +191,13 @@ function PermissionBadge({ permission, onRequest, onOpenSettings, copy }) {
 function SettingField({ label, value, onChange, placeholder, type = "text" }) {
   return (
     <label className="grid gap-1">
-      <span className="text-[10px] font-semibold text-slate-600">{label}</span>
+      <span className="text-[22px] font-semibold text-slate-600">{label}</span>
       <input
         type={type}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="rounded-[10px] border border-[#eadfca] bg-white px-2.5 py-1.5 text-[10px] text-slate-900 outline-none"
+        className="rounded-[10px] border border-[#eadfca] bg-white px-2.5 py-1.5 text-[22px] text-slate-900 outline-none"
       />
     </label>
   );
@@ -209,12 +209,12 @@ function PricingSettingsPanel({ settings, onUpdateSetting, copy }) {
       <div className="rounded-[14px] border border-[#eadfca] bg-[#fff8ec] px-3 py-2 shadow-[0_10px_22px_rgba(15,23,42,0.05)]">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-[10px] font-bold text-slate-900">{copy.pricingEnvironment}</p>
-            <p className="mt-0.5 text-[9px] text-slate-500">
+            <p className="text-[22px] font-bold text-slate-900">{copy.pricingEnvironment}</p>
+            <p className="mt-0.5 text-[21px] text-slate-500">
               {settings.country} - {settings.currency} - {copy.profitSummary} {settings.profitPercent}%
             </p>
           </div>
-          <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-bold text-[#b8893d]">
+          <span className="rounded-full bg-white px-2 py-0.5 text-[21px] font-bold text-[#b8893d]">
             {copy.pricingActive}
           </span>
         </div>
@@ -353,14 +353,14 @@ function AccountPanel({
     <div className="grid gap-1.5">
       <div className="rounded-[14px] border border-white/10 bg-[linear-gradient(180deg,#182e56_0%,#10213e_100%)] px-3 py-1 text-white shadow-[0_12px_22px_rgba(9,18,42,0.15)]">
         <div className="flex items-center gap-1.5">
-          <div className="grid h-4.5 w-4.5 place-items-center rounded-full border border-white/10 bg-white/20 text-[9px]">
+          <div className="grid h-4.5 w-4.5 place-items-center rounded-full border border-white/10 bg-white/20 text-[21px]">
             👤
           </div>
           <div className="min-w-0">
-            <h3 className="truncate text-[10px] font-bold leading-4">
+            <h3 className="truncate text-[22px] font-bold leading-4">
               {isGuest ? text.settings.guest : settings.userName}
             </h3>
-            <p className="text-[8px] leading-3 text-slate-200">
+            <p className="text-[17px] leading-3 text-slate-200">
               {isGuest ? text.settings.browseMode : settings.userEmail}
             </p>
           </div>
@@ -386,10 +386,10 @@ function AccountPanel({
       <SectionCard title={text.settings.sessionStatus} icon="🔐">
         <div className="grid gap-2">
           <div className="rounded-[12px] border border-[#f0e6d5] bg-[#fff8ec] px-3 py-2">
-            <p className="text-[11px] font-bold text-slate-900">
+            <p className="text-[23px] font-bold text-slate-900">
               {isGuest ? text.settings.guestSession : `${text.settings.signedInAs} ${settings.userName}`}
             </p>
-            <p className="mt-1 text-[9px] leading-4 text-slate-500">
+            <p className="mt-1 text-[21px] leading-4 text-slate-500">
               {isGuest
                 ? text.settings.guestSessionBody
                 : `${settings.userEmail} ${sessionMeta?.lastLoginAt ? `- ${text.settings.signedInAt} ${sessionMeta.lastLoginAt}` : ""}`}
@@ -401,14 +401,14 @@ function AccountPanel({
               <button
                 type="button"
                 onClick={() => onOpenAuthScreen?.("login")}
-                className="rounded-[12px] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] px-3 py-2 text-[10px] font-bold text-white"
+                className="rounded-[12px] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] px-3 py-2 text-[22px] font-bold text-white"
               >
                 {text.settings.loginNow}
               </button>
               <button
                 type="button"
                 onClick={() => onOpenAuthScreen?.("register")}
-                className="rounded-[12px] border border-[#d8b16c] bg-white px-3 py-2 text-[10px] font-bold text-[#b8893d]"
+                className="rounded-[12px] border border-[#d8b16c] bg-white px-3 py-2 text-[22px] font-bold text-[#b8893d]"
               >
                 {text.settings.createAccountNow}
               </button>
@@ -418,14 +418,14 @@ function AccountPanel({
               <button
                 type="button"
                 onClick={() => onOpenAuthScreen?.("login")}
-                className="rounded-[12px] border border-[#d8b16c] bg-white px-3 py-2 text-[10px] font-bold text-[#b8893d]"
+                className="rounded-[12px] border border-[#d8b16c] bg-white px-3 py-2 text-[22px] font-bold text-[#b8893d]"
               >
                 {text.settings.switchAccount}
               </button>
               <button
                 type="button"
                 onClick={onLogout}
-                className="rounded-[12px] border border-red-200 bg-white px-3 py-2 text-[10px] font-bold text-red-600"
+                className="rounded-[12px] border border-red-200 bg-white px-3 py-2 text-[22px] font-bold text-red-600"
               >
                 {text.settings.logout}
               </button>
@@ -457,7 +457,7 @@ function AccountPanel({
               onOpenSettings={() => systemBridge.openAppSettings?.()}
             />
           ))}
-          <div className="rounded-[12px] border border-[#f0e6d5] bg-[#fffdfa] px-3 py-2 text-[9px] leading-4 text-slate-600">
+          <div className="rounded-[12px] border border-[#f0e6d5] bg-[#fffdfa] px-3 py-2 text-[21px] leading-4 text-slate-600">
             <p className="font-bold text-slate-900">
               {systemBridge.isAndroid ? copy.androidConnected : copy.webPreview}
             </p>
@@ -473,12 +473,12 @@ function AccountPanel({
       <SectionCard title={copy.dataState} icon="📊">
         <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
           <div className="rounded-[12px] border border-[#f0e6d5] bg-white px-3 py-2 text-center">
-            <p className="text-[9px] text-slate-500">{copy.savedAnalyses}</p>
-            <p className="mt-1 text-[12px] font-bold text-slate-900">{savedAnalyses.length}</p>
+            <p className="text-[21px] text-slate-500">{copy.savedAnalyses}</p>
+            <p className="mt-1 text-[27px] font-bold text-slate-900">{savedAnalyses.length}</p>
           </div>
           <div className="rounded-[12px] border border-[#f0e6d5] bg-white px-3 py-2 text-center">
-            <p className="text-[9px] text-slate-500">{copy.rfqs}</p>
-            <p className="mt-1 text-[12px] font-bold text-slate-900">{rfqRequests.length}</p>
+            <p className="text-[21px] text-slate-500">{copy.rfqs}</p>
+            <p className="mt-1 text-[27px] font-bold text-slate-900">{rfqRequests.length}</p>
           </div>
         </div>
       </SectionCard>
@@ -487,33 +487,33 @@ function AccountPanel({
         <SectionCard title={text.settings.adminTitle} icon="🛡️">
           <div className="grid gap-2">
             <div className="rounded-[12px] border border-[#f0e6d5] bg-[#fff8ec] px-3 py-1.5">
-              <p className="text-[11px] font-bold text-slate-900">{text.settings.adminPrimary}</p>
-              <p className="mt-0.5 text-[10px] text-slate-500">{settings.userEmail}</p>
+              <p className="text-[23px] font-bold text-slate-900">{text.settings.adminPrimary}</p>
+              <p className="mt-0.5 text-[22px] text-slate-500">{settings.userEmail}</p>
             </div>
             <div className="grid grid-cols-1 gap-1 min-[380px]:grid-cols-3">
-              <div className="rounded-[10px] border border-[#f0e6d5] bg-white px-2 py-1.5 text-center text-[9px] font-bold text-slate-700">
+              <div className="rounded-[10px] border border-[#f0e6d5] bg-white px-2 py-1.5 text-center text-[21px] font-bold text-slate-700">
                 {text.settings.manageCompanies}
               </div>
-              <div className="rounded-[10px] border border-[#f0e6d5] bg-white px-2 py-1.5 text-center text-[9px] font-bold text-slate-700">
+              <div className="rounded-[10px] border border-[#f0e6d5] bg-white px-2 py-1.5 text-center text-[21px] font-bold text-slate-700">
                 {text.settings.managePricing}
               </div>
-              <div className="rounded-[10px] border border-[#f0e6d5] bg-white px-2 py-1.5 text-center text-[9px] font-bold text-slate-700">
+              <div className="rounded-[10px] border border-[#f0e6d5] bg-white px-2 py-1.5 text-center text-[21px] font-bold text-slate-700">
                 {text.settings.manageSuppliers}
               </div>
             </div>
             <div className="rounded-[12px] border border-dashed border-[#d8c295] bg-[#fffdfa] px-3 py-1.5">
-              <p className="text-[10px] font-bold text-slate-700">{text.settings.futureAdmins}</p>
-              <p className="mt-0.5 text-[10px] leading-4 text-slate-500">{text.settings.pendingAdminNote}</p>
+              <p className="text-[22px] font-bold text-slate-700">{text.settings.futureAdmins}</p>
+              <p className="mt-0.5 text-[22px] leading-4 text-slate-500">{text.settings.pendingAdminNote}</p>
             </div>
           </div>
         </SectionCard>
       ) : null}
 
-      <div className="rounded-[16px] border border-[#eadfca] bg-[#fff8ec] px-3 py-1.5 text-[9px] leading-5 text-slate-600">
+      <div className="rounded-[16px] border border-[#eadfca] bg-[#fff8ec] px-3 py-1.5 text-[21px] leading-5 text-slate-600">
         <div className="flex items-center justify-between gap-2">
           <div>
             <p className="font-bold text-slate-900">{settings.appName}</p>
-            <p className="mt-0.5 text-[10px]">
+            <p className="mt-0.5 text-[22px]">
               {text.settings.version} {settings.appVersion}
             </p>
           </div>
@@ -551,7 +551,7 @@ export default function SettingsPanel({
         <button
           type="button"
           onClick={onLogout}
-          className="w-full rounded-[14px] border border-red-200 bg-white px-3 py-2 text-[11px] font-bold text-red-600 shadow-[0_10px_20px_rgba(15,23,42,0.06)]"
+          className="w-full rounded-[14px] border border-red-200 bg-white px-3 py-2 text-[23px] font-bold text-red-600 shadow-[0_10px_20px_rgba(15,23,42,0.06)]"
         >
           {getAppText(settings.language).settings.logout}
         </button>

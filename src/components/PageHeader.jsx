@@ -5,14 +5,14 @@ export default function PageHeader({ eyebrow, title, description, actions }) {
         <div className="max-w-3xl">
           <div className="flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-[#d9b36a]" />
-            <p className="text-[10px] font-medium tracking-[0.22em] text-[#d9b36a]">{eyebrow}</p>
+            <p className="text-[22px] font-medium tracking-[0.22em] text-[#d9b36a]">{eyebrow}</p>
           </div>
           {title ? (
-            <h2 className="mt-1 text-[16px] font-semibold leading-5 text-white sm:text-[18px] sm:leading-6">
+            <h2 className="mt-1 text-[35px] font-semibold leading-5 text-white sm:text-[39px] sm:leading-6">
               {title}
             </h2>
           ) : null}
-          <p className={`${title ? "mt-1" : "mt-0.5"} max-w-[30rem] text-[10px] leading-4 text-slate-200 sm:text-[11px] sm:leading-5`}>
+          <p className={`${title ? "mt-1" : "mt-0.5"} max-w-[30rem] text-[22px] leading-4 text-slate-200 sm:text-[23px] sm:leading-5`}>
             {description}
           </p>
         </div>

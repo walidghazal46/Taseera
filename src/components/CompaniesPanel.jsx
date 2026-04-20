@@ -133,13 +133,13 @@ function translateCompanyType(type, copy) {
 
 function SearchBar({ placeholder, value, onChange }) {
   return (
-    <div className="flex items-center gap-2 rounded-[14px] bg-white/18 px-2.5 py-2 text-[10px] text-white/80 shadow-inner min-[390px]:px-3 min-[390px]:py-2.5 min-[390px]:text-[11px]">
+    <div className="flex items-center gap-2 rounded-[14px] bg-white/18 px-2.5 py-2 text-[22px] text-white/80 shadow-inner min-[390px]:px-3 min-[390px]:py-2.5 min-[390px]:text-[23px]">
       <SearchIcon className="h-3 w-3 min-[390px]:h-3.5 min-[390px]:w-3.5" />
       <input
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="w-full bg-transparent text-[10px] text-white placeholder:text-white/60 outline-none min-[390px]:text-[11px]"
+        className="w-full bg-transparent text-[22px] text-white placeholder:text-white/60 outline-none min-[390px]:text-[23px]"
       />
     </div>
   );
@@ -161,12 +161,12 @@ function Stars({ rating }) {
 function Field({ label, value, onChange, placeholder }) {
   return (
     <label className="grid gap-1">
-      <span className="text-[10px] font-semibold text-slate-600">{label}</span>
+      <span className="text-[22px] font-semibold text-slate-600">{label}</span>
       <input
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="rounded-[12px] border border-[#eadfca] bg-white px-3 py-2 text-[11px] text-slate-900 outline-none"
+        className="rounded-[12px] border border-[#eadfca] bg-white px-3 py-2 text-[23px] text-slate-900 outline-none"
       />
     </label>
   );
@@ -176,8 +176,8 @@ function StatCard({ label, value }) {
   return (
     <div className="rounded-[16px] border border-[#eadfca] bg-white px-2.5 py-1.5 shadow-[0_10px_24px_rgba(15,23,42,0.05)] min-[390px]:px-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[8px] text-slate-500 min-[390px]:text-[9px]">{label}</p>
-        <p className="text-[11px] font-bold text-slate-900 min-[390px]:text-[12px]">{value}</p>
+        <p className="text-[17px] text-slate-500 min-[390px]:text-[21px]">{label}</p>
+        <p className="text-[23px] font-bold text-slate-900 min-[390px]:text-[27px]">{value}</p>
       </div>
     </div>
   );
@@ -197,19 +197,19 @@ function CompanyReviewPage({ company, onBack, copy }) {
           </div>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5">
-              <h3 className="text-[13px] font-bold text-slate-900">{company.name}</h3>
-              <span className="rounded-full bg-[#f6efe4] px-2 py-0.5 text-[9px] font-semibold text-[#b8893d]">
+              <h3 className="text-[29px] font-bold text-slate-900">{company.name}</h3>
+              <span className="rounded-full bg-[#f6efe4] px-2 py-0.5 text-[21px] font-semibold text-[#b8893d]">
                 {translateCompanyType(company.type, copy)}
               </span>
             </div>
-            <p className="mt-0.5 text-[11px] font-medium text-[#b8893d]">{company.specialization}</p>
-            <p className="mt-1 text-[10px] leading-4 text-slate-500">{company.description}</p>
+            <p className="mt-0.5 text-[23px] font-medium text-[#b8893d]">{company.specialization}</p>
+            <p className="mt-1 text-[22px] leading-4 text-slate-500">{company.description}</p>
           </div>
         </div>
         <button
           type="button"
           onClick={onBack}
-          className="rounded-full border border-[#eadfca] px-2.5 py-1 text-[9px] font-bold text-slate-500"
+          className="rounded-full border border-[#eadfca] px-2.5 py-1 text-[21px] font-bold text-slate-500"
         >
           {copy.back}
         </button>
@@ -217,38 +217,38 @@ function CompanyReviewPage({ company, onBack, copy }) {
 
       <div className="mt-3 grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
         <div className="rounded-[14px] border border-[#eadfca] bg-white px-3 py-2">
-          <p className="text-[9px] text-slate-500">{copy.headquarters}</p>
-          <p className="mt-1 text-[11px] font-semibold text-slate-900">
+          <p className="text-[21px] text-slate-500">{copy.headquarters}</p>
+          <p className="mt-1 text-[23px] font-semibold text-slate-900">
             {(company.headquarters || []).join(" - ")}
           </p>
         </div>
         <div className="rounded-[14px] border border-[#eadfca] bg-white px-3 py-2">
-          <p className="text-[9px] text-slate-500">{copy.website}</p>
+          <p className="text-[21px] text-slate-500">{copy.website}</p>
           {company.website ? (
             <a
               href={company.website}
               target="_blank"
               rel="noreferrer"
-              className="mt-1 block text-[11px] font-semibold text-[#b8893d] underline"
+              className="mt-1 block text-[23px] font-semibold text-[#b8893d] underline"
             >
               {copy.visitWebsite}
             </a>
           ) : (
-            <p className="mt-1 text-[11px] font-semibold text-slate-400">{copy.unavailable}</p>
+            <p className="mt-1 text-[23px] font-semibold text-slate-400">{copy.unavailable}</p>
           )}
         </div>
       </div>
 
       <div className="mt-2 rounded-[14px] border border-[#eadfca] bg-white px-3 py-2">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] font-bold text-slate-900">{copy.keyProjects}</p>
-          <p className="text-[9px] text-slate-500">{company.projectsCount} {copy.projectCount}</p>
+          <p className="text-[22px] font-bold text-slate-900">{copy.keyProjects}</p>
+          <p className="text-[21px] text-slate-500">{company.projectsCount} {copy.projectCount}</p>
         </div>
         <div className="mt-2 flex flex-wrap gap-1">
           {(company.keyProjects || []).map((project) => (
             <span
               key={project}
-              className="rounded-full border border-[#eadfca] bg-[#fcf8ef] px-2 py-0.5 text-[9px] text-slate-600"
+              className="rounded-full border border-[#eadfca] bg-[#fcf8ef] px-2 py-0.5 text-[21px] text-slate-600"
             >
               {project}
             </span>
@@ -257,7 +257,7 @@ function CompanyReviewPage({ company, onBack, copy }) {
       </div>
 
       <div className="mt-2 rounded-[14px] border border-[#eadfca] bg-white px-3 py-2">
-        <p className="text-[10px] font-bold text-slate-900">{copy.systemProjects}</p>
+        <p className="text-[22px] font-bold text-slate-900">{copy.systemProjects}</p>
         <div className="mt-2 grid gap-1.5">
           {company.projects?.length ? (
             company.projects.map((project) => (
@@ -266,18 +266,18 @@ function CompanyReviewPage({ company, onBack, copy }) {
                 className="flex items-center justify-between gap-2 rounded-[12px] bg-[#faf6ef] px-2.5 py-2"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-[10px] font-semibold text-slate-900">{project.name}</p>
-                  <p className="mt-0.5 text-[9px] text-slate-500">
+                  <p className="truncate text-[22px] font-semibold text-slate-900">{project.name}</p>
+                  <p className="mt-0.5 text-[21px] text-slate-500">
                     {project.location} - {project.stage}
                   </p>
                 </div>
-                <span className="rounded-full bg-white px-2 py-0.5 text-[9px] text-[#b8893d]">
+                <span className="rounded-full bg-white px-2 py-0.5 text-[21px] text-[#b8893d]">
                   {project.budget || copy.noBudget}
                 </span>
               </div>
             ))
           ) : (
-            <div className="rounded-[12px] bg-[#faf6ef] px-2.5 py-2 text-[9px] text-slate-500">
+            <div className="rounded-[12px] bg-[#faf6ef] px-2.5 py-2 text-[21px] text-slate-500">
               {copy.noProjects}
             </div>
           )}
@@ -286,8 +286,8 @@ function CompanyReviewPage({ company, onBack, copy }) {
 
       <div className="mt-2 rounded-[14px] border border-[#eadfca] bg-white px-3 py-2">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] font-bold text-slate-900">{copy.overallRating}</p>
-          <span className="text-[11px] font-bold text-[#b8893d]">{company.rating}/5</span>
+          <p className="text-[22px] font-bold text-slate-900">{copy.overallRating}</p>
+          <span className="text-[23px] font-bold text-[#b8893d]">{company.rating}/5</span>
         </div>
         <div className="mt-1 rounded-[12px] bg-[#f8f5ee] px-2.5 py-1.5">
           <Stars rating={company.rating} />
@@ -296,8 +296,8 @@ function CompanyReviewPage({ company, onBack, copy }) {
 
       <div className="mt-2 rounded-[14px] border border-[#eadfca] bg-white px-3 py-2">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] font-bold text-slate-900">{copy.customerReviews}</p>
-          <span className="text-[9px] text-slate-500">{copy.reviewCount}</span>
+          <p className="text-[22px] font-bold text-slate-900">{copy.customerReviews}</p>
+          <span className="text-[21px] text-slate-500">{copy.reviewCount}</span>
         </div>
         <div className="mt-2 grid gap-1.5">
           {[
@@ -307,7 +307,7 @@ function CompanyReviewPage({ company, onBack, copy }) {
           ].map((review, index) => (
             <div
               key={`${company.id}-review-${index}`}
-              className="rounded-[12px] bg-[#faf6ef] px-2.5 py-2 text-[10px] leading-5 text-slate-600"
+              className="rounded-[12px] bg-[#faf6ef] px-2.5 py-2 text-[22px] leading-5 text-slate-600"
             >
               {review}
             </div>
@@ -339,17 +339,17 @@ function CompanyCard({ company, selected, onSelectCompany, onShowDetails, copy }
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <h3 className="truncate text-[12px] font-bold text-slate-900">{company.name}</h3>
-                <p className="mt-0.5 text-[10px] font-medium text-[#b8893d]">
+                <h3 className="truncate text-[27px] font-bold text-slate-900">{company.name}</h3>
+                <p className="mt-0.5 text-[22px] font-medium text-[#b8893d]">
                   {company.specialization}
                 </p>
               </div>
-              <span className="shrink-0 rounded-full border border-[#f0dfbf] bg-[#fcf6ea] px-2 py-0.5 text-[9px] text-slate-600">
+              <span className="shrink-0 rounded-full border border-[#f0dfbf] bg-[#fcf6ea] px-2 py-0.5 text-[21px] text-slate-600">
                 {translateCompanyType(company.type, copy)}
               </span>
             </div>
 
-            <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-slate-500">
+            <p className="mt-1 line-clamp-2 text-[22px] leading-4 text-slate-500">
               {company.description}
             </p>
           </button>
@@ -358,7 +358,7 @@ function CompanyCard({ company, selected, onSelectCompany, onShowDetails, copy }
             {company.headquarters?.slice(0, 1).map((city) => (
               <span
                 key={city}
-                className="rounded-full bg-[#f8f5ee] px-2 py-0.5 text-[9px] text-slate-600"
+                className="rounded-full bg-[#f8f5ee] px-2 py-0.5 text-[21px] text-slate-600"
               >
                 {city}
               </span>
@@ -366,7 +366,7 @@ function CompanyCard({ company, selected, onSelectCompany, onShowDetails, copy }
             {company.keyProjects?.slice(0, 1).map((project) => (
               <span
                 key={project}
-                className="rounded-full border border-[#eadfca] px-2 py-0.5 text-[9px] text-slate-500"
+                className="rounded-full border border-[#eadfca] px-2 py-0.5 text-[21px] text-slate-500"
               >
                 {project}
               </span>
@@ -377,7 +377,7 @@ function CompanyCard({ company, selected, onSelectCompany, onShowDetails, copy }
             <div className="min-w-0">
               <div className="rounded-[10px] bg-[#f8f5ee] px-2 py-0.5">
                 <Stars rating={company.rating} />
-                <p className="mt-0.5 flex items-center gap-1 text-[9px] text-slate-500">
+                <p className="mt-0.5 flex items-center gap-1 text-[21px] text-slate-500">
                   <FolderIcon className="h-3 w-3" />
                   <span>{company.projectsCount} {copy.projectCount}</span>
                 </p>
@@ -386,7 +386,7 @@ function CompanyCard({ company, selected, onSelectCompany, onShowDetails, copy }
             <button
               type="button"
               onClick={() => onShowDetails(company.id)}
-              className="rounded-full border border-[#d8b16c] bg-white px-2.5 py-0.5 text-[9px] font-semibold text-[#b8893d] shadow-sm"
+              className="rounded-full border border-[#d8b16c] bg-white px-2.5 py-0.5 text-[21px] font-semibold text-[#b8893d] shadow-sm"
             >
               {copy.rating}
             </button>
@@ -452,7 +452,7 @@ export default function CompaniesPanel({
     );
   }, [companies, query]);
 
-  const directoryPageSize = 7;
+  const directoryPageSize = 4;
   const totalDirectoryPages = Math.max(
     1,
     Math.ceil(filteredCompanies.length / directoryPageSize)
@@ -556,7 +556,7 @@ export default function CompaniesPanel({
                     detailCompanyId: null,
                   })
                 }
-                className={`flex-1 rounded-[12px] px-2 py-1.5 text-[10px] font-bold transition ${
+                className={`flex-1 rounded-[12px] px-2 py-1.5 text-[22px] font-bold transition ${
                   activeSection === tab.id ? "bg-[#d8b16c] text-white" : "text-white/75"
                 }`}
               >
@@ -584,13 +584,13 @@ export default function CompaniesPanel({
         <div className="rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,#1a2f56_0%,#132443_100%)] p-2.5 shadow-[0_20px_40px_rgba(9,18,42,0.28)]">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <p className="text-[10px] text-[#d8b16c]">{copy.companyDetails}</p>
-              <h3 className="mt-1 text-[15px] font-bold text-white">{copy.customerReviews}</h3>
+              <p className="text-[22px] text-[#d8b16c]">{copy.companyDetails}</p>
+              <h3 className="mt-1 text-[34px] font-bold text-white">{copy.customerReviews}</h3>
             </div>
             <button
               type="button"
               onClick={closeDetailPage}
-              className="rounded-full border border-white/20 px-3 py-1 text-[10px] font-bold text-white/85"
+              className="rounded-full border border-white/20 px-3 py-1 text-[22px] font-bold text-white/85"
             >
               {copy.back}
             </button>
@@ -600,7 +600,7 @@ export default function CompaniesPanel({
 
       {activeSection === "directory" ? (
         <div className="flex min-h-0 flex-col gap-1.5 overflow-y-auto pr-1 pb-2">
-          <div className="flex items-center justify-between rounded-[14px] border border-[#eadfca] bg-white px-3 py-2 text-[10px] shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+          <div className="flex items-center justify-between rounded-[14px] border border-[#eadfca] bg-white px-3 py-2 text-[22px] shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
             <p className="text-slate-500">
               {copy.currentShowing}{" "}
               <span className="font-bold text-slate-900">{pagedCompanies.length}</span>{" "}
@@ -626,7 +626,7 @@ export default function CompaniesPanel({
               type="button"
               onClick={() => setDirectoryPage((current) => Math.max(1, current - 1))}
               disabled={directoryPage === 1}
-              className={`rounded-[12px] px-3 py-1 text-[10px] font-bold ${
+              className={`rounded-[12px] px-3 py-1 text-[22px] font-bold ${
                 directoryPage === 1
                   ? "cursor-not-allowed bg-slate-100 text-slate-400"
                   : "border border-[#d8b16c] bg-white text-[#b8893d]"
@@ -634,7 +634,7 @@ export default function CompaniesPanel({
             >
               {copy.previous}
             </button>
-            <p className="text-[10px] text-slate-500">
+            <p className="text-[22px] text-slate-500">
               {copy.page} {directoryPage} {copy.outOf} {totalDirectoryPages}
             </p>
             <button
@@ -645,7 +645,7 @@ export default function CompaniesPanel({
                 )
               }
               disabled={directoryPage === totalDirectoryPages}
-              className={`rounded-[12px] px-3 py-1 text-[10px] font-bold ${
+              className={`rounded-[12px] px-3 py-1 text-[22px] font-bold ${
                 directoryPage === totalDirectoryPages
                   ? "cursor-not-allowed bg-slate-100 text-slate-400"
                   : "bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] text-white"
@@ -676,15 +676,15 @@ export default function CompaniesPanel({
                 className="flex w-full items-start justify-between gap-2 text-right"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-[9px] text-slate-500">{copy.company}</p>
-                  <h3 className="mt-0.5 text-[13px] font-bold text-slate-900">{entry.name}</h3>
-                  <p className="mt-1 text-[10px] text-[#b8893d]">{entry.specialization}</p>
-                  <p className="mt-0.5 text-[9px] text-slate-500">
+                  <p className="text-[21px] text-slate-500">{copy.company}</p>
+                  <h3 className="mt-0.5 text-[29px] font-bold text-slate-900">{entry.name}</h3>
+                  <p className="mt-1 text-[22px] text-[#b8893d]">{entry.specialization}</p>
+                  <p className="mt-0.5 text-[21px] text-slate-500">
                     {(entry.headquarters || []).join(" - ")}
                   </p>
                 </div>
                 <span
-                  className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                  className={`rounded-full px-2 py-0.5 text-[21px] font-bold ${
                     selectedCompanyId === entry.id
                       ? "bg-[#d8b16c] text-white"
                       : "bg-[#f4ecdf] text-[#b8893d]"
@@ -713,15 +713,15 @@ export default function CompaniesPanel({
                       >
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-[12px] font-bold text-slate-900">
+                            <p className="truncate text-[27px] font-bold text-slate-900">
                               {project.name}
                             </p>
-                            <p className="mt-0.5 text-[9px] text-slate-500">
+                            <p className="mt-0.5 text-[21px] text-slate-500">
                               {project.location} - {project.stage}
                             </p>
                           </div>
                           <span
-                            className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                            className={`rounded-full px-2 py-0.5 text-[21px] font-bold ${
                               isSelected
                                 ? "bg-[#d8b16c] text-white"
                                 : "bg-[#fcf6ea] text-[#b8893d]"
@@ -734,7 +734,7 @@ export default function CompaniesPanel({
                     );
                   })
                 ) : (
-                  <div className="rounded-[14px] border border-dashed border-[#dec89a] bg-[#fffdfa] px-3 py-3 text-center text-[10px] text-slate-500">
+                  <div className="rounded-[14px] border border-dashed border-[#dec89a] bg-[#fffdfa] px-3 py-3 text-center text-[22px] text-slate-500">
                     {copy.noCompanyProjects}
                   </div>
                 )}
@@ -750,7 +750,7 @@ export default function CompaniesPanel({
             onSubmit={submitCompany}
             className="grid gap-2 rounded-[18px] border border-[#eadfca] bg-white p-3 shadow-[0_14px_30px_rgba(15,23,42,0.08)]"
           >
-            <p className="text-[11px] font-bold text-slate-900">{copy.addCompany}</p>
+            <p className="text-[23px] font-bold text-slate-900">{copy.addCompany}</p>
             <Field
               label={copy.companyName}
               value={companyForm.name}
@@ -769,13 +769,13 @@ export default function CompaniesPanel({
             />
             <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
               <label className="grid gap-1">
-                <span className="text-[10px] font-semibold text-slate-600">{copy.type}</span>
+                <span className="text-[22px] font-semibold text-slate-600">{copy.type}</span>
                 <select
                   value={companyForm.type}
                   onChange={(event) =>
                     setCompanyForm((current) => ({ ...current, type: event.target.value }))
                   }
-                  className="rounded-[12px] border border-[#eadfca] bg-white px-3 py-2 text-[11px] text-slate-900 outline-none"
+                  className="rounded-[12px] border border-[#eadfca] bg-white px-3 py-2 text-[23px] text-slate-900 outline-none"
                 >
                   <option value="Contractor">{copy.contracting}</option>
                   <option value="Consultant">{copy.consulting}</option>
@@ -800,7 +800,7 @@ export default function CompaniesPanel({
             />
             <button
               type="submit"
-              className="rounded-[14px] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] px-3 py-2 text-[11px] font-bold text-white"
+              className="rounded-[14px] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] px-3 py-2 text-[23px] font-bold text-white"
             >
               {copy.saveCompany}
             </button>
@@ -811,8 +811,8 @@ export default function CompaniesPanel({
             className="grid gap-2 rounded-[18px] border border-[#eadfca] bg-white p-3 shadow-[0_14px_30px_rgba(15,23,42,0.08)]"
           >
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[11px] font-bold text-slate-900">{copy.addProject}</p>
-              <span className="text-[9px] text-slate-500">{company?.name || copy.chooseCompanyFirst}</span>
+              <p className="text-[23px] font-bold text-slate-900">{copy.addProject}</p>
+              <span className="text-[21px] text-slate-500">{company?.name || copy.chooseCompanyFirst}</span>
             </div>
             <Field
               label={copy.projectName}
@@ -851,7 +851,7 @@ export default function CompaniesPanel({
             <button
               type="submit"
               disabled={!company}
-              className={`rounded-[14px] px-3 py-2 text-[11px] font-bold ${
+              className={`rounded-[14px] px-3 py-2 text-[23px] font-bold ${
                 company
                   ? "bg-[linear-gradient(135deg,#d8b16c_0%,#b88c45_100%)] text-white"
                   : "cursor-not-allowed bg-slate-200 text-slate-400"

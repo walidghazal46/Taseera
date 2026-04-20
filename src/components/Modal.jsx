@@ -7,7 +7,7 @@ export default function Modal({ title, children, onClose, closeLabel = "Close" }
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-[10px] text-white transition hover:bg-white/15"
+            className="rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-[22px] text-white transition hover:bg-white/15"
           >
             {closeLabel}
           </button>
