@@ -694,8 +694,22 @@ export default function App() {
 
       setRfqRequests((current) => [nextRequest, ...current].slice(0, 50));
 
+      // Send email to admin
+      await bridge.openEmail(
+        "walidghazal46@gmail.com",
+        systemText.rfqSubject(item?.name || systemText.supplyService),
+        `${systemText.rfqGreeting("Admin", item?.name || supplier?.category)}\n\n` +
+        `البيانات:\n` +
+        `الشركة: ${selectedCompany?.name || "غير محدد"}\n` +
+        `المشروع: ${selectedProject?.name || "غير محدد"}\n` +
+        `البند: ${item?.name || "غير محدد"}\n` +
+        `المورد: ${supplier?.name || "غير محدد"}\n` +
+        `البريد الإلكتروني للمورد: ${supplier?.email || "غير متوفر"}\n` +
+        `رقم المورد: ${supplier?.phone || "غير متوفر"}`
+      );
+
       if (supplier?.email) {
-        bridge.openEmail(
+        await bridge.openEmail(
           supplier.email,
           systemText.rfqSubject(item?.name || systemText.supplyService),
           systemText.rfqGreeting(supplier.contactPerson || supplier.name, item?.name || supplier.category)
