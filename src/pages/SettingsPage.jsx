@@ -6,7 +6,7 @@ export default function SettingsPage(props) {
   const text = getAppText(props.settings?.language);
 
   return (
-    <div className="grid h-full grid-rows-[auto_1fr] gap-4 overflow-hidden">
+    <div className="grid h-full grid-rows-[auto_1fr] gap-3 overflow-hidden">
       <PageHeader
         eyebrow={text.pages.settings.eyebrow}
         title={text.pages.settings.title}

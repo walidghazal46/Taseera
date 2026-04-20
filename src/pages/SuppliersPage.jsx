@@ -3,7 +3,7 @@ import SuppliersPanel from "../components/SuppliersPanel";
 
 export default function SuppliersPage(props) {
   return (
-    <div className="grid h-full grid-rows-[auto_1fr] gap-4 overflow-hidden">
+    <div className="grid h-full grid-rows-[auto_1fr] gap-3 overflow-hidden">
       <PageHeader
         eyebrow="الموردين"
         title="دليل الموردين وعروض الأسعار"

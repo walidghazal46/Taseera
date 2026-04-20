@@ -1,4 +1,5 @@
 import { APP_LANGUAGES, getAppText } from "../data/appText";
+import useBackStack from "../hooks/useBackStack";
 
 const PRIMARY_ADMIN_EMAIL = "walidghazal46@gmail.com";
 
@@ -11,6 +12,22 @@ function ToneToggle({ active, onClick, children }) {
         active
           ? "border-[#b8893d] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] text-white"
           : "border-[#eadfca] bg-white text-slate-600"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function SwitchPill({ active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex min-h-[28px] flex-1 items-center justify-center rounded-[8px] px-2 py-1.5 text-[9px] font-bold leading-4 transition ${
+        active
+          ? "bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] text-white"
+          : "bg-white text-slate-600"
       }`}
     >
       {children}
@@ -52,7 +69,158 @@ function UtilityButton({ title, subtitle, onClick, active }) {
   );
 }
 
-function AccountPanel({ settings, authMode, onLogout, onUpdateSetting }) {
+function PermissionBadge({ permission, onRequest, onOpenSettings }) {
+  const toneClass =
+    permission.status === "granted"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+      : permission.status === "denied"
+        ? "border-amber-200 bg-amber-50 text-amber-900"
+        : "border-slate-200 bg-slate-50 text-slate-600";
+
+  return (
+    <div className={`rounded-[12px] border px-3 py-2 ${toneClass}`}>
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <p className="text-[11px] font-bold">{permission.label}</p>
+          <p className="mt-0.5 text-[9px] leading-4">{permission.description}</p>
+        </div>
+        <span className="rounded-full bg-white/70 px-2 py-0.5 text-[9px] font-bold">
+          {permission.status === "granted"
+            ? "مفعلة"
+            : permission.status === "denied"
+              ? "غير مفعلة"
+              : permission.status === "not_required"
+                ? "غير مطلوبة"
+                : "غير متاحة"}
+        </span>
+      </div>
+      {permission.available && permission.status !== "granted" ? (
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            onClick={onRequest}
+            className="rounded-[10px] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] px-3 py-1.5 text-[9px] font-bold text-white"
+          >
+            طلب الإذن
+          </button>
+          {permission.status === "denied" ? (
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="rounded-[10px] border border-[#d8b16c] bg-white px-3 py-1.5 text-[9px] font-bold text-[#b8893d]"
+            >
+              فتح الإعدادات
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SettingField({ label, value, onChange, placeholder, type = "text" }) {
+  return (
+    <label className="grid gap-1">
+      <span className="text-[10px] font-semibold text-slate-600">{label}</span>
+      <input
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="rounded-[10px] border border-[#eadfca] bg-white px-2.5 py-1.5 text-[10px] text-slate-900 outline-none"
+      />
+    </label>
+  );
+}
+
+function PricingSettingsPanel({ settings, onUpdateSetting }) {
+  return (
+    <div className="grid gap-1.5">
+      <div className="rounded-[14px] border border-[#eadfca] bg-[#fff8ec] px-3 py-2 shadow-[0_10px_22px_rgba(15,23,42,0.05)]">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="text-[10px] font-bold text-slate-900">بيئة التسعير الحالية</p>
+            <p className="mt-0.5 text-[9px] text-slate-500">
+              {settings.country} - {settings.currency} - ربح {settings.profitPercent}%
+            </p>
+          </div>
+          <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-bold text-[#b8893d]">
+            نشطة
+          </span>
+        </div>
+      </div>
+
+      <SectionCard title="إعدادات الدولة والتسعير" icon="⚙️">
+        <div className="grid grid-cols-2 gap-2">
+          <SettingField
+            label="الدولة"
+            value={settings.country}
+            onChange={(value) => onUpdateSetting("country", value)}
+            placeholder="السعودية"
+          />
+          <SettingField
+            label="المدينة"
+            value={settings.city}
+            onChange={(value) => onUpdateSetting("city", value)}
+            placeholder="الرياض"
+          />
+          <SettingField
+            label="العملة"
+            value={settings.currency}
+            onChange={(value) => onUpdateSetting("currency", value)}
+            placeholder="SAR"
+          />
+          <SettingField
+            label="عامل الموقع"
+            type="number"
+            value={settings.locationFactor}
+            onChange={(value) => onUpdateSetting("locationFactor", value)}
+            placeholder="1"
+          />
+        </div>
+      </SectionCard>
+
+      <SectionCard title="نسب التسعير" icon="📈">
+        <div className="grid grid-cols-3 gap-2">
+          <SettingField
+            label="الربح %"
+            type="number"
+            value={settings.profitPercent}
+            onChange={(value) => onUpdateSetting("profitPercent", value)}
+            placeholder="15"
+          />
+          <SettingField
+            label="المصاريف %"
+            type="number"
+            value={settings.overheadPercent}
+            onChange={(value) => onUpdateSetting("overheadPercent", value)}
+            placeholder="6"
+          />
+          <SettingField
+            label="الضريبة %"
+            type="number"
+            value={settings.taxPercent}
+            onChange={(value) => onUpdateSetting("taxPercent", value)}
+            placeholder="15"
+          />
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+function AccountPanel({
+  settings,
+  authMode,
+  onLogout,
+  onUpdateSetting,
+  onSettingsAction,
+  systemBridge,
+  savedAnalyses,
+  rfqRequests,
+  onOpenAuthScreen,
+  sessionMeta,
+}) {
   const text = getAppText(settings.language);
   const isGuest = authMode === "guest";
   const isPrimaryAdmin =
@@ -112,16 +280,16 @@ function AccountPanel({ settings, authMode, onLogout, onUpdateSetting }) {
 
   return (
     <div className="grid gap-1.5">
-      <div className="rounded-[14px] border border-white/10 bg-[linear-gradient(180deg,#182e56_0%,#10213e_100%)] px-3 py-1 text-white shadow-[0_14px_26px_rgba(9,18,42,0.18)]">
+      <div className="rounded-[14px] border border-white/10 bg-[linear-gradient(180deg,#182e56_0%,#10213e_100%)] px-3 py-1 text-white shadow-[0_12px_22px_rgba(9,18,42,0.15)]">
         <div className="flex items-center gap-1.5">
-          <div className="grid h-6 w-6 place-items-center rounded-full border border-white/10 bg-white/20 text-[11px]">
+          <div className="grid h-4.5 w-4.5 place-items-center rounded-full border border-white/10 bg-white/20 text-[9px]">
             👤
           </div>
           <div className="min-w-0">
-            <h3 className="truncate text-[11px] font-bold leading-4">
+            <h3 className="truncate text-[10px] font-bold leading-4">
               {isGuest ? text.settings.guest : settings.userName}
             </h3>
-            <p className="mt-0.5 text-[8px] text-slate-200">
+            <p className="text-[8px] leading-3 text-slate-200">
               {isGuest ? text.settings.browseMode : settings.userEmail}
             </p>
           </div>
@@ -147,6 +315,57 @@ function AccountPanel({ settings, authMode, onLogout, onUpdateSetting }) {
         </div>
       </SectionCard>
 
+      <SectionCard title={text.settings.sessionStatus} icon="🔐">
+        <div className="grid gap-2">
+          <div className="rounded-[12px] border border-[#f0e6d5] bg-[#fff8ec] px-3 py-2">
+            <p className="text-[11px] font-bold text-slate-900">
+              {isGuest ? text.settings.guestSession : `${text.settings.signedInAs} ${settings.userName}`}
+            </p>
+            <p className="mt-1 text-[9px] leading-4 text-slate-500">
+              {isGuest
+                ? text.settings.guestSessionBody
+                : `${settings.userEmail} ${sessionMeta?.lastLoginAt ? `- ${text.settings.signedInAt} ${sessionMeta.lastLoginAt}` : ""}`}
+            </p>
+          </div>
+
+          {isGuest ? (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => onOpenAuthScreen?.("login")}
+                className="rounded-[12px] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] px-3 py-2 text-[10px] font-bold text-white"
+              >
+                {text.settings.loginNow}
+              </button>
+              <button
+                type="button"
+                onClick={() => onOpenAuthScreen?.("register")}
+                className="rounded-[12px] border border-[#d8b16c] bg-white px-3 py-2 text-[10px] font-bold text-[#b8893d]"
+              >
+                {text.settings.createAccountNow}
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => onOpenAuthScreen?.("login")}
+                className="rounded-[12px] border border-[#d8b16c] bg-white px-3 py-2 text-[10px] font-bold text-[#b8893d]"
+              >
+                {text.settings.switchAccount}
+              </button>
+              <button
+                type="button"
+                onClick={onLogout}
+                className="rounded-[12px] border border-red-200 bg-white px-3 py-2 text-[10px] font-bold text-red-600"
+              >
+                {text.settings.logout}
+              </button>
+            </div>
+          )}
+        </div>
+      </SectionCard>
+
       <div className="grid gap-1">
         {(isGuest ? guestItems : utilityItems).map((item) => (
           <UtilityButton
@@ -154,10 +373,46 @@ function AccountPanel({ settings, authMode, onLogout, onUpdateSetting }) {
             title={item.title}
             subtitle={item.subtitle}
             active={false}
-            onClick={() => {}}
+            onClick={() => onSettingsAction?.(item.id)}
           />
         ))}
       </div>
+
+      <SectionCard title="صلاحيات الهاتف والتكامل" icon="📱">
+        <div className="grid gap-2">
+          {Object.values(systemBridge.permissions || {}).map((permission) => (
+            <PermissionBadge
+              key={permission.key}
+              permission={permission}
+              onRequest={() => systemBridge.requestNotificationsPermission?.()}
+              onOpenSettings={() => systemBridge.openAppSettings?.()}
+            />
+          ))}
+          <div className="rounded-[12px] border border-[#f0e6d5] bg-[#fffdfa] px-3 py-2 text-[9px] leading-4 text-slate-600">
+            <p className="font-bold text-slate-900">
+              {systemBridge.isAndroid ? "بيئة Android متصلة" : "وضع الويب / المعاينة"}
+            </p>
+            <p className="mt-1">
+              {systemBridge.isAndroid
+                ? `الحزمة: ${systemBridge.platformInfo.packageName} - الإصدار: ${systemBridge.platformInfo.appVersion}`
+                : "يمكن معاينة الواجهة هنا، بينما صلاحيات النظام الكاملة تظهر وتُطلب من داخل تطبيق Android."}
+            </p>
+          </div>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="حالة البيانات" icon="📊">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-[12px] border border-[#f0e6d5] bg-white px-3 py-2 text-center">
+            <p className="text-[9px] text-slate-500">تحليلات محفوظة</p>
+            <p className="mt-1 text-[12px] font-bold text-slate-900">{savedAnalyses.length}</p>
+          </div>
+          <div className="rounded-[12px] border border-[#f0e6d5] bg-white px-3 py-2 text-center">
+            <p className="text-[9px] text-slate-500">طلبات عروض سعر</p>
+            <p className="mt-1 text-[12px] font-bold text-slate-900">{rfqRequests.length}</p>
+          </div>
+        </div>
+      </SectionCard>
 
       {isPrimaryAdmin ? (
         <SectionCard title={text.settings.adminTitle} icon="🛡️">
@@ -185,16 +440,6 @@ function AccountPanel({ settings, authMode, onLogout, onUpdateSetting }) {
         </SectionCard>
       ) : null}
 
-      {!isGuest ? (
-        <button
-          type="button"
-          onClick={onLogout}
-          className="rounded-[14px] border border-red-200 bg-white px-3 py-1.5 text-[10px] font-bold text-red-600 shadow-[0_10px_20px_rgba(15,23,42,0.06)]"
-        >
-          {text.settings.logout}
-        </button>
-      ) : null}
-
       <div className="rounded-[16px] border border-[#eadfca] bg-[#fff8ec] px-3 py-1.5 text-[9px] leading-5 text-slate-600">
         <div className="flex items-center justify-between gap-2">
           <div>
@@ -215,15 +460,66 @@ export default function SettingsPanel({
   authMode,
   onLogout,
   onUpdateSetting,
+  onSettingsAction,
+  systemBridge,
+  savedAnalyses,
+  rfqRequests,
+  navigationBridge,
+  onOpenAuthScreen,
+  sessionMeta,
 }) {
+  const settingsNavigation = useBackStack({
+    initialEntry: { section: "pricing" },
+    registerBackHandler: navigationBridge?.registerBackHandler,
+    pushHistoryEntry: navigationBridge?.pushHistoryEntry,
+  });
+  const activeView = settingsNavigation.currentEntry.section;
+
   return (
     <div className="grid gap-2">
-      <AccountPanel
-        settings={settings}
-        authMode={authMode}
-        onLogout={onLogout}
-        onUpdateSetting={onUpdateSetting}
-      />
+      {authMode !== "guest" ? (
+        <button
+          type="button"
+          onClick={onLogout}
+          className="w-full rounded-[14px] border border-red-200 bg-white px-3 py-2 text-[11px] font-bold text-red-600 shadow-[0_10px_20px_rgba(15,23,42,0.06)]"
+        >
+          {getAppText(settings.language).settings.logout}
+        </button>
+      ) : null}
+
+      <div className="self-start min-w-[calc(100%-4px)] rounded-[10px] bg-[#f7f1e6] p-[2px] shadow-[0_6px_14px_rgba(15,23,42,0.04)]">
+        <div className="flex gap-1">
+          <SwitchPill
+            active={activeView === "pricing"}
+            onClick={() => settingsNavigation.navigate({ section: "pricing" })}
+          >
+            التسعير
+          </SwitchPill>
+          <SwitchPill
+            active={activeView === "account"}
+            onClick={() => settingsNavigation.navigate({ section: "account" })}
+          >
+            الحساب
+          </SwitchPill>
+        </div>
+      </div>
+
+      {activeView === "pricing" ? (
+        <PricingSettingsPanel settings={settings} onUpdateSetting={onUpdateSetting} />
+      ) : (
+        <AccountPanel
+          settings={settings}
+          authMode={authMode}
+          onLogout={onLogout}
+          onUpdateSetting={onUpdateSetting}
+          onSettingsAction={onSettingsAction}
+          systemBridge={systemBridge}
+          savedAnalyses={savedAnalyses}
+          rfqRequests={rfqRequests}
+          onOpenAuthScreen={onOpenAuthScreen}
+          sessionMeta={sessionMeta}
+        />
+      )}
     </div>
   );
 }

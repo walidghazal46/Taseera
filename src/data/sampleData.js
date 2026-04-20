@@ -14,7 +14,7 @@ export const sampleSettings = {
   userName: "أحمد العتيبي",
   userEmail: "walidghazal46@gmail.com",
   appName: "Taseera",
-  appVersion: "1.0.0",
+  appVersion: "2",
 };
 
 export const resourcesDatabase = [

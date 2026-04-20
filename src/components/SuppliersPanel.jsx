@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import Modal from "./Modal";
+import useBackStack from "../hooks/useBackStack";
 
 function Stars({ rating }) {
   const filled = Math.round(rating);
@@ -27,8 +28,14 @@ function InputField({ label, value, onChange, placeholder }) {
   );
 }
 
-export default function SuppliersPanel({ suppliers, authMode, onAddSupplier }) {
-  const [activeSection, setActiveSection] = useState("directory");
+export default function SuppliersPanel({
+  suppliers,
+  authMode,
+  onAddSupplier,
+  onContactSupplier,
+  onCreateRfq,
+  navigationBridge,
+}) {
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [directoryPage, setDirectoryPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
@@ -40,7 +47,14 @@ export default function SuppliersPanel({ suppliers, authMode, onAddSupplier }) {
     phone: "",
     email: "",
     contactPerson: "",
+    website: "",
   });
+  const suppliersNavigation = useBackStack({
+    initialEntry: { section: "directory" },
+    registerBackHandler: navigationBridge?.registerBackHandler,
+    pushHistoryEntry: navigationBridge?.pushHistoryEntry,
+  });
+  const activeSection = suppliersNavigation.currentEntry.section;
 
   const submitSupplier = (event) => {
     event.preventDefault();
@@ -56,8 +70,9 @@ export default function SuppliersPanel({ suppliers, authMode, onAddSupplier }) {
       phone: "",
       email: "",
       contactPerson: "",
+      website: "",
     });
-    setActiveSection("directory");
+    suppliersNavigation.reset({ section: "directory" });
   };
 
   const groupOptions = useMemo(() => {
@@ -117,7 +132,7 @@ export default function SuppliersPanel({ suppliers, authMode, onAddSupplier }) {
 
   return (
     <div className="grid h-full grid-rows-[auto_1fr] gap-2 overflow-hidden">
-      <div className="rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,#1a2f56_0%,#132443_100%)] p-3 shadow-[0_20px_40px_rgba(9,18,42,0.28)]">
+      <div className="rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,#1a2f56_0%,#132443_100%)] p-2.5 shadow-[0_20px_40px_rgba(9,18,42,0.28)]">
         <div className="flex gap-1.5 rounded-[16px] bg-white/10 p-1">
           {[
             { id: "directory", label: "الدليل" },
@@ -126,7 +141,7 @@ export default function SuppliersPanel({ suppliers, authMode, onAddSupplier }) {
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveSection(tab.id)}
+              onClick={() => suppliersNavigation.navigate({ section: tab.id })}
               className={`flex-1 rounded-[12px] px-2 py-1.5 text-[10px] font-bold transition ${
                 activeSection === tab.id ? "bg-[#d8b16c] text-white" : "text-white/75"
               }`}
@@ -138,7 +153,7 @@ export default function SuppliersPanel({ suppliers, authMode, onAddSupplier }) {
       </div>
 
       {activeSection === "directory" ? (
-        <div className="flex min-h-0 flex-col gap-2 overflow-y-auto pr-1 pb-2">
+        <div className="flex min-h-0 flex-col gap-1.5 overflow-y-auto pr-1 pb-2">
           <div className="rounded-[16px] border border-[#eadfca] bg-white px-3 py-2 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
             <div className="flex items-center justify-between gap-2">
               <p className="text-[10px] font-bold text-slate-900">تخصصات الموردين</p>
@@ -146,12 +161,12 @@ export default function SuppliersPanel({ suppliers, authMode, onAddSupplier }) {
                 يظهر الآن {pagedSuppliers.length} من أصل {filteredSuppliers.length}
               </p>
             </div>
-            <div className="mt-2 rounded-[12px] border border-[#eadfca] bg-[#fffdfa] px-2 py-1.5">
+            <div className="mt-2 rounded-[12px] border border-[#eadfca] bg-[#fffdfa] px-2.5 py-2">
               <input
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="ابحث باسم المورد أو تخصصه"
-                className="w-full bg-transparent text-[10px] text-slate-700 placeholder:text-slate-400 outline-none"
+                className="w-full bg-transparent text-[11px] text-slate-700 placeholder:text-slate-400 outline-none"
               />
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5">
@@ -175,7 +190,7 @@ export default function SuppliersPanel({ suppliers, authMode, onAddSupplier }) {
           {pagedSuppliers.map((supplier) => (
             <div
               key={supplier.id}
-              className="rounded-[16px] border border-[#eadfca] bg-white p-1 shadow-[0_10px_20px_rgba(15,23,42,0.06)]"
+              className="rounded-[16px] border border-[#eadfca] bg-white p-2 shadow-[0_10px_20px_rgba(15,23,42,0.06)]"
             >
               <div className="flex items-start gap-1">
                 <div className="grid h-6 w-6 place-items-center rounded-[9px] bg-[linear-gradient(135deg,#1b2f56_0%,#10213e_100%)] text-[11px] font-bold text-[#d8b16c]">
@@ -184,7 +199,7 @@ export default function SuppliersPanel({ suppliers, authMode, onAddSupplier }) {
                 <div className="flex-1">
                   <div className="flex items-start justify-between gap-1.5">
                     <div>
-                      <h3 className="text-[10px] font-bold leading-4 text-slate-900">{supplier.name}</h3>
+                      <h3 className="text-[11px] font-bold leading-4 text-slate-900">{supplier.name}</h3>
                       <p className="mt-0.5 text-[8px] font-semibold leading-3 text-[#b8893d]">
                         {supplier.group}
                       </p>
@@ -206,13 +221,19 @@ export default function SuppliersPanel({ suppliers, authMode, onAddSupplier }) {
                     <button
                       type="button"
                       onClick={() => setSelectedSupplier(supplier)}
-                      className="flex-1 rounded-full border border-[#d8b16c] px-2 py-0.5 text-[8px] font-semibold leading-4 text-[#b8893d]"
+                      className="flex-1 rounded-full border border-[#d8b16c] px-2 py-1 text-[9px] font-semibold leading-4 text-[#b8893d]"
                     >
                       تواصل
                     </button>
                     <button
                       type="button"
-                      className={`flex-1 rounded-full px-2 py-0.5 text-[8px] font-semibold leading-4 ${
+                      onClick={() =>
+                        onCreateRfq?.({
+                          supplier,
+                          source: "supplier-directory",
+                        })
+                      }
+                      className={`flex-1 rounded-full px-2 py-1 text-[9px] font-semibold leading-4 ${
                         authMode === "guest"
                           ? "cursor-not-allowed bg-slate-300 text-white"
                           : "bg-[linear-gradient(135deg,#d8b16c_0%,#b88c45_100%)] text-white"
@@ -326,6 +347,14 @@ export default function SuppliersPanel({ suppliers, authMode, onAddSupplier }) {
             }
             placeholder="اسم المسؤول"
           />
+          <InputField
+            label="الموقع الإلكتروني"
+            value={formState.website}
+            onChange={(event) =>
+              setFormState((current) => ({ ...current, website: event.target.value }))
+            }
+            placeholder="https://company.sa"
+          />
           <button
             type="submit"
             className="rounded-[14px] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] px-3 py-2 text-[11px] font-bold text-white"
@@ -361,6 +390,29 @@ export default function SuppliersPanel({ suppliers, authMode, onAddSupplier }) {
             <div className="rounded-[10px] bg-slate-50 p-2.5">
               <p className="text-[10px] text-slate-500">الموقع الإلكتروني</p>
               <p className="mt-1 text-xs font-semibold text-slate-900">{selectedSupplier.website}</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => onContactSupplier?.(selectedSupplier, "phone")}
+                className="rounded-[10px] border border-[#d8b16c] bg-white px-3 py-2 text-[10px] font-bold text-[#b8893d]"
+              >
+                اتصال
+              </button>
+              <button
+                type="button"
+                onClick={() => onContactSupplier?.(selectedSupplier, "email")}
+                className="rounded-[10px] border border-[#d8b16c] bg-white px-3 py-2 text-[10px] font-bold text-[#b8893d]"
+              >
+                بريد
+              </button>
+              <button
+                type="button"
+                onClick={() => onContactSupplier?.(selectedSupplier, "share")}
+                className="rounded-[10px] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] px-3 py-2 text-[10px] font-bold text-white"
+              >
+                مشاركة
+              </button>
             </div>
           </div>
         </Modal>

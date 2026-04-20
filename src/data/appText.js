@@ -12,8 +12,7 @@ export const APP_TEXT = {
       settings: "الإعدادات",
     },
     login: {
-      hero:
-        "اعرف أسعار بنود مشاريع المقاولات وقارن الأسعار بالسوق بدقة فى تجربة ذكية وسريعة",
+      hero: "اعرف التكاليف - تغلب على السوق",
       login: "تسجيل الدخول",
       register: "إنشاء حساب",
       email: "البريد الإلكتروني أو رقم الجوال",
@@ -108,6 +107,14 @@ export const APP_TEXT = {
         "نحفظ بيانات الاستخدام الأساسية داخل التطبيق لتحسين تجربة التسعير، ولا تتم مشاركة بياناتك مع أي جهة خارجية دون موافقة واضحة منك.",
       rateBody:
         "يمكنك تقييم التطبيق بعد تسجيل الدخول ومشاركة تجربتك لمساعدة الفريق على تحسين الأداء والدقة.",
+      loginNow: "تسجيل الدخول الآن",
+      createAccountNow: "إنشاء حساب",
+      switchAccount: "تبديل الحساب",
+      sessionStatus: "حالة الجلسة",
+      signedInAs: "مسجل الدخول باسم",
+      signedInAt: "آخر دخول",
+      guestSession: "أنت الآن في وضع الضيف",
+      guestSessionBody: "يمكنك تسجيل الدخول أو إنشاء حساب من داخل التطبيق في أي وقت.",
     },
     common: {
       close: "إغلاق",
@@ -122,8 +129,7 @@ export const APP_TEXT = {
       settings: "Settings",
     },
     login: {
-      hero:
-        "Know construction item prices and compare them with market benchmarks in a smart, fast workflow.",
+      hero: "Know Costs - Beat The Market",
       login: "Log In",
       register: "Create Account",
       email: "Email or mobile number",
@@ -218,6 +224,14 @@ export const APP_TEXT = {
         "We keep essential in-app usage data to improve pricing workflows and never share your data externally without clear consent.",
       rateBody:
         "You can rate the application after signing in and leave feedback to improve quality and pricing accuracy.",
+      loginNow: "Log in now",
+      createAccountNow: "Create account",
+      switchAccount: "Switch account",
+      sessionStatus: "Session status",
+      signedInAs: "Signed in as",
+      signedInAt: "Last sign-in",
+      guestSession: "You are currently browsing as a guest",
+      guestSessionBody: "You can log in or create an account from inside the app at any time.",
     },
     common: {
       close: "Close",

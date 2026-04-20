@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { BoxIcon, PricingIcon, TruckIcon, UserIcon } from "./icons";
+import useBackStack from "../hooks/useBackStack";
 import { resourcesDatabase } from "../data/sampleData";
 import { computeItemPricing } from "../data/pricingEngine";
 
@@ -136,9 +137,15 @@ export default function PricingWorkspace({
   selectedPricingItemId,
   onSelectPricingItem,
   settings,
+  company,
+  project,
+  savedAnalyses,
+  rfqRequests,
+  navigationBridge,
+  onSaveAnalysis,
+  onCreateRfq,
 }) {
   const [filter, setFilter] = useState("أعمال إنشائية");
-  const [activeSection, setActiveSection] = useState("items");
   const [itemsView, setItemsView] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [itemsPage, setItemsPage] = useState(1);
@@ -146,6 +153,12 @@ export default function PricingWorkspace({
   const [profit, setProfit] = useState(settings?.profitPercent ?? 15);
   const [resourceOverrides, setResourceOverrides] = useState({});
   const [expandedFormulaId, setExpandedFormulaId] = useState(null);
+  const pricingNavigation = useBackStack({
+    initialEntry: { section: "items" },
+    registerBackHandler: navigationBridge?.registerBackHandler,
+    pushHistoryEntry: navigationBridge?.pushHistoryEntry,
+  });
+  const activeSection = pricingNavigation.currentEntry.section;
 
   const selectedItem = useMemo(
     () => pricingCatalog.find((item) => item.id === selectedPricingItemId) || pricingCatalog[0],
@@ -253,21 +266,21 @@ export default function PricingWorkspace({
   };
 
   return (
-    <div className="grid gap-2 pb-2">
-      <div className="rounded-[20px] bg-[linear-gradient(180deg,#1a2f56_0%,#132443_100%)] p-2.5 shadow-[0_20px_40px_rgba(9,18,42,0.28)]">
+    <div className="grid gap-1.5 pb-2">
+      <div className="rounded-[20px] bg-[linear-gradient(180deg,#1a2f56_0%,#132443_100%)] p-2 shadow-[0_20px_40px_rgba(9,18,42,0.28)]">
         <div className="mb-1.5 flex gap-1 rounded-[14px] bg-white/10 p-1">
-          {[
-            { id: "items", label: "البنود" },
-            { id: "analysis", label: "التحليل" },
-            { id: "market", label: "السوق" },
-          ].map((section) => (
-            <button
-              key={section.id}
-              type="button"
-              onClick={() => setActiveSection(section.id)}
-              className={`flex-1 rounded-[11px] px-2 py-1.5 text-[10px] font-bold transition ${
-                activeSection === section.id ? "bg-[#d8b16c] text-white" : "text-white/75"
-              }`}
+              {[
+                { id: "items", label: "البنود" },
+                { id: "analysis", label: "التحليل" },
+                { id: "market", label: "السوق" },
+              ].map((section) => (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => pricingNavigation.navigate({ section: section.id })}
+                  className={`flex-1 rounded-[11px] px-2 py-1.5 text-[10px] font-bold transition ${
+                    activeSection === section.id ? "bg-[#d8b16c] text-white" : "text-white/75"
+                  }`}
             >
               {section.label}
             </button>
@@ -308,6 +321,16 @@ export default function PricingWorkspace({
               </div>
 
               <div className="rounded-[18px] border border-[#eadfca] bg-white p-2 shadow-[0_14px_30px_rgba(15,23,42,0.08)]">
+                <div className="mb-2 rounded-[14px] bg-[#fff8ec] px-3 py-2 text-[10px] text-slate-700">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-slate-900">{project?.name || "بدون مشروع محدد"}</span>
+                    <span className="text-[#b8893d]">{company?.name || "اختر شركة"}</span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-[9px] text-slate-500">
+                    <span>التحليلات المحفوظة: {savedAnalyses?.length || 0}</span>
+                    <span>طلبات الأسعار: {rfqRequests?.length || 0}</span>
+                  </div>
+                </div>
                 <div className="flex gap-1 rounded-[14px] bg-[#f8f5ee] p-1">
                   {[
                     { id: "all", label: "كل البنود", count: itemViewCounts.all },
@@ -363,30 +386,18 @@ export default function PricingWorkspace({
                       type="button"
                       onClick={() => {
                         onSelectPricingItem(item.id);
-                        setActiveSection("analysis");
+                        pricingNavigation.navigate({ section: "analysis" });
                       }}
-                      className={`mx-auto grid h-[44px] w-[96%] grid-rows-[auto_auto_auto] rounded-[14px] border px-2 py-1 text-right shadow-sm ${
+                      className={`mx-auto flex min-h-[48px] w-[96%] items-center justify-center gap-1.5 rounded-[14px] border px-3 py-1.5 text-center shadow-sm ${
                         item.id === selectedPricingItemId
                           ? "border-[#d8b16c] bg-[#fffaf1]"
                           : "border-[#eadfca] bg-white"
                       }`}
                     >
-                      <div className="flex items-center justify-between gap-1">
-                        <p className="line-clamp-1 text-[10px] font-bold leading-4 text-slate-900">{item.name}</p>
-                        <span className="text-[13px] leading-none">{item.icon}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-[8px] text-slate-500">
-                        <span>{item.marketAverage}</span>
-                        <span>{item.unit}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-[9px] font-semibold leading-none text-[#b8893d]">
-                          {item.code}
-                        </span>
-                        <span className="rounded-full bg-[#d5ab61] px-1.5 py-0.5 text-[8px] font-bold leading-none text-white">
-                          فتح
-                        </span>
-                      </div>
+                      <p className="line-clamp-1 text-[10px] font-bold leading-4 text-slate-900">
+                        {item.name}
+                      </p>
+                      <span className="text-[13px] leading-none">{item.icon}</span>
                     </button>
                   ))}
                 </div>
@@ -430,7 +441,7 @@ export default function PricingWorkspace({
           ) : null}
 
           {(activeSection === "analysis" || activeSection === "market") && (
-            <div className="rounded-[20px] border border-[#dec89a] bg-white p-2.5 shadow-[0_16px_34px_rgba(15,23,42,0.1)]">
+            <div className="rounded-[20px] border border-[#dec89a] bg-white p-2 shadow-[0_16px_34px_rgba(15,23,42,0.1)]">
         <div className="rounded-[16px] bg-[linear-gradient(180deg,#1b2f56_0%,#132443_100%)] px-3 py-2 text-white">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[10px] text-[#d8b16c]">{selectedItem.code}</span>
@@ -442,12 +453,15 @@ export default function PricingWorkspace({
               {selectedItem.source.sourceName} - {selectedItem.source.currency}
             </p>
           ) : null}
+          <p className="mt-1 text-[9px] text-white/70">
+            {project?.name || "بدون مشروع"} - {company?.name || "بدون شركة"}
+          </p>
         </div>
 
         <div className="mt-2 grid gap-2">
           {activeSection === "analysis" ? (
             <>
-          <div className="rounded-[14px] border border-[#eadfca] bg-[#fffdfa] p-1.5">
+          <div className="rounded-[14px] border border-[#eadfca] bg-[#fffdfa] p-2">
             <SectionTitle
               icon={<PricingIcon className="h-3 w-3" />}
               title="مدخلات المشروع"
@@ -459,7 +473,7 @@ export default function PricingWorkspace({
                 <input
                   value={quantity}
                   onChange={(event) => setQuantity(event.target.value)}
-                  className="mt-0.5 w-full border-0 p-0 text-[11px] font-bold text-slate-900 outline-none"
+                  className="mt-0.5 w-full border-0 p-0 text-[12px] font-bold text-slate-900 outline-none"
                 />
               </div>
               <div className="rounded-[10px] bg-white px-2 py-1 shadow-sm">
@@ -473,7 +487,7 @@ export default function PricingWorkspace({
                   <input
                   value={profit}
                   onChange={(event) => setProfit(event.target.value)}
-                  className="w-full border-0 bg-transparent p-0 text-center text-[11px] font-bold text-slate-900 outline-none"
+                  className="w-full border-0 bg-transparent p-0 text-center text-[12px] font-bold text-slate-900 outline-none"
                 />
                 </div>
               </div>
@@ -580,6 +594,14 @@ export default function PricingWorkspace({
           <div className="grid grid-cols-2 gap-1.5">
             <button
               type="button"
+              onClick={() =>
+                onSaveAnalysis?.({
+                  item: selectedItem,
+                  result,
+                  quantity,
+                  profit,
+                })
+              }
               className={`rounded-full px-3 py-1.5 text-[10px] font-bold ${
                 authMode === "guest"
                   ? "cursor-not-allowed border border-[#e8dcc6] bg-slate-100 text-slate-400"
@@ -591,6 +613,12 @@ export default function PricingWorkspace({
             </button>
             <button
               type="button"
+              onClick={() =>
+                onCreateRfq?.({
+                  item: selectedItem,
+                  source: "pricing-workspace",
+                })
+              }
               className={`rounded-full px-3 py-1.5 text-[10px] font-bold ${
                 authMode === "guest"
                   ? "cursor-not-allowed bg-slate-300 text-white"
@@ -667,6 +695,33 @@ export default function PricingWorkspace({
                     </span>
                   </div>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => pricingNavigation.navigate({ section: "analysis" })}
+                  className="rounded-full border border-[#d8b16c] bg-white px-3 py-1.5 text-[10px] font-bold text-[#b8893d]"
+                >
+                  الرجوع إلى التحليل
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onCreateRfq?.({
+                      item: selectedItem,
+                      source: "market-comparison",
+                    })
+                  }
+                  className={`rounded-full px-3 py-1.5 text-[10px] font-bold ${
+                    authMode === "guest"
+                      ? "cursor-not-allowed bg-slate-300 text-white"
+                      : "bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] text-white"
+                  }`}
+                  disabled={authMode === "guest"}
+                >
+                  إنشاء طلب سعر
+                </button>
               </div>
             </>
           )}

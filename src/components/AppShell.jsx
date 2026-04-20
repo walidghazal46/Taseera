@@ -38,7 +38,7 @@ export default function AppShell({
     >
       <div className="mx-auto flex min-h-screen max-w-6xl items-center justify-center">
         <div
-          className={`w-full max-w-[430px] rounded-[38px] border p-3 shadow-[0_30px_90px_rgba(2,6,23,0.55)] ${
+          className={`w-full max-w-[430px] rounded-[38px] border p-2.5 shadow-[0_30px_90px_rgba(2,6,23,0.55)] ${
             isLight
               ? "border-[#d0b27a] bg-[linear-gradient(180deg,#f7f0e3_0%,#ede1ca_100%)]"
               : "border-[#d0b27a] bg-[linear-gradient(180deg,#0b1327_0%,#0f172a_100%)]"
@@ -50,7 +50,7 @@ export default function AppShell({
             }`}
           >
             <div
-              className={`flex items-center justify-between px-4 py-3 ${
+              className={`flex items-center justify-between px-4 py-2.5 ${
                 isLight
                   ? "bg-[linear-gradient(135deg,#173a67_0%,#002D5A_70%,#214b7c_100%)] text-white"
                   : "bg-[linear-gradient(135deg,#13294b_0%,#10213e_60%,#182a48_100%)] text-white"
@@ -60,13 +60,15 @@ export default function AppShell({
                 <p className="text-[11px] uppercase tracking-[0.28em] text-[#d9b36a]">
                   Taseera
                 </p>
-                <p className="mt-1 text-xs font-medium text-slate-200">Construction Pricing Intelligence</p>
+                <p className="mt-0.5 text-[11px] font-medium text-slate-200">
+                  Construction Pricing Intelligence
+                </p>
               </div>
               <div className="h-6 w-24 rounded-full bg-black/40 shadow-inner" />
             </div>
 
             <main
-              className={`h-[calc(100vh-14rem)] min-h-[720px] overflow-y-auto px-3 py-3 ${
+              className={`h-[min(72vh,660px)] min-h-[560px] overflow-y-auto px-3 py-2.5 ${
                 isLight
                   ? "bg-[linear-gradient(180deg,#fffaf1_0%,#fbf5eb_24%,#ffffff_100%)]"
                   : "bg-[linear-gradient(180deg,#f7f2e9_0%,#f4efe7_24%,#fbfbfb_100%)]"
@@ -75,7 +77,7 @@ export default function AppShell({
               {children}
             </main>
 
-            <nav className="grid grid-cols-4 gap-2 border-t border-[#e8dcc6] bg-white px-3 py-2.5">
+            <nav className="grid grid-cols-4 gap-1.5 border-t border-[#e8dcc6] bg-white px-2.5 py-2">
               {localizedItems.map((item) => {
                 const isActive = item.id === activePage;
                 const Icon = item.icon;
@@ -85,7 +87,7 @@ export default function AppShell({
                     key={item.id}
                     type="button"
                     onClick={() => onNavigate(item.id)}
-                    className={`grid place-items-center gap-1 rounded-[14px] px-2 py-1.5 text-center text-[10px] font-medium transition ${
+                    className={`grid min-h-[46px] place-items-center gap-1 rounded-[14px] px-2 py-1.5 text-center text-[10px] font-medium transition ${
                       isActive
                         ? "bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] text-white shadow-lg shadow-slate-950/20"
                         : "text-slate-500 hover:bg-[#f6efe4]"
@@ -96,7 +98,7 @@ export default function AppShell({
                         isActive ? "bg-white/10 text-[#d9b36a]" : "bg-[#f5ede0] text-slate-500"
                       }`}
                     >
-                      <Icon className="h-6 w-6" />
+                      <Icon className="h-5 w-5" />
                     </span>
                     <span>{item.label}</span>
                   </button>

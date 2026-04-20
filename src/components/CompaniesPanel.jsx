@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { FolderIcon, SearchIcon, StarIcon } from "./icons";
+import useBackStack from "../hooks/useBackStack";
 
 function SearchBar({ placeholder, value, onChange }) {
   return (
-    <div className="flex items-center gap-2 rounded-[14px] bg-white/18 px-3 py-2 text-xs text-white/80 shadow-inner">
+    <div className="flex items-center gap-2 rounded-[14px] bg-white/18 px-3 py-2.5 text-[11px] text-white/80 shadow-inner">
       <SearchIcon className="h-3.5 w-3.5" />
       <input
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="w-full bg-transparent text-xs text-white placeholder:text-white/60 outline-none"
+        className="w-full bg-transparent text-[11px] text-white placeholder:text-white/60 outline-none"
       />
     </div>
   );
@@ -192,7 +193,7 @@ function CompanyReviewPage({ company, onBack }) {
 function CompanyCard({ company, selected, onSelectCompany, onShowDetails }) {
   return (
     <div
-      className={`w-full rounded-[18px] border p-2 text-right shadow-[0_14px_30px_rgba(15,23,42,0.08)] transition ${
+      className={`w-full rounded-[18px] border p-2.5 text-right shadow-[0_14px_30px_rgba(15,23,42,0.08)] transition ${
         selected
           ? "border-[#d8b16c] bg-[linear-gradient(180deg,#fffaf1_0%,#fffdfa_100%)]"
           : "border-[#eadfca] bg-[linear-gradient(180deg,#ffffff_0%,#fffdfa_100%)]"
@@ -210,8 +211,8 @@ function CompanyCard({ company, selected, onSelectCompany, onShowDetails }) {
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <h3 className="truncate text-[11px] font-bold text-slate-900">{company.name}</h3>
-                <p className="mt-0.5 text-[9px] font-medium text-[#b8893d]">
+                <h3 className="truncate text-[12px] font-bold text-slate-900">{company.name}</h3>
+                <p className="mt-0.5 text-[10px] font-medium text-[#b8893d]">
                   {company.specialization}
                 </p>
               </div>
@@ -220,7 +221,7 @@ function CompanyCard({ company, selected, onSelectCompany, onShowDetails }) {
               </span>
             </div>
 
-            <p className="mt-0.5 line-clamp-1 text-[9px] leading-4 text-slate-500">
+            <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-slate-500">
               {company.description}
             </p>
           </button>
@@ -277,8 +278,8 @@ export default function CompaniesPanel({
   onSelectProject,
   onAddCompany,
   onAddProject,
+  navigationBridge,
 }) {
-  const [activeSection, setActiveSection] = useState("directory");
   const [query, setQuery] = useState("");
   const [companyForm, setCompanyForm] = useState({
     name: "",
@@ -294,7 +295,13 @@ export default function CompaniesPanel({
     budget: "",
   });
   const [directoryPage, setDirectoryPage] = useState(1);
-  const [detailCompanyId, setDetailCompanyId] = useState(null);
+  const companiesNavigation = useBackStack({
+    initialEntry: { section: "directory", detailCompanyId: null },
+    registerBackHandler: navigationBridge?.registerBackHandler,
+    pushHistoryEntry: navigationBridge?.pushHistoryEntry,
+  });
+  const activeSection = companiesNavigation.currentEntry.section;
+  const detailCompanyId = companiesNavigation.currentEntry.detailCompanyId;
 
   const filteredCompanies = useMemo(() => {
     const normalized = query.trim();
@@ -352,7 +359,11 @@ export default function CompaniesPanel({
   }, [directoryPage, totalDirectoryPages]);
 
   useEffect(() => {
-    setDetailCompanyId(null);
+    if (activeSection === "details") {
+      companiesNavigation.reset({ section: "directory", detailCompanyId: null });
+    }
+    // Search and pagination changes should close the detail view to avoid stale results.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [directoryPage, query]);
 
   const submitCompany = (event) => {
@@ -369,7 +380,7 @@ export default function CompaniesPanel({
       specialization: "",
       headquarters: "",
     });
-    setActiveSection("projects");
+    companiesNavigation.navigate({ section: "projects", detailCompanyId: null });
   };
 
   const handleQueryChange = (event) => {
@@ -393,25 +404,28 @@ export default function CompaniesPanel({
   };
 
   const openDetailPage = (companyId) => {
-    setDetailCompanyId(companyId);
-    setActiveSection("details");
+    companiesNavigation.navigate({ section: "details", detailCompanyId: companyId });
   };
 
   const closeDetailPage = () => {
-    setDetailCompanyId(null);
-    setActiveSection("directory");
+    companiesNavigation.reset({ section: "directory", detailCompanyId: null });
   };
 
   return (
     <div className="grid h-full min-h-0 grid-rows-[auto_1fr] gap-2 overflow-hidden">
       {activeSection !== "details" ? (
-        <div className="rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,#1a2f56_0%,#132443_100%)] p-3 shadow-[0_20px_40px_rgba(9,18,42,0.28)]">
+        <div className="rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,#1a2f56_0%,#132443_100%)] p-2.5 shadow-[0_20px_40px_rgba(9,18,42,0.28)]">
           <div className="flex gap-1.5 rounded-[16px] bg-white/10 p-1">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveSection(tab.id)}
+                onClick={() =>
+                  companiesNavigation.navigate({
+                    section: tab.id,
+                    detailCompanyId: null,
+                  })
+                }
                 className={`flex-1 rounded-[12px] px-2 py-1.5 text-[10px] font-bold transition ${
                   activeSection === tab.id ? "bg-[#d8b16c] text-white" : "text-white/75"
                 }`}
@@ -437,7 +451,7 @@ export default function CompaniesPanel({
           ) : null}
         </div>
       ) : (
-        <div className="rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,#1a2f56_0%,#132443_100%)] p-3 shadow-[0_20px_40px_rgba(9,18,42,0.28)]">
+        <div className="rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,#1a2f56_0%,#132443_100%)] p-2.5 shadow-[0_20px_40px_rgba(9,18,42,0.28)]">
           <div className="flex items-center justify-between gap-2">
             <div>
               <p className="text-[10px] text-[#d8b16c]">تفاصيل الشركة</p>
@@ -455,8 +469,8 @@ export default function CompaniesPanel({
       )}
 
       {activeSection === "directory" ? (
-        <div className="flex min-h-0 flex-col gap-2 overflow-y-auto pr-1 pb-2">
-          <div className="flex items-center justify-between rounded-[14px] border border-[#eadfca] bg-white px-3 py-1.5 text-[10px] shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+        <div className="flex min-h-0 flex-col gap-1.5 overflow-y-auto pr-1 pb-2">
+          <div className="flex items-center justify-between rounded-[14px] border border-[#eadfca] bg-white px-3 py-2 text-[10px] shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
             <p className="text-slate-500">
               يعرض الآن{" "}
               <span className="font-bold text-slate-900">{pagedCompanies.length}</span>{" "}
@@ -519,7 +533,7 @@ export default function CompaniesPanel({
       ) : null}
 
       {activeSection === "projects" ? (
-        <div className="flex flex-col gap-2 overflow-y-auto pr-1">
+        <div className="flex flex-col gap-1.5 overflow-y-auto pr-1">
           {companies.map((entry) => (
             <div
               key={entry.id}
@@ -600,7 +614,7 @@ export default function CompaniesPanel({
       ) : null}
 
       {activeSection === "create" ? (
-        <div className="flex flex-col gap-2 overflow-y-auto pr-1">
+        <div className="flex flex-col gap-1.5 overflow-y-auto pr-1">
           <form
             onSubmit={submitCompany}
             className="grid gap-2 rounded-[18px] border border-[#eadfca] bg-white p-3 shadow-[0_14px_30px_rgba(15,23,42,0.08)]"

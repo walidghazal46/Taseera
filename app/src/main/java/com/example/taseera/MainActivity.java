@@ -1,35 +1,51 @@
-package com.example.taseera;
+package com.taseera.app;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.ActivityNotFoundException;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.ViewGroup;
 import android.webkit.ConsoleMessage;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.splashscreen.SplashScreen;
 import androidx.webkit.WebViewAssetLoader;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "TaseeraWebView";
     private static final String START_URL = "https://appassets.androidplatform.net/assets/web/index.html";
+    private static final int REQUEST_NOTIFICATIONS_PERMISSION = 4102;
 
     private WebView webView;
 
-    @SuppressLint("SetJavaScriptEnabled")
+    @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        SplashScreen.installSplashScreen(this);
         super.onCreate(savedInstanceState);
 
         FrameLayout root = new FrameLayout(this);
@@ -63,6 +79,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setMediaPlaybackRequiresUserGesture(false);
 
         WebView.setWebContentsDebuggingEnabled(true);
+        webView.addJavascriptInterface(new TaseeraBridge(this), "TaseeraAndroid");
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
@@ -96,22 +113,8 @@ public class MainActivity extends AppCompatActivity {
                     return false;
                 }
 
-                Intent browserIntent = new Intent(Intent.ACTION_VIEW, uri);
-                try {
-                    startActivity(browserIntent);
-                } catch (ActivityNotFoundException ignored) {
-                }
+                openIntentSafely(new Intent(Intent.ACTION_VIEW, uri));
                 return true;
-            }
-
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                Log.i(TAG, "Page finished: " + url);
-                view.evaluateJavascript(
-                    "(function(){var root=document.getElementById('root');return JSON.stringify({text:(document.body.innerText||'').slice(0,160),bg:getComputedStyle(document.body).backgroundColor,rootChildren:root?root.children.length:-1,rootHtml:root?root.innerHTML.slice(0,160):'no-root'});})();",
-                    value -> Log.i(TAG, "DOM snapshot: " + value)
-                );
-                super.onPageFinished(view, url);
             }
         });
 
@@ -138,8 +141,104 @@ public class MainActivity extends AppCompatActivity {
             .setTitle("الخروج من التطبيق")
             .setMessage("هل تريد الخروج من التطبيق؟")
             .setNegativeButton("إلغاء", (dialog, which) -> dialog.dismiss())
-            .setPositiveButton("خروج", (dialog, which) -> finish())
+            .setPositiveButton("خروج", (dialog, which) -> finishAffinity())
             .show();
+    }
+
+    private void openIntentSafely(Intent intent) {
+        try {
+            startActivity(intent);
+        } catch (ActivityNotFoundException ignored) {
+            Toast.makeText(this, "تعذر فتح التطبيق المطلوب.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private JSONObject buildPermissionsPayload() throws JSONException {
+        JSONObject payload = new JSONObject();
+        JSONObject notifications = new JSONObject();
+        boolean notificationsAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU;
+        boolean notificationsGranted = !notificationsAvailable
+            || ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED;
+
+        notifications.put("key", "notifications");
+        notifications.put("label", "الإشعارات");
+        notifications.put(
+            "description",
+            "لتنبيهات تحديثات طلبات عروض الأسعار والتنبيهات التشغيلية."
+        );
+        notifications.put("required", false);
+        notifications.put("available", notificationsAvailable);
+        notifications.put("granted", notificationsGranted);
+        notifications.put(
+            "status",
+            !notificationsAvailable
+                ? "not_required"
+                : notificationsGranted ? "granted" : "denied"
+        );
+        payload.put("notifications", notifications);
+
+        return payload;
+    }
+
+    private JSONObject buildCapabilitiesPayload() throws JSONException {
+        JSONObject payload = new JSONObject();
+        payload.put("platform", "android");
+        payload.put("canShare", true);
+        payload.put("canDial", true);
+        payload.put("canEmail", true);
+        payload.put("canOpenExternal", true);
+        payload.put("canOpenSettings", true);
+        payload.put("canRateApp", true);
+        return payload;
+    }
+
+    private JSONObject buildPlatformInfoPayload() throws JSONException {
+        JSONObject payload = new JSONObject();
+        String versionName = "1.0";
+        try {
+            versionName = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (PackageManager.NameNotFoundException ignored) {
+        }
+
+        payload.put("platform", "android");
+        payload.put("packageName", getPackageName());
+        payload.put("appVersion", versionName);
+        payload.put("sdkInt", Build.VERSION.SDK_INT);
+        return payload;
+    }
+
+    private void emitPermissionState() {
+        if (webView == null) {
+            return;
+        }
+
+        try {
+            String payload = buildPermissionsPayload().toString();
+            String escapedPayload = JSONObject.quote(payload);
+            webView.post(() ->
+                webView.evaluateJavascript(
+                    "(function(){var payload=JSON.parse(" + escapedPayload + ");window.dispatchEvent(new CustomEvent('taseera:permissions-changed',{detail:payload}));})();",
+                    null
+                )
+            );
+        } catch (JSONException ignored) {
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(
+        int requestCode,
+        @NonNull String[] permissions,
+        @NonNull int[] grantResults
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == REQUEST_NOTIFICATIONS_PERMISSION) {
+            emitPermissionState();
+        }
     }
 
     @Override
@@ -154,5 +253,128 @@ public class MainActivity extends AppCompatActivity {
             webView.destroy();
         }
         super.onDestroy();
+    }
+
+    private final class TaseeraBridge {
+        private final Context context;
+
+        private TaseeraBridge(Context context) {
+            this.context = context;
+        }
+
+        @JavascriptInterface
+        public String getPermissionsStatus() {
+            try {
+                return buildPermissionsPayload().toString();
+            } catch (JSONException exception) {
+                return "{}";
+            }
+        }
+
+        @JavascriptInterface
+        public String getCapabilities() {
+            try {
+                return buildCapabilitiesPayload().toString();
+            } catch (JSONException exception) {
+                return "{}";
+            }
+        }
+
+        @JavascriptInterface
+        public String getPlatformInfo() {
+            try {
+                return buildPlatformInfoPayload().toString();
+            } catch (JSONException exception) {
+                return "{}";
+            }
+        }
+
+        @JavascriptInterface
+        public void requestNotificationsPermission() {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                emitPermissionState();
+                return;
+            }
+
+            runOnUiThread(() -> ActivityCompat.requestPermissions(
+                MainActivity.this,
+                new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                REQUEST_NOTIFICATIONS_PERMISSION
+            ));
+        }
+
+        @JavascriptInterface
+        public void openAppSettings() {
+            runOnUiThread(() -> openIntentSafely(
+                new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                    .setData(Uri.fromParts("package", getPackageName(), null))
+            ));
+        }
+
+        @JavascriptInterface
+        public void openExternalUrl(String url) {
+            runOnUiThread(() -> openIntentSafely(new Intent(Intent.ACTION_VIEW, Uri.parse(url))));
+        }
+
+        @JavascriptInterface
+        public void openDialer(String phoneNumber) {
+            runOnUiThread(() -> openIntentSafely(
+                new Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + phoneNumber))
+            ));
+        }
+
+        @JavascriptInterface
+        public void openEmail(String email, String subject, String body) {
+            runOnUiThread(() -> {
+                Intent intent = new Intent(Intent.ACTION_SENDTO);
+                intent.setData(Uri.parse("mailto:" + email));
+                intent.putExtra(Intent.EXTRA_SUBJECT, subject);
+                intent.putExtra(Intent.EXTRA_TEXT, body);
+                openIntentSafely(intent);
+            });
+        }
+
+        @JavascriptInterface
+        public void shareText(String title, String text) {
+            runOnUiThread(() -> {
+                Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                shareIntent.setType("text/plain");
+                shareIntent.putExtra(Intent.EXTRA_SUBJECT, title);
+                shareIntent.putExtra(Intent.EXTRA_TEXT, text);
+                startActivity(Intent.createChooser(shareIntent, title));
+            });
+        }
+
+        @JavascriptInterface
+        public void rateApp() {
+            runOnUiThread(() -> {
+                Intent marketIntent = new Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse("market://details?id=" + getPackageName())
+                );
+                try {
+                    startActivity(marketIntent);
+                } catch (ActivityNotFoundException exception) {
+                    openIntentSafely(
+                        new Intent(
+                            Intent.ACTION_VIEW,
+                            Uri.parse(
+                                "https://play.google.com/store/apps/details?id=" + getPackageName()
+                            )
+                        )
+                    );
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void exitApp() {
+            runOnUiThread(MainActivity.this::finishAffinity);
+        }
+
+        @JavascriptInterface
+        public void showToast(String message) {
+            runOnUiThread(() -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show());
+        }
     }
 }

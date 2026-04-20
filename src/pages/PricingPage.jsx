@@ -3,7 +3,7 @@ import PricingWorkspace from "../components/PricingWorkspace";
 
 export default function PricingPage(props) {
   return (
-    <div className="grid min-h-full gap-3">
+    <div className="grid min-h-full gap-2.5">
       <PageHeader
         eyebrow="التسعير"
         title="تحليل وتسعير بنود المقاولات"
