@@ -88,7 +88,7 @@ export default function LoginScreen({
                 />
               </div>
               <p
-                className={`mx-auto mt-2 max-w-[17.5rem] px-2 text-center text-[11px] font-medium leading-5 ${
+                className={`mx-auto mt-2 max-w-[17.5rem] px-2 text-center text-[14px] font-medium leading-5 ${
                   isLight ? "text-[#002D5A]" : "text-white/90"
                 }`}
               >
@@ -106,7 +106,7 @@ export default function LoginScreen({
                     key={item.id}
                     type="button"
                     onClick={() => setMode(item.id)}
-                    className={`rounded-[10px] px-2.5 py-2 text-[10px] font-bold transition ${
+                    className={`rounded-[10px] px-2.5 py-2 text-[13px] font-bold transition ${
                       mode === item.id
                         ? "bg-[linear-gradient(135deg,#0A4C87_0%,#002D5A_100%)] text-white shadow-sm"
                         : "text-slate-600"
@@ -122,14 +122,14 @@ export default function LoginScreen({
                   <input
                     value={formState.fullName}
                     onChange={(event) => updateField("fullName", event.target.value)}
-                    className="w-full rounded-[12px] border border-slate-200 px-3 py-2.5 text-[11px] outline-none"
+                    className="w-full rounded-[12px] border border-slate-200 px-3 py-2.5 text-[14px] outline-none"
                     placeholder={text.login.fullName}
                   />
                 )}
                 <input
                   value={formState.email}
                   onChange={(event) => updateField("email", event.target.value)}
-                  className={`w-full rounded-[12px] border border-slate-200 px-3 py-2.5 text-[11px] outline-none ${
+                  className={`w-full rounded-[12px] border border-slate-200 px-3 py-2.5 text-[14px] outline-none ${
                     mode === "register" ? "mt-3" : ""
                   }`}
                   placeholder={text.login.email}
@@ -138,7 +138,7 @@ export default function LoginScreen({
                   type="password"
                   value={formState.password}
                   onChange={(event) => updateField("password", event.target.value)}
-                  className="mt-2 w-full rounded-[12px] border border-slate-200 px-3 py-2.5 text-[11px] outline-none"
+                  className="mt-2 w-full rounded-[12px] border border-slate-200 px-3 py-2.5 text-[14px] outline-none"
                   placeholder={text.login.password}
                 />
                 {mode === "register" && (
@@ -146,21 +146,21 @@ export default function LoginScreen({
                     type="password"
                     value={formState.confirmPassword}
                     onChange={(event) => updateField("confirmPassword", event.target.value)}
-                    className="mt-2 w-full rounded-[12px] border border-slate-200 px-3 py-2.5 text-[11px] outline-none"
+                    className="mt-2 w-full rounded-[12px] border border-slate-200 px-3 py-2.5 text-[14px] outline-none"
                     placeholder={text.login.confirmPassword}
                   />
                 )}
                 <button
                   type="button"
                   onClick={submit}
-                  className="mt-3 w-full rounded-full bg-[linear-gradient(135deg,#0A4C87_0%,#002D5A_100%)] px-3 py-2.5 text-[11px] font-bold text-white"
+                  className="mt-3 w-full rounded-full bg-[linear-gradient(135deg,#0A4C87_0%,#002D5A_100%)] px-3 py-2.5 text-[14px] font-bold text-white"
                 >
                   {mode === "register" ? text.login.submitRegister : text.login.submitLogin}
                 </button>
                 {error && (
-                  <p className="mt-2 text-center text-[10px] font-semibold text-red-600">{error}</p>
+                  <p className="mt-2 text-center text-[13px] font-semibold text-red-600">{error}</p>
                 )}
-                <p className="mt-2 text-center text-[9px] leading-5 text-slate-500">
+                <p className="mt-2 text-center text-[12px] leading-5 text-slate-500">
                   {mode === "register"
                     ? text.login.registerHint
                     : text.login.loginHint}
@@ -170,18 +170,18 @@ export default function LoginScreen({
               <button
                 type="button"
                 onClick={() => onGuest("guest")}
-                className="w-full rounded-full border border-[#d8b16c] bg-white px-3 py-2.5 text-[11px] font-bold text-[#b8893d]"
+                className="w-full rounded-full border border-[#d8b16c] bg-white px-3 py-2.5 text-[14px] font-bold text-[#b8893d]"
               >
                 {text.login.guest}
               </button>
 
-              <div className="rounded-[14px] bg-[#fff8ec] px-3 py-2 text-[10px] text-slate-600">
+              <div className="rounded-[14px] bg-[#fff8ec] px-3 py-2 text-[13px] text-slate-600">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
                       onClick={() => onChangeLanguage?.("ar")}
-                      className={`rounded-[8px] px-2 py-1 text-[10px] font-bold ${
+                      className={`rounded-[8px] px-2 py-1 text-[13px] font-bold ${
                         language === "ar"
                           ? "bg-[linear-gradient(135deg,#0A4C87_0%,#002D5A_100%)] text-white"
                           : "border border-[#d8b16c] bg-white text-[#b8893d]"
@@ -192,7 +192,7 @@ export default function LoginScreen({
                     <button
                       type="button"
                       onClick={() => onChangeLanguage?.("en")}
-                      className={`rounded-[8px] px-2 py-1 text-[10px] font-bold ${
+                      className={`rounded-[8px] px-2 py-1 text-[13px] font-bold ${
                         language === "en"
                           ? "bg-[linear-gradient(135deg,#0A4C87_0%,#002D5A_100%)] text-white"
                           : "border border-[#d8b16c] bg-white text-[#b8893d]"
