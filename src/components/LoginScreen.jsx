@@ -60,7 +60,7 @@ export default function LoginScreen({
   return (
     <div
       dir={language === "ar" ? "rtl" : "ltr"}
-      className={`flex min-h-screen flex-col ${
+      className={`flex h-[100dvh] max-h-[100dvh] overflow-hidden flex-col ${
         isLight
           ? "bg-[radial-gradient(circle_at_top,#f7efdf_0%,#ecdec0_58%,#d4be94_100%)]"
           : "bg-[radial-gradient(circle_at_top,#0B4A84_0%,#002D5A_52%,#001A35_100%)]"
@@ -71,8 +71,8 @@ export default function LoginScreen({
           isLight ? "bg-[#fffaf1]" : "bg-[#001F3F]"
         }`}
       >
-        <div className="flex flex-1 flex-col overflow-y-auto px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <div className="flex flex-col justify-between gap-6 h-full">
+        <div className="flex flex-1 flex-col overflow-hidden px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <div className="flex flex-col justify-end gap-6 sm:justify-between h-full">
             <div className="pt-3 text-center">
               <div className="mx-auto w-[min(58vw,15rem)] bg-transparent p-0 shadow-none ring-0">
                 <img
@@ -96,7 +96,7 @@ export default function LoginScreen({
               </p>
             </div>
 
-            <div className="grid shrink-0 gap-2 pt-1.5">
+            <div className="grid shrink-0 gap-2 pt-1.5 mb-[1cm] sm:mb-0">
               <div className="grid grid-cols-2 rounded-[14px] bg-[#f4ecdf] p-1">
                 {[
                   { id: "login", label: text.login.login },
