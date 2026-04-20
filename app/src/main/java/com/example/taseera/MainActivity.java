@@ -32,6 +32,16 @@ import androidx.core.content.ContextCompat;
 import androidx.core.splashscreen.SplashScreen;
 import androidx.webkit.WebViewAssetLoader;
 
+import com.google.android.gms.auth.api.signin.GoogleSignIn;
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
+import com.google.android.gms.auth.api.signin.GoogleSignInClient;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
+import com.google.android.gms.common.api.ApiException;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.AuthCredential;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.GoogleAuthProvider;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -39,8 +49,11 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "TaseeraWebView";
     private static final String START_URL = "https://appassets.androidplatform.net/assets/web/index.html";
     private static final int REQUEST_NOTIFICATIONS_PERMISSION = 4102;
+    private static final int REQUEST_GOOGLE_SIGN_IN = 4103;
 
     private WebView webView;
+    private GoogleSignInClient googleSignInClient;
+    private FirebaseAuth firebaseAuth;
 
     @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
     @Override
@@ -62,6 +75,16 @@ public class MainActivity extends AppCompatActivity {
         );
 
         setContentView(root);
+
+        // Initialize Firebase Auth
+        firebaseAuth = FirebaseAuth.getInstance();
+
+        // Initialize Google Sign-In
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(getString(R.string.default_web_client_id))
+            .requestEmail()
+            .build();
+        googleSignInClient = GoogleSignIn.getClient(this, gso);
 
         WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
@@ -242,6 +265,72 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == REQUEST_GOOGLE_SIGN_IN) {
+            Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+            try {
+                GoogleSignInAccount account = task.getResult(ApiException.class);
+                if (account != null && account.getIdToken() != null) {
+                    authenticateWithFirebase(account.getIdToken(), account.getDisplayName(), account.getEmail());
+                }
+            } catch (ApiException e) {
+                Log.w(TAG, "Google sign in failed", e);
+                emitGoogleSignInError("Google sign in failed");
+            }
+        }
+    }
+
+    private void authenticateWithFirebase(String idToken, String displayName, String email) {
+        AuthCredential credential = GoogleAuthProvider.getCredential(idToken, null);
+        firebaseAuth.signInWithCredential(credential)
+            .addOnCompleteListener(this, task -> {
+                if (task.isSuccessful()) {
+                    emitGoogleSignInSuccess(displayName, email);
+                } else {
+                    Log.w(TAG, "signInWithCredential:failure", task.getException());
+                    emitGoogleSignInError("Firebase authentication failed");
+                }
+            });
+    }
+
+    private void emitGoogleSignInSuccess(String displayName, String email) {
+        if (webView == null) {
+            return;
+        }
+
+        try {
+            JSONObject data = new JSONObject();
+            data.put("displayName", displayName != null ? displayName : "");
+            data.put("email", email != null ? email : "");
+            String payload = data.toString();
+            String escapedPayload = JSONObject.quote(payload);
+            webView.post(() ->
+                webView.evaluateJavascript(
+                    "(function(){var payload=JSON.parse(" + escapedPayload + ");window.dispatchEvent(new CustomEvent('taseera:google-signin-success',{detail:payload}));})();",
+                    null
+                )
+            );
+        } catch (JSONException ignored) {
+        }
+    }
+
+    private void emitGoogleSignInError(String error) {
+        if (webView == null) {
+            return;
+        }
+
+        String escapedError = JSONObject.quote(error);
+        webView.post(() ->
+            webView.evaluateJavascript(
+                "(function(){window.dispatchEvent(new CustomEvent('taseera:google-signin-error',{detail:{error:" + escapedError + "}}));})();",
+                null
+            )
+        );
+    }
+
+    @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         webView.saveState(outState);
@@ -375,6 +464,12 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void showToast(String message) {
             runOnUiThread(() -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show());
+        }
+
+        @JavascriptInterface
+        public void signInWithGoogle() {
+            Intent signInIntent = googleSignInClient.getSignInIntent();
+            startActivityForResult(signInIntent, REQUEST_GOOGLE_SIGN_IN);
         }
     }
 }

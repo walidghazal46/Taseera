@@ -103,18 +103,54 @@ export default function LoginScreen({
   const signInWithGoogle = async () => {
     setLoading(true);
     setError("");
-    try {
-      const credential = await signInWithPopup(auth, googleProvider);
-      onLogin("authenticated", {
-        userName: credential.user.displayName || credential.user.email.split("@")[0],
-        userEmail: credential.user.email,
-      });
-    } catch (err) {
-      if (err.code !== "auth/popup-closed-by-user") {
+
+    // Check if running on Android
+    const isAndroid = typeof window !== "undefined" && window.TaseeraAndroid;
+
+    if (isAndroid) {
+      // Android native Google Sign-In
+      try {
+        const handleSuccess = (event) => {
+          window.removeEventListener("taseera:google-signin-success", handleSuccess);
+          window.removeEventListener("taseera:google-signin-error", handleError);
+          setLoading(false);
+          const { displayName, email } = event.detail;
+          onLogin("authenticated", {
+            userName: displayName,
+            userEmail: email,
+          });
+        };
+
+        const handleError = (event) => {
+          window.removeEventListener("taseera:google-signin-success", handleSuccess);
+          window.removeEventListener("taseera:google-signin-error", handleError);
+          setLoading(false);
+          setError(language === "en" ? "Google sign-in failed. Try again." : "فشل تسجيل الدخول بجوجل، حاول مجدداً.");
+        };
+
+        window.addEventListener("taseera:google-signin-success", handleSuccess);
+        window.addEventListener("taseera:google-signin-error", handleError);
+
+        window.TaseeraAndroid.signInWithGoogle();
+      } catch (err) {
+        setLoading(false);
         setError(language === "en" ? "Google sign-in failed. Try again." : "فشل تسجيل الدخول بجوجل، حاول مجدداً.");
       }
-    } finally {
-      setLoading(false);
+    } else {
+      // Web (Firebase Popup)
+      try {
+        const credential = await signInWithPopup(auth, googleProvider);
+        onLogin("authenticated", {
+          userName: credential.user.displayName || credential.user.email.split("@")[0],
+          userEmail: credential.user.email,
+        });
+      } catch (err) {
+        if (err.code !== "auth/popup-closed-by-user") {
+          setError(language === "en" ? "Google sign-in failed. Try again." : "فشل تسجيل الدخول بجوجل، حاول مجدداً.");
+        }
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
