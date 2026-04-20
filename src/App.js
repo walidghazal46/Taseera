@@ -92,6 +92,92 @@ function createRoute(authMode, page = "companies") {
   return { kind: "app", page };
 }
 
+function getSystemText(language = "ar") {
+  return language === "en"
+    ? {
+        consultantCompany: "consulting",
+        contractorCompany: "delivery",
+        companyAdded: (name) => `Added company ${name}.`,
+        projectAdded: (name) => `Added project ${name}.`,
+        supplierAdded: (name) => `Added supplier ${name}.`,
+        supplierInitial: "S",
+        loginRequiredToSave: "Sign-in is required to save the analysis.",
+        chooseCompanyBeforeSave: "Choose a company and project before saving.",
+        analysisSaved: "The analysis was saved and linked to the current project.",
+        loginRequiredForRfq: "Sign-in is required to create an RFQ.",
+        genericRequest: "General request",
+        market: "Market",
+        supplyService: "Supply service",
+        rfqSubject: (name) => `RFQ - ${name}`,
+        rfqGreeting: (contact, itemName) =>
+          `Hello ${contact},%0D%0AWe would like to receive an initial quotation for: ${itemName}.`,
+        rfqShareTitle: "Request for quotation",
+        rfqShareBody: (name) => `A new RFQ was created for ${name}.`,
+        rfqCreated: "The RFQ was created and the proper contact channel was opened.",
+        callOpened: (name) => `Calling ${name}.`,
+        emailInquirySubject: (appName) => `Inquiry from ${appName}`,
+        emailInquiryBody: (contact, category) =>
+          `Hello ${contact},%0D%0AWe would like to get in touch regarding ${category}.`,
+        supplierEmailOpened: (name) => `Opened email for supplier ${name}.`,
+        sharedSupplier: "Supplier details were shared.",
+        shareFailed: "Unable to share supplier details from this device.",
+        contactSubject: (appName) => `Contact from ${appName}`,
+        contactBody: "Hello, I have a question about the application.",
+        contactOpened: "Opened contact via email.",
+        supportSubject: (appName) => `Technical support - ${appName}`,
+        supportBody: "Hello, I need technical help inside the app.",
+        supportOpened: "Opened technical support via email.",
+        appStatus: "Application Status",
+        platform: "Platform",
+        version: "Version",
+        savedAnalyses: "Saved analyses",
+        rfqRequests: "RFQ requests",
+        appStoreOpened: "Opened the rating page or app store.",
+        privacyTitle: "Privacy Policy",
+      }
+    : {
+        consultantCompany: "استشارية",
+        contractorCompany: "تنفيذية",
+        companyAdded: (name) => `تمت إضافة الشركة ${name}.`,
+        projectAdded: (name) => `تمت إضافة المشروع ${name}.`,
+        supplierAdded: (name) => `تمت إضافة المورد ${name}.`,
+        supplierInitial: "م",
+        loginRequiredToSave: "يجب تسجيل الدخول لحفظ التحليل.",
+        chooseCompanyBeforeSave: "اختر شركة ومشروعًا قبل الحفظ.",
+        analysisSaved: "تم حفظ التحليل وربطه بالمشروع الحالي.",
+        loginRequiredForRfq: "تسجيل الدخول مطلوب لإنشاء طلب عرض سعر.",
+        genericRequest: "طلب عام",
+        market: "السوق",
+        supplyService: "خدمة توريد",
+        rfqSubject: (name) => `طلب عرض سعر - ${name}`,
+        rfqGreeting: (contact, itemName) =>
+          `مرحبًا ${contact},%0D%0Aنرغب في استلام عرض سعر مبدئي للبند: ${itemName}.`,
+        rfqShareTitle: "طلب عرض سعر",
+        rfqShareBody: (name) => `تم إنشاء طلب عرض سعر جديد للبند ${name}.`,
+        rfqCreated: "تم إنشاء طلب عرض السعر وفتح قناة التواصل المناسبة.",
+        callOpened: (name) => `تم فتح الاتصال مع ${name}.`,
+        emailInquirySubject: (appName) => `استفسار من تطبيق ${appName}`,
+        emailInquiryBody: (contact, category) =>
+          `مرحبًا ${contact},%0D%0Aنرغب بالتواصل بخصوص ${category}.`,
+        supplierEmailOpened: (name) => `تم فتح البريد الإلكتروني للمورد ${name}.`,
+        sharedSupplier: "تمت مشاركة بيانات المورد.",
+        shareFailed: "تعذر مشاركة بيانات المورد من هذا الجهاز.",
+        contactSubject: (appName) => `تواصل من تطبيق ${appName}`,
+        contactBody: "مرحبًا، لدي استفسار بخصوص التطبيق.",
+        contactOpened: "تم فتح وسيلة التواصل عبر البريد الإلكتروني.",
+        supportSubject: (appName) => `دعم فني - ${appName}`,
+        supportBody: "مرحبًا، أحتاج مساعدة فنية داخل التطبيق.",
+        supportOpened: "تم فتح الدعم الفني عبر البريد الإلكتروني.",
+        appStatus: "حالة التطبيق",
+        platform: "المنصة",
+        version: "الإصدار",
+        savedAnalyses: "التحليلات المحفوظة",
+        rfqRequests: "طلبات عروض الأسعار",
+        appStoreOpened: "تم فتح صفحة التقييم أو المتجر.",
+        privacyTitle: "سياسة الخصوصية",
+      };
+}
+
 function StatusToast({ status }) {
   if (!status) {
     return null;
@@ -118,7 +204,7 @@ function InfoDialog({ dialog, onClose }) {
   }
 
   return (
-    <Modal title={dialog.title} onClose={onClose}>
+    <Modal title={dialog.title} onClose={onClose} closeLabel={dialog.closeLabel || "Close"}>
       <div className="grid gap-3 text-right">
         {dialog.lines?.map((line) => (
           <p key={line} className="text-sm leading-6 text-slate-700">
@@ -189,6 +275,7 @@ export default function App() {
   const pageBackHandlerRef = useRef(() => false);
   const statusTimeoutRef = useRef(null);
   const appText = getAppText(settings.language);
+  const systemText = getSystemText(settings.language);
   const shouldShowLogin = !authMode || authScreenMode !== null || forcedScreen === "login";
 
   const showStatus = useCallback(
@@ -218,13 +305,6 @@ export default function App() {
   const openAuthScreen = useCallback((mode = "login") => {
     setAuthScreenMode(mode);
   }, []);
-
-  const closeAuthScreen = useCallback(() => {
-    if (!authMode && forcedScreen === "login") {
-      return;
-    }
-    setAuthScreenMode(null);
-  }, [authMode, forcedScreen]);
 
   useEffect(() => {
     routeStackRef.current = routeStack;
@@ -370,11 +450,26 @@ export default function App() {
       }));
       window.history.pushState({ source: "taseera-guard" }, "");
       showStatus(
-        mode === "guest" ? "تم الدخول بوضع الضيف." : "تم تسجيل الدخول بنجاح.",
+        mode === "guest"
+          ? settings.language === "en"
+            ? "Guest mode is now active."
+            : "تم الدخول بوضع الضيف."
+          : settings.language === "en"
+            ? "Signed in successfully."
+            : "تم تسجيل الدخول بنجاح.",
         "success"
       );
     },
-    [setActivePage, setAuthMode, setAuthSession, setSettings, settings.userEmail, settings.userName, showStatus]
+    [
+      setActivePage,
+      setAuthMode,
+      setAuthSession,
+      setSettings,
+      settings.language,
+      settings.userEmail,
+      settings.userName,
+      showStatus,
+    ]
   );
 
   const handleLogout = useCallback(() => {
@@ -386,8 +481,11 @@ export default function App() {
     setAuthScreenMode("login");
     setRouteStack([createRoute(null)]);
     window.history.pushState({ source: "taseera-guard" }, "");
-    showStatus("تم تسجيل الخروج من الحساب.", "info");
-  }, [setActivePage, setAuthMode, setAuthSession, showStatus]);
+    showStatus(
+      settings.language === "en" ? "Signed out of the account." : "تم تسجيل الخروج من الحساب.",
+      "info"
+    );
+  }, [setActivePage, setAuthMode, setAuthSession, settings.language, showStatus]);
 
   const confirmExit = useCallback(() => {
     setShowExitPrompt(false);
@@ -443,7 +541,10 @@ export default function App() {
       logo: inferCompanyLogo(companyInput.specialization, companyInput.type),
       specialization: companyInput.specialization.trim(),
       headquarters,
-      description: `شركة ${companyInput.type === "Consultant" ? "استشارية" : "تنفيذية"} متخصصة في ${companyInput.specialization.trim()}.`,
+      description:
+        settings.language === "en"
+          ? `${companyInput.type === "Consultant" ? "Consulting" : "Execution"} company specialized in ${companyInput.specialization.trim()}.`
+          : `شركة ${companyInput.type === "Consultant" ? systemText.consultantCompany : systemText.contractorCompany} متخصصة في ${companyInput.specialization.trim()}.`,
       rating: 4.4,
       projectsCount: 0,
       keyProjects: [],
@@ -453,7 +554,7 @@ export default function App() {
     setCompanies((current) => [...current, newCompany]);
     setSelectedCompanyId(newCompany.id);
     setSelectedProjectId(null);
-    showStatus(`تمت إضافة الشركة ${newCompany.name}.`, "success");
+    showStatus(systemText.companyAdded(newCompany.name), "success");
   };
 
   const addProject = (companyId, projectInput) => {
@@ -483,7 +584,7 @@ export default function App() {
     setSelectedCompanyId(companyId);
     setSelectedProjectId(newProject.id);
     setActivePage("companies");
-    showStatus(`تمت إضافة المشروع ${newProject.name}.`, "success");
+    showStatus(systemText.projectAdded(newProject.name), "success");
   };
 
   const addSupplier = (supplierInput) => {
@@ -500,11 +601,11 @@ export default function App() {
       website: supplierInput.website?.trim() || "",
       rating: 4,
       materials: [supplierInput.category.trim()].filter(Boolean),
-      logo: supplierInput.name.trim().slice(0, 1) || "م",
+      logo: supplierInput.name.trim().slice(0, 1) || systemText.supplierInitial,
     };
 
     setSuppliers((current) => [...current, newSupplier]);
-    showStatus(`تمت إضافة المورد ${newSupplier.name}.`, "success");
+    showStatus(systemText.supplierAdded(newSupplier.name), "success");
   };
 
   const updateSetting = (field, value) => {
@@ -532,12 +633,12 @@ export default function App() {
   const handleSaveAnalysis = useCallback(
     ({ item, result, quantity, profit }) => {
       if (authMode === "guest") {
-        showStatus("يجب تسجيل الدخول لحفظ التحليل.", "warning");
+        showStatus(systemText.loginRequiredToSave, "warning");
         return;
       }
 
       if (!selectedCompany || !selectedProject) {
-        showStatus("اختر شركة ومشروعًا قبل الحفظ.", "warning");
+        showStatus(systemText.chooseCompanyBeforeSave, "warning");
         return;
       }
 
@@ -557,13 +658,14 @@ export default function App() {
       };
 
       setSavedAnalyses((current) => [nextAnalysis, ...current].slice(0, 50));
-      showStatus("تم حفظ التحليل وربطه بالمشروع الحالي.", "success");
+      showStatus(systemText.analysisSaved, "success");
     },
     [
       authMode,
       selectedCompany,
       selectedProject,
       setSavedAnalyses,
+      systemText,
       showStatus,
     ]
   );
@@ -571,7 +673,7 @@ export default function App() {
   const handleCreateRfq = useCallback(
     async ({ item, supplier, source }) => {
       if (authMode === "guest") {
-        showStatus("تسجيل الدخول مطلوب لإنشاء طلب عرض سعر.", "warning");
+        showStatus(systemText.loginRequiredForRfq, "warning");
         return;
       }
 
@@ -580,9 +682,9 @@ export default function App() {
         createdAt: new Date().toISOString(),
         source,
         itemId: item?.id || null,
-        itemName: item?.name || "طلب عام",
+        itemName: item?.name || systemText.genericRequest,
         supplierId: supplier?.id || null,
-        supplierName: supplier?.name || "السوق",
+        supplierName: supplier?.name || systemText.market,
         companyId: selectedCompany?.id || null,
         companyName: selectedCompany?.name || "",
         projectId: selectedProject?.id || null,
@@ -595,19 +697,17 @@ export default function App() {
       if (supplier?.email) {
         bridge.openEmail(
           supplier.email,
-          `طلب عرض سعر - ${item?.name || "خدمة توريد"}`,
-          `مرحبًا ${supplier.contactPerson || supplier.name},%0D%0Aنرغب في استلام عرض سعر مبدئي للبند: ${
-            item?.name || supplier.category
-          }.`
+          systemText.rfqSubject(item?.name || systemText.supplyService),
+          systemText.rfqGreeting(supplier.contactPerson || supplier.name, item?.name || supplier.category)
         );
       } else {
         await bridge.shareText(
-          "طلب عرض سعر",
-          `تم إنشاء طلب عرض سعر جديد للبند ${item?.name || "عام"}`
+          systemText.rfqShareTitle,
+          systemText.rfqShareBody(item?.name || systemText.genericRequest)
         );
       }
 
-      showStatus("تم إنشاء طلب عرض السعر وفتح قناة التواصل المناسبة.", "success");
+      showStatus(systemText.rfqCreated, "success");
     },
     [
       authMode,
@@ -615,6 +715,7 @@ export default function App() {
       selectedCompany,
       selectedProject,
       setRfqRequests,
+      systemText,
       showStatus,
     ]
   );
@@ -623,17 +724,17 @@ export default function App() {
     async (supplier, channel = "phone") => {
       if (channel === "phone" && supplier.phone) {
         bridge.openDialer(supplier.phone);
-        showStatus(`تم فتح الاتصال مع ${supplier.name}.`, "info");
+        showStatus(systemText.callOpened(supplier.name), "info");
         return;
       }
 
       if (channel === "email" && supplier.email) {
         bridge.openEmail(
           supplier.email,
-          `استفسار من تطبيق ${settings.appName}`,
-          `مرحبًا ${supplier.contactPerson || supplier.name},%0D%0Aنرغب بالتواصل بخصوص ${supplier.category}.`
+          systemText.emailInquirySubject(settings.appName),
+          systemText.emailInquiryBody(supplier.contactPerson || supplier.name, supplier.category)
         );
-        showStatus(`تم فتح البريد الإلكتروني للمورد ${supplier.name}.`, "info");
+        showStatus(systemText.supplierEmailOpened(supplier.name), "info");
         return;
       }
 
@@ -643,11 +744,11 @@ export default function App() {
       );
 
       showStatus(
-        shared ? "تمت مشاركة بيانات المورد." : "تعذر مشاركة بيانات المورد من هذا الجهاز.",
+        shared ? systemText.sharedSupplier : systemText.shareFailed,
         shared ? "success" : "warning"
       );
     },
-    [bridge, settings.appName, showStatus]
+    [bridge, settings.appName, showStatus, systemText]
   );
 
   const handleSettingsAction = useCallback(
@@ -655,7 +756,7 @@ export default function App() {
       switch (actionId) {
         case "privacy":
           openDialog({
-            title: settings.language === "en" ? "Privacy Policy" : "سياسة الخصوصية",
+            title: systemText.privacyTitle,
             lines: [
               settings.language === "en"
                 ? "We store only the operational data needed for pricing, suppliers, and project continuity inside the app."
@@ -669,27 +770,27 @@ export default function App() {
         case "contact":
           bridge.openEmail(
             "walidghazal46@gmail.com",
-            `تواصل من تطبيق ${settings.appName}`,
-            "مرحبًا، لدي استفسار بخصوص التطبيق."
+            systemText.contactSubject(settings.appName),
+            systemText.contactBody
           );
-          showStatus("تم فتح وسيلة التواصل عبر البريد الإلكتروني.", "info");
+          showStatus(systemText.contactOpened, "info");
           return;
         case "support":
           bridge.openEmail(
             "walidghazal46@gmail.com",
-            `دعم فني - ${settings.appName}`,
-            "مرحبًا، أحتاج مساعدة فنية داخل التطبيق."
+            systemText.supportSubject(settings.appName),
+            systemText.supportBody
           );
-          showStatus("تم فتح الدعم الفني عبر البريد الإلكتروني.", "info");
+          showStatus(systemText.supportOpened, "info");
           return;
         case "update":
           openDialog({
-            title: settings.language === "en" ? "Application Status" : "حالة التطبيق",
+            title: systemText.appStatus,
             lines: [
-              `المنصة: ${bridge.platformInfo.platform}`,
-              `الإصدار: ${bridge.platformInfo.appVersion || settings.appVersion}`,
-              `التحليلات المحفوظة: ${savedAnalyses.length}`,
-              `طلبات عروض الأسعار: ${rfqRequests.length}`,
+              `${systemText.platform}: ${bridge.platformInfo.platform}`,
+              `${systemText.version}: ${bridge.platformInfo.appVersion || settings.appVersion}`,
+              `${systemText.savedAnalyses}: ${savedAnalyses.length}`,
+              `${systemText.rfqRequests}: ${rfqRequests.length}`,
             ],
             action: bridge.capabilities.canOpenSettings
               ? {
@@ -704,7 +805,7 @@ export default function App() {
           return;
         case "rate":
           bridge.rateApp();
-          showStatus("تم فتح صفحة التقييم أو المتجر.", "info");
+          showStatus(systemText.appStoreOpened, "info");
           return;
         default:
       }
@@ -718,6 +819,7 @@ export default function App() {
       settings.appName,
       settings.appVersion,
       settings.language,
+      systemText,
       showStatus,
     ]
   );
@@ -795,7 +897,11 @@ export default function App() {
             }
           />
           {showExitPrompt ? (
-            <Modal title={settings.language === "en" ? "Confirm Exit" : "تأكيد الخروج"} onClose={() => setShowExitPrompt(false)}>
+            <Modal
+              title={settings.language === "en" ? "Confirm Exit" : "تأكيد الخروج"}
+              onClose={() => setShowExitPrompt(false)}
+              hideCloseButton
+            >
               <div className="grid gap-3 rounded-[16px] border border-red-200 bg-[radial-gradient(circle_at_top,#fff5f5_0%,#fff1f1_55%,#ffe4e6_100%)] p-1 text-right shadow-[0_0_24px_rgba(239,68,68,0.18)]">
                 <p className="text-sm font-semibold text-red-700">
                   {settings.language === "en"
@@ -837,7 +943,11 @@ export default function App() {
             {renderedPage}
           </AppShell>
           {showExitPrompt ? (
-            <Modal title={settings.language === "en" ? "Confirm Exit" : "تأكيد الخروج"} onClose={() => setShowExitPrompt(false)}>
+            <Modal
+              title={settings.language === "en" ? "Confirm Exit" : "تأكيد الخروج"}
+              onClose={() => setShowExitPrompt(false)}
+              hideCloseButton
+            >
               <div className="grid gap-3 text-right">
                 <p className="text-sm text-slate-700">
                   {settings.language === "en"

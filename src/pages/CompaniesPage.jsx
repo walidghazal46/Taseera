@@ -1,13 +1,16 @@
 import CompaniesPanel from "../components/CompaniesPanel";
 import PageHeader from "../components/PageHeader";
+import { getAppText } from "../data/appText";
 
 export default function CompaniesPage(props) {
+  const text = getAppText(props.settings?.language);
+
   return (
-    <div className="grid h-full grid-rows-[auto_1fr] gap-3 overflow-hidden">
+    <div className="grid gap-3 pb-2">
       <PageHeader
-        eyebrow="الشركات"
+        eyebrow={text.pages.companies.eyebrow}
         title=""
-        description="استعرض الشركات والمقاولين، اختر المشروع المناسب للتسعير، وأنشئ شركات أو مشاريع جديدة داخل نفس التجربة."
+        description={text.pages.companies.description}
       />
       <CompaniesPanel {...props} />
     </div>

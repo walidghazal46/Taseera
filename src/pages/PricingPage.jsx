@@ -1,13 +1,16 @@
 import PageHeader from "../components/PageHeader";
 import PricingWorkspace from "../components/PricingWorkspace";
+import { getAppText } from "../data/appText";
 
 export default function PricingPage(props) {
+  const text = getAppText(props.settings?.language);
+
   return (
     <div className="grid min-h-full gap-2.5">
       <PageHeader
-        eyebrow="التسعير"
-        title="تحليل وتسعير بنود المقاولات"
-        description="اختر البند، حلل التكاليف المباشرة وغير المباشرة، أضف الربح، وقارن السعر مع السوق للوصول إلى قرار أسرع وأدق."
+        eyebrow={text.pages.pricing.eyebrow}
+        title=""
+        description={text.pages.pricing.description}
       />
       <PricingWorkspace {...props} />
     </div>

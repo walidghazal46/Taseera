@@ -3,15 +3,143 @@ import { useEffect, useMemo, useState } from "react";
 import { FolderIcon, SearchIcon, StarIcon } from "./icons";
 import useBackStack from "../hooks/useBackStack";
 
+function getCompaniesCopy(language) {
+  return language === "en"
+    ? {
+        contractor: "Contractor",
+        consultant: "Consultant",
+        back: "Back",
+        headquarters: "Headquarters",
+        website: "Website",
+        visitWebsite: "Visit website",
+        unavailable: "Currently unavailable",
+        keyProjects: "Key projects",
+        projectCount: "projects",
+        systemProjects: "Projects in system",
+        noBudget: "No budget",
+        noProjects: "No projects have been added for this company yet.",
+        overallRating: "Overall rating",
+        customerReviews: "Client reviews and experience",
+        reviewCount: "3 reviews",
+        reviewOne: "Pricing was clear and communication stayed fast throughout the project.",
+        reviewTwo: "Execution quality is excellent, but schedule updates should be faster.",
+        reviewThree: "A strong fit for major projects with solid coordination and follow-up.",
+        rating: "Rating",
+        directory: "Directory",
+        projects: "Projects",
+        add: "Add",
+        searchPlaceholder: "Search by company name, specialty, or city",
+        totalCompanies: "Total companies",
+        contractors: "Contractors",
+        consultants: "Consultants",
+        companyDetails: "Company details",
+        currentShowing: "Currently showing",
+        outOf: "out of",
+        remaining: "Remaining",
+        previous: "Previous",
+        next: "Next",
+        page: "Page",
+        company: "Company",
+        selected: "Selected",
+        choose: "Choose",
+        noCompanyProjects: "No projects have been added for this company yet.",
+        addCompany: "Add company",
+        companyName: "Company name",
+        enterCompanyName: "Enter company name",
+        specialization: "Specialization",
+        enterSpecialization: "Roads, MEP, hospitals...",
+        type: "Type",
+        contracting: "Contracting",
+        consulting: "Consulting",
+        country: "Country",
+        mainCities: "Primary cities",
+        citiesPlaceholder: "Riyadh, Jeddah",
+        saveCompany: "Save company",
+        addProject: "Add project",
+        chooseCompanyFirst: "Choose a company first",
+        projectName: "Project name",
+        enterProjectName: "Enter project name",
+        location: "Location",
+        stage: "Stage",
+        pricingStage: "Pricing",
+        budget: "Budget",
+        saveProject: "Save project",
+      }
+    : {
+        contractor: "مقاول",
+        consultant: "استشاري",
+        back: "رجوع",
+        headquarters: "المقرات الرئيسية",
+        website: "الموقع الإلكتروني",
+        visitWebsite: "زيارة الموقع",
+        unavailable: "غير متاح حاليًا",
+        keyProjects: "المشاريع الرئيسية",
+        projectCount: "مشروع",
+        systemProjects: "المشاريع داخل النظام",
+        noBudget: "بدون ميزانية",
+        noProjects: "لا توجد مشاريع مسجلة لهذه الشركة بعد.",
+        overallRating: "التقييم العام",
+        customerReviews: "التقييم وتجارب العملاء",
+        reviewCount: "3 تقييمات",
+        reviewOne: "التسعير كان واضحًا والتواصل مع الشركة سريع طوال المشروع.",
+        reviewTwo: "جودة التنفيذ ممتازة لكن نحتاج سرعة أعلى في تحديث الجداول.",
+        reviewThree: "شركة مناسبة للمشاريع الكبيرة ولديها حضور جيد في التنسيق والمتابعة.",
+        rating: "التقييم",
+        directory: "الدليل",
+        projects: "المشاريع",
+        add: "إضافة",
+        searchPlaceholder: "ابحث باسم الشركة أو التخصص أو المدينة",
+        totalCompanies: "إجمالي الشركات",
+        contractors: "مقاولين",
+        consultants: "استشاريين",
+        companyDetails: "تفاصيل الشركة",
+        currentShowing: "يعرض الآن",
+        outOf: "من أصل",
+        remaining: "المتبقي",
+        previous: "السابق",
+        next: "التالي",
+        page: "صفحة",
+        company: "الشركة",
+        selected: "محدد",
+        choose: "اختيار",
+        noCompanyProjects: "لا توجد مشاريع مضافة لهذه الشركة بعد.",
+        addCompany: "إضافة شركة",
+        companyName: "اسم الشركة",
+        enterCompanyName: "اكتب اسم الشركة",
+        specialization: "التخصص",
+        enterSpecialization: "طرق، MEP، مستشفيات...",
+        type: "النوع",
+        contracting: "مقاولات",
+        consulting: "استشارات",
+        country: "الدولة",
+        mainCities: "المدن الرئيسية",
+        citiesPlaceholder: "الرياض، جدة",
+        saveCompany: "حفظ الشركة",
+        addProject: "إضافة مشروع",
+        chooseCompanyFirst: "اختر شركة أولًا",
+        projectName: "اسم المشروع",
+        enterProjectName: "اكتب اسم المشروع",
+        location: "الموقع",
+        stage: "المرحلة",
+        pricingStage: "تسعير",
+        budget: "الميزانية",
+        saveProject: "حفظ المشروع",
+      };
+}
+
+function translateCompanyType(type, copy) {
+  return type === "Contractor" ? copy.contractor : copy.consultant;
+}
+
 function SearchBar({ placeholder, value, onChange }) {
   return (
-    <div className="flex items-center gap-2 rounded-[14px] bg-white/18 px-3 py-2.5 text-[11px] text-white/80 shadow-inner">
-      <SearchIcon className="h-3.5 w-3.5" />
+    <div className="flex items-center gap-2 rounded-[14px] bg-white/18 px-2.5 py-2 text-[10px] text-white/80 shadow-inner min-[390px]:px-3 min-[390px]:py-2.5 min-[390px]:text-[11px]">
+      <SearchIcon className="h-3 w-3 min-[390px]:h-3.5 min-[390px]:w-3.5" />
       <input
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="w-full bg-transparent text-[11px] text-white placeholder:text-white/60 outline-none"
+        className="w-full bg-transparent text-[10px] text-white placeholder:text-white/60 outline-none min-[390px]:text-[11px]"
       />
     </div>
   );
@@ -46,16 +174,16 @@ function Field({ label, value, onChange, placeholder }) {
 
 function StatCard({ label, value }) {
   return (
-    <div className="rounded-[16px] border border-[#eadfca] bg-white px-3 py-1.5 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+    <div className="rounded-[16px] border border-[#eadfca] bg-white px-2.5 py-1.5 shadow-[0_10px_24px_rgba(15,23,42,0.05)] min-[390px]:px-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[9px] text-slate-500">{label}</p>
-        <p className="text-[12px] font-bold text-slate-900">{value}</p>
+        <p className="text-[8px] text-slate-500 min-[390px]:text-[9px]">{label}</p>
+        <p className="text-[11px] font-bold text-slate-900 min-[390px]:text-[12px]">{value}</p>
       </div>
     </div>
   );
 }
 
-function CompanyReviewPage({ company, onBack }) {
+function CompanyReviewPage({ company, onBack, copy }) {
   if (!company) {
     return null;
   }
@@ -71,7 +199,7 @@ function CompanyReviewPage({ company, onBack }) {
             <div className="flex flex-wrap items-center gap-1.5">
               <h3 className="text-[13px] font-bold text-slate-900">{company.name}</h3>
               <span className="rounded-full bg-[#f6efe4] px-2 py-0.5 text-[9px] font-semibold text-[#b8893d]">
-                {company.type === "Contractor" ? "مقاول" : "استشاري"}
+                {translateCompanyType(company.type, copy)}
               </span>
             </div>
             <p className="mt-0.5 text-[11px] font-medium text-[#b8893d]">{company.specialization}</p>
@@ -83,19 +211,19 @@ function CompanyReviewPage({ company, onBack }) {
           onClick={onBack}
           className="rounded-full border border-[#eadfca] px-2.5 py-1 text-[9px] font-bold text-slate-500"
         >
-          رجوع
+          {copy.back}
         </button>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-3 grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
         <div className="rounded-[14px] border border-[#eadfca] bg-white px-3 py-2">
-          <p className="text-[9px] text-slate-500">المقرات الرئيسية</p>
+          <p className="text-[9px] text-slate-500">{copy.headquarters}</p>
           <p className="mt-1 text-[11px] font-semibold text-slate-900">
             {(company.headquarters || []).join(" - ")}
           </p>
         </div>
         <div className="rounded-[14px] border border-[#eadfca] bg-white px-3 py-2">
-          <p className="text-[9px] text-slate-500">الموقع الإلكتروني</p>
+          <p className="text-[9px] text-slate-500">{copy.website}</p>
           {company.website ? (
             <a
               href={company.website}
@@ -103,18 +231,18 @@ function CompanyReviewPage({ company, onBack }) {
               rel="noreferrer"
               className="mt-1 block text-[11px] font-semibold text-[#b8893d] underline"
             >
-              زيارة الموقع
+              {copy.visitWebsite}
             </a>
           ) : (
-            <p className="mt-1 text-[11px] font-semibold text-slate-400">غير متاح حاليًا</p>
+            <p className="mt-1 text-[11px] font-semibold text-slate-400">{copy.unavailable}</p>
           )}
         </div>
       </div>
 
       <div className="mt-2 rounded-[14px] border border-[#eadfca] bg-white px-3 py-2">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] font-bold text-slate-900">المشاريع الرئيسية</p>
-          <p className="text-[9px] text-slate-500">{company.projectsCount} مشروع</p>
+          <p className="text-[10px] font-bold text-slate-900">{copy.keyProjects}</p>
+          <p className="text-[9px] text-slate-500">{company.projectsCount} {copy.projectCount}</p>
         </div>
         <div className="mt-2 flex flex-wrap gap-1">
           {(company.keyProjects || []).map((project) => (
@@ -129,7 +257,7 @@ function CompanyReviewPage({ company, onBack }) {
       </div>
 
       <div className="mt-2 rounded-[14px] border border-[#eadfca] bg-white px-3 py-2">
-        <p className="text-[10px] font-bold text-slate-900">المشاريع داخل النظام</p>
+        <p className="text-[10px] font-bold text-slate-900">{copy.systemProjects}</p>
         <div className="mt-2 grid gap-1.5">
           {company.projects?.length ? (
             company.projects.map((project) => (
@@ -144,13 +272,13 @@ function CompanyReviewPage({ company, onBack }) {
                   </p>
                 </div>
                 <span className="rounded-full bg-white px-2 py-0.5 text-[9px] text-[#b8893d]">
-                  {project.budget || "بدون ميزانية"}
+                  {project.budget || copy.noBudget}
                 </span>
               </div>
             ))
           ) : (
             <div className="rounded-[12px] bg-[#faf6ef] px-2.5 py-2 text-[9px] text-slate-500">
-              لا توجد مشاريع مسجلة لهذه الشركة بعد.
+              {copy.noProjects}
             </div>
           )}
         </div>
@@ -158,7 +286,7 @@ function CompanyReviewPage({ company, onBack }) {
 
       <div className="mt-2 rounded-[14px] border border-[#eadfca] bg-white px-3 py-2">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] font-bold text-slate-900">التقييم العام</p>
+          <p className="text-[10px] font-bold text-slate-900">{copy.overallRating}</p>
           <span className="text-[11px] font-bold text-[#b8893d]">{company.rating}/5</span>
         </div>
         <div className="mt-1 rounded-[12px] bg-[#f8f5ee] px-2.5 py-1.5">
@@ -168,14 +296,14 @@ function CompanyReviewPage({ company, onBack }) {
 
       <div className="mt-2 rounded-[14px] border border-[#eadfca] bg-white px-3 py-2">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-[10px] font-bold text-slate-900">التقييم وتجارب العملاء</p>
-          <span className="text-[9px] text-slate-500">3 تقييمات</span>
+          <p className="text-[10px] font-bold text-slate-900">{copy.customerReviews}</p>
+          <span className="text-[9px] text-slate-500">{copy.reviewCount}</span>
         </div>
         <div className="mt-2 grid gap-1.5">
           {[
-            "التسعير كان واضحًا والتواصل مع الشركة سريع طوال المشروع.",
-            "جودة التنفيذ ممتازة لكن نحتاج سرعة أعلى في تحديث الجداول.",
-            "شركة مناسبة للمشاريع الكبيرة ولديها حضور جيد في التنسيق والمتابعة.",
+            copy.reviewOne,
+            copy.reviewTwo,
+            copy.reviewThree,
           ].map((review, index) => (
             <div
               key={`${company.id}-review-${index}`}
@@ -190,7 +318,7 @@ function CompanyReviewPage({ company, onBack }) {
   );
 }
 
-function CompanyCard({ company, selected, onSelectCompany, onShowDetails }) {
+function CompanyCard({ company, selected, onSelectCompany, onShowDetails, copy }) {
   return (
     <div
       className={`w-full rounded-[18px] border p-2.5 text-right shadow-[0_14px_30px_rgba(15,23,42,0.08)] transition ${
@@ -217,7 +345,7 @@ function CompanyCard({ company, selected, onSelectCompany, onShowDetails }) {
                 </p>
               </div>
               <span className="shrink-0 rounded-full border border-[#f0dfbf] bg-[#fcf6ea] px-2 py-0.5 text-[9px] text-slate-600">
-                {company.type === "Contractor" ? "مقاول" : "استشاري"}
+                {translateCompanyType(company.type, copy)}
               </span>
             </div>
 
@@ -251,7 +379,7 @@ function CompanyCard({ company, selected, onSelectCompany, onShowDetails }) {
                 <Stars rating={company.rating} />
                 <p className="mt-0.5 flex items-center gap-1 text-[9px] text-slate-500">
                   <FolderIcon className="h-3 w-3" />
-                  <span>{company.projectsCount} مشروع</span>
+                  <span>{company.projectsCount} {copy.projectCount}</span>
                 </p>
               </div>
             </div>
@@ -260,7 +388,7 @@ function CompanyCard({ company, selected, onSelectCompany, onShowDetails }) {
               onClick={() => onShowDetails(company.id)}
               className="rounded-full border border-[#d8b16c] bg-white px-2.5 py-0.5 text-[9px] font-semibold text-[#b8893d] shadow-sm"
             >
-              التقييم
+              {copy.rating}
             </button>
           </div>
         </div>
@@ -279,19 +407,21 @@ export default function CompaniesPanel({
   onAddCompany,
   onAddProject,
   navigationBridge,
+  settings,
 }) {
+  const copy = getCompaniesCopy(settings?.language);
   const [query, setQuery] = useState("");
   const [companyForm, setCompanyForm] = useState({
     name: "",
     type: "Contractor",
-    country: "السعودية",
+    country: settings?.language === "en" ? "Saudi Arabia" : "السعودية",
     specialization: "",
     headquarters: "",
   });
   const [projectForm, setProjectForm] = useState({
     name: "",
     location: "",
-    stage: "تسعير",
+    stage: copy.pricingStage,
     budget: "",
   });
   const [directoryPage, setDirectoryPage] = useState(1);
@@ -347,9 +477,9 @@ export default function CompaniesPanel({
   );
 
   const tabs = [
-    { id: "directory", label: "الدليل" },
-    { id: "projects", label: "المشاريع" },
-    { id: "create", label: "إضافة" },
+    { id: "directory", label: copy.directory },
+    { id: "projects", label: copy.projects },
+    { id: "create", label: copy.add },
   ];
 
   useEffect(() => {
@@ -376,7 +506,7 @@ export default function CompaniesPanel({
     setCompanyForm({
       name: "",
       type: "Contractor",
-      country: "السعودية",
+      country: settings?.language === "en" ? "Saudi Arabia" : "السعودية",
       specialization: "",
       headquarters: "",
     });
@@ -398,7 +528,7 @@ export default function CompaniesPanel({
     setProjectForm({
       name: "",
       location: "",
-      stage: "تسعير",
+      stage: copy.pricingStage,
       budget: "",
     });
   };
@@ -412,7 +542,7 @@ export default function CompaniesPanel({
   };
 
   return (
-    <div className="grid h-full min-h-0 grid-rows-[auto_1fr] gap-2 overflow-hidden">
+    <div className="grid gap-2">
       {activeSection !== "details" ? (
         <div className="rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,#1a2f56_0%,#132443_100%)] p-2.5 shadow-[0_20px_40px_rgba(9,18,42,0.28)]">
           <div className="flex gap-1.5 rounded-[16px] bg-white/10 p-1">
@@ -438,14 +568,14 @@ export default function CompaniesPanel({
           {activeSection === "directory" ? (
             <div className="mt-2 grid gap-2">
               <SearchBar
-                placeholder="ابحث باسم الشركة أو التخصص أو المدينة"
+                placeholder={copy.searchPlaceholder}
                 value={query}
                 onChange={handleQueryChange}
               />
-              <div className="grid grid-cols-3 gap-2">
-                <StatCard label="إجمالي الشركات" value={summary.total} />
-                <StatCard label="مقاولين" value={summary.contractors} />
-                <StatCard label="استشاريين" value={summary.consultants} />
+              <div className="grid grid-cols-3 gap-1.5 min-[390px]:gap-2">
+                <StatCard label={copy.totalCompanies} value={summary.total} />
+                <StatCard label={copy.contractors} value={summary.contractors} />
+                <StatCard label={copy.consultants} value={summary.consultants} />
               </div>
             </div>
           ) : null}
@@ -454,15 +584,15 @@ export default function CompaniesPanel({
         <div className="rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,#1a2f56_0%,#132443_100%)] p-2.5 shadow-[0_20px_40px_rgba(9,18,42,0.28)]">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <p className="text-[10px] text-[#d8b16c]">تفاصيل الشركة</p>
-              <h3 className="mt-1 text-[15px] font-bold text-white">التقييم وتجارب العملاء</h3>
+              <p className="text-[10px] text-[#d8b16c]">{copy.companyDetails}</p>
+              <h3 className="mt-1 text-[15px] font-bold text-white">{copy.customerReviews}</h3>
             </div>
             <button
               type="button"
               onClick={closeDetailPage}
               className="rounded-full border border-white/20 px-3 py-1 text-[10px] font-bold text-white/85"
             >
-              رجوع
+              {copy.back}
             </button>
           </div>
         </div>
@@ -472,19 +602,20 @@ export default function CompaniesPanel({
         <div className="flex min-h-0 flex-col gap-1.5 overflow-y-auto pr-1 pb-2">
           <div className="flex items-center justify-between rounded-[14px] border border-[#eadfca] bg-white px-3 py-2 text-[10px] shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
             <p className="text-slate-500">
-              يعرض الآن{" "}
+              {copy.currentShowing}{" "}
               <span className="font-bold text-slate-900">{pagedCompanies.length}</span>{" "}
-              من أصل{" "}
+              {copy.outOf}{" "}
               <span className="font-bold text-slate-900">{filteredCompanies.length}</span>
             </p>
             <p className="font-semibold text-[#b8893d]">
-              المتبقي {Math.max(filteredCompanies.length - directoryPage * directoryPageSize, 0)}
+              {copy.remaining} {Math.max(filteredCompanies.length - directoryPage * directoryPageSize, 0)}
             </p>
           </div>
           {pagedCompanies.map((entry) => (
             <CompanyCard
               key={entry.id}
               company={entry}
+              copy={copy}
               selected={selectedCompanyId === entry.id}
               onSelectCompany={onSelectCompany}
               onShowDetails={openDetailPage}
@@ -501,10 +632,10 @@ export default function CompaniesPanel({
                   : "border border-[#d8b16c] bg-white text-[#b8893d]"
               }`}
             >
-              السابق
+              {copy.previous}
             </button>
             <p className="text-[10px] text-slate-500">
-              صفحة {directoryPage} من {totalDirectoryPages}
+              {copy.page} {directoryPage} {copy.outOf} {totalDirectoryPages}
             </p>
             <button
               type="button"
@@ -520,7 +651,7 @@ export default function CompaniesPanel({
                   : "bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] text-white"
               }`}
             >
-              التالي
+              {copy.next}
             </button>
           </div>
         </div>
@@ -528,7 +659,7 @@ export default function CompaniesPanel({
 
       {activeSection === "details" ? (
         <div className="overflow-y-auto pr-1 pb-2">
-          <CompanyReviewPage company={detailCompany} onBack={closeDetailPage} />
+          <CompanyReviewPage company={detailCompany} onBack={closeDetailPage} copy={copy} />
         </div>
       ) : null}
 
@@ -545,7 +676,7 @@ export default function CompaniesPanel({
                 className="flex w-full items-start justify-between gap-2 text-right"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-[9px] text-slate-500">الشركة</p>
+                  <p className="text-[9px] text-slate-500">{copy.company}</p>
                   <h3 className="mt-0.5 text-[13px] font-bold text-slate-900">{entry.name}</h3>
                   <p className="mt-1 text-[10px] text-[#b8893d]">{entry.specialization}</p>
                   <p className="mt-0.5 text-[9px] text-slate-500">
@@ -559,7 +690,7 @@ export default function CompaniesPanel({
                       : "bg-[#f4ecdf] text-[#b8893d]"
                   }`}
                 >
-                  {entry.projects.length} مشروع
+                  {entry.projects.length} {copy.projectCount}
                 </span>
               </button>
 
@@ -595,8 +726,8 @@ export default function CompaniesPanel({
                                 ? "bg-[#d8b16c] text-white"
                                 : "bg-[#fcf6ea] text-[#b8893d]"
                             }`}
-                          >
-                            {isSelected ? "محدد" : "اختيار"}
+                            >
+                            {isSelected ? copy.selected : copy.choose}
                           </span>
                         </div>
                       </button>
@@ -604,7 +735,7 @@ export default function CompaniesPanel({
                   })
                 ) : (
                   <div className="rounded-[14px] border border-dashed border-[#dec89a] bg-[#fffdfa] px-3 py-3 text-center text-[10px] text-slate-500">
-                    لا توجد مشاريع مضافة لهذه الشركة بعد.
+                    {copy.noCompanyProjects}
                   </div>
                 )}
               </div>
@@ -619,26 +750,26 @@ export default function CompaniesPanel({
             onSubmit={submitCompany}
             className="grid gap-2 rounded-[18px] border border-[#eadfca] bg-white p-3 shadow-[0_14px_30px_rgba(15,23,42,0.08)]"
           >
-            <p className="text-[11px] font-bold text-slate-900">إضافة شركة</p>
+            <p className="text-[11px] font-bold text-slate-900">{copy.addCompany}</p>
             <Field
-              label="اسم الشركة"
+              label={copy.companyName}
               value={companyForm.name}
               onChange={(event) =>
                 setCompanyForm((current) => ({ ...current, name: event.target.value }))
               }
-              placeholder="اكتب اسم الشركة"
+              placeholder={copy.enterCompanyName}
             />
             <Field
-              label="التخصص"
+              label={copy.specialization}
               value={companyForm.specialization}
               onChange={(event) =>
                 setCompanyForm((current) => ({ ...current, specialization: event.target.value }))
               }
-              placeholder="طرق، MEP، مستشفيات..."
+              placeholder={copy.enterSpecialization}
             />
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
               <label className="grid gap-1">
-                <span className="text-[10px] font-semibold text-slate-600">النوع</span>
+                <span className="text-[10px] font-semibold text-slate-600">{copy.type}</span>
                 <select
                   value={companyForm.type}
                   onChange={(event) =>
@@ -646,32 +777,32 @@ export default function CompaniesPanel({
                   }
                   className="rounded-[12px] border border-[#eadfca] bg-white px-3 py-2 text-[11px] text-slate-900 outline-none"
                 >
-                  <option value="Contractor">مقاولات</option>
-                  <option value="Consultant">استشارات</option>
+                  <option value="Contractor">{copy.contracting}</option>
+                  <option value="Consultant">{copy.consulting}</option>
                 </select>
               </label>
               <Field
-                label="الدولة"
+                label={copy.country}
                 value={companyForm.country}
                 onChange={(event) =>
                   setCompanyForm((current) => ({ ...current, country: event.target.value }))
                 }
-                placeholder="السعودية"
+                placeholder={settings?.language === "en" ? "Saudi Arabia" : "السعودية"}
               />
             </div>
             <Field
-              label="المدن الرئيسية"
+              label={copy.mainCities}
               value={companyForm.headquarters}
               onChange={(event) =>
                 setCompanyForm((current) => ({ ...current, headquarters: event.target.value }))
               }
-              placeholder="الرياض، جدة"
+              placeholder={copy.citiesPlaceholder}
             />
             <button
               type="submit"
               className="rounded-[14px] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] px-3 py-2 text-[11px] font-bold text-white"
             >
-              حفظ الشركة
+              {copy.saveCompany}
             </button>
           </form>
 
@@ -680,37 +811,37 @@ export default function CompaniesPanel({
             className="grid gap-2 rounded-[18px] border border-[#eadfca] bg-white p-3 shadow-[0_14px_30px_rgba(15,23,42,0.08)]"
           >
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[11px] font-bold text-slate-900">إضافة مشروع</p>
-              <span className="text-[9px] text-slate-500">{company?.name || "اختر شركة أولًا"}</span>
+              <p className="text-[11px] font-bold text-slate-900">{copy.addProject}</p>
+              <span className="text-[9px] text-slate-500">{company?.name || copy.chooseCompanyFirst}</span>
             </div>
             <Field
-              label="اسم المشروع"
+              label={copy.projectName}
               value={projectForm.name}
               onChange={(event) =>
                 setProjectForm((current) => ({ ...current, name: event.target.value }))
               }
-              placeholder="اكتب اسم المشروع"
+              placeholder={copy.enterProjectName}
             />
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
               <Field
-                label="الموقع"
+                label={copy.location}
                 value={projectForm.location}
                 onChange={(event) =>
                   setProjectForm((current) => ({ ...current, location: event.target.value }))
                 }
-                placeholder="الرياض"
+                placeholder={settings?.language === "en" ? "Riyadh" : "الرياض"}
               />
               <Field
-                label="المرحلة"
+                label={copy.stage}
                 value={projectForm.stage}
                 onChange={(event) =>
                   setProjectForm((current) => ({ ...current, stage: event.target.value }))
                 }
-                placeholder="تسعير"
+                placeholder={copy.pricingStage}
               />
             </div>
             <Field
-              label="الميزانية"
+              label={copy.budget}
               value={projectForm.budget}
               onChange={(event) =>
                 setProjectForm((current) => ({ ...current, budget: event.target.value }))
@@ -726,7 +857,7 @@ export default function CompaniesPanel({
                   : "cursor-not-allowed bg-slate-200 text-slate-400"
               }`}
             >
-              حفظ المشروع
+              {copy.saveProject}
             </button>
           </form>
         </div>

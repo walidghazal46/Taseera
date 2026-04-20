@@ -3,12 +3,82 @@ import useBackStack from "../hooks/useBackStack";
 
 const PRIMARY_ADMIN_EMAIL = "walidghazal46@gmail.com";
 
+function getSettingsPanelCopy(language) {
+  return language === "en"
+    ? {
+        permissionEnabled: "Enabled",
+        permissionDisabled: "Not enabled",
+        permissionNotRequired: "Not required",
+        permissionUnavailable: "Unavailable",
+        requestPermission: "Request permission",
+        openSettings: "Open settings",
+        pricingEnvironment: "Current pricing environment",
+        pricingActive: "Active",
+        profitSummary: "Profit",
+        pricingCountryTitle: "Country and pricing settings",
+        country: "Country",
+        city: "City",
+        currency: "Currency",
+        locationFactor: "Location factor",
+        pricingRatios: "Pricing ratios",
+        profitPercent: "Profit %",
+        overheadPercent: "Overhead %",
+        taxPercent: "Tax %",
+        phonePermissions: "Phone permissions and integration",
+        androidConnected: "Android environment connected",
+        webPreview: "Web / preview mode",
+        androidSummaryPrefix: "Package",
+        androidVersion: "Version",
+        webSummary:
+          "The UI can be previewed here, while full system permissions appear and are requested from the Android app.",
+        dataState: "Data status",
+        savedAnalyses: "Saved analyses",
+        rfqs: "RFQ requests",
+        pricingTab: "Pricing",
+        accountTab: "Account",
+        close: "Close",
+      }
+    : {
+        permissionEnabled: "مفعلة",
+        permissionDisabled: "غير مفعلة",
+        permissionNotRequired: "غير مطلوبة",
+        permissionUnavailable: "غير متاحة",
+        requestPermission: "طلب الإذن",
+        openSettings: "فتح الإعدادات",
+        pricingEnvironment: "بيئة التسعير الحالية",
+        pricingActive: "نشطة",
+        profitSummary: "ربح",
+        pricingCountryTitle: "إعدادات الدولة والتسعير",
+        country: "الدولة",
+        city: "المدينة",
+        currency: "العملة",
+        locationFactor: "عامل الموقع",
+        pricingRatios: "نسب التسعير",
+        profitPercent: "الربح %",
+        overheadPercent: "المصاريف %",
+        taxPercent: "الضريبة %",
+        phonePermissions: "صلاحيات الهاتف والتكامل",
+        androidConnected: "بيئة Android متصلة",
+        webPreview: "وضع الويب / المعاينة",
+        androidSummaryPrefix: "الحزمة",
+        androidVersion: "الإصدار",
+        webSummary:
+          "يمكن معاينة الواجهة هنا، بينما صلاحيات النظام الكاملة تظهر وتُطلب من داخل تطبيق Android.",
+        dataState: "حالة البيانات",
+        savedAnalyses: "تحليلات محفوظة",
+        rfqs: "طلبات عروض سعر",
+        pricingTab: "التسعير",
+        accountTab: "الحساب",
+        close: "إغلاق",
+      };
+}
+
 function ToneToggle({ active, onClick, children }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-[10px] border px-2 py-0.5 text-[9px] font-bold transition ${
+      className={`rounded-[10px] border px-2 py-0.5 text-[8px] font-bold transition min-[390px]:text-[9px] ${
         active
           ? "border-[#b8893d] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] text-white"
           : "border-[#eadfca] bg-white text-slate-600"
@@ -24,7 +94,7 @@ function SwitchPill({ active, onClick, children }) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex min-h-[28px] flex-1 items-center justify-center rounded-[8px] px-2 py-1.5 text-[9px] font-bold leading-4 transition ${
+      className={`flex min-h-[28px] flex-1 items-center justify-center rounded-[8px] px-2 py-1.5 text-[8px] font-bold leading-4 transition min-[390px]:text-[9px] ${
         active
           ? "bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] text-white"
           : "bg-white text-slate-600"
@@ -42,7 +112,7 @@ function SectionCard({ title, icon, children }) {
         <span className="grid h-5 w-5 place-items-center rounded-full bg-[#f6efe4] text-[10px] text-[#b8893d]">
           {icon}
         </span>
-        <p className="text-[11px] font-bold text-slate-900">{title}</p>
+        <p className="text-[10px] font-bold text-slate-900 min-[390px]:text-[11px]">{title}</p>
       </div>
       <div className="mt-2">{children}</div>
     </div>
@@ -61,15 +131,15 @@ function UtilityButton({ title, subtitle, onClick, active }) {
       }`}
     >
       <div>
-        <p className="text-[11px] font-bold text-slate-900">{title}</p>
-            <p className="mt-0.5 text-[9px] leading-4 text-slate-500">{subtitle}</p>
+        <p className="text-[10px] font-bold text-slate-900 min-[390px]:text-[11px]">{title}</p>
+            <p className="mt-0.5 text-[8px] leading-4 text-slate-500 min-[390px]:text-[9px]">{subtitle}</p>
       </div>
       <span className="text-[#b8893d]">‹</span>
     </button>
   );
 }
 
-function PermissionBadge({ permission, onRequest, onOpenSettings }) {
+function PermissionBadge({ permission, onRequest, onOpenSettings, copy }) {
   const toneClass =
     permission.status === "granted"
       ? "border-emerald-200 bg-emerald-50 text-emerald-800"
@@ -81,17 +151,17 @@ function PermissionBadge({ permission, onRequest, onOpenSettings }) {
     <div className={`rounded-[12px] border px-3 py-2 ${toneClass}`}>
       <div className="flex items-center justify-between gap-2">
         <div>
-          <p className="text-[11px] font-bold">{permission.label}</p>
-          <p className="mt-0.5 text-[9px] leading-4">{permission.description}</p>
+          <p className="text-[10px] font-bold min-[390px]:text-[11px]">{permission.label}</p>
+          <p className="mt-0.5 text-[8px] leading-4 min-[390px]:text-[9px]">{permission.description}</p>
         </div>
-        <span className="rounded-full bg-white/70 px-2 py-0.5 text-[9px] font-bold">
+        <span className="rounded-full bg-white/70 px-2 py-0.5 text-[8px] font-bold min-[390px]:text-[9px]">
           {permission.status === "granted"
-            ? "مفعلة"
+            ? copy.permissionEnabled
             : permission.status === "denied"
-              ? "غير مفعلة"
+              ? copy.permissionDisabled
               : permission.status === "not_required"
-                ? "غير مطلوبة"
-                : "غير متاحة"}
+                ? copy.permissionNotRequired
+                : copy.permissionUnavailable}
         </span>
       </div>
       {permission.available && permission.status !== "granted" ? (
@@ -99,17 +169,17 @@ function PermissionBadge({ permission, onRequest, onOpenSettings }) {
           <button
             type="button"
             onClick={onRequest}
-            className="rounded-[10px] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] px-3 py-1.5 text-[9px] font-bold text-white"
+            className="rounded-[10px] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] px-3 py-1.5 text-[8px] font-bold text-white min-[390px]:text-[9px]"
           >
-            طلب الإذن
+            {copy.requestPermission}
           </button>
           {permission.status === "denied" ? (
             <button
               type="button"
               onClick={onOpenSettings}
-              className="rounded-[10px] border border-[#d8b16c] bg-white px-3 py-1.5 text-[9px] font-bold text-[#b8893d]"
+              className="rounded-[10px] border border-[#d8b16c] bg-white px-3 py-1.5 text-[8px] font-bold text-[#b8893d] min-[390px]:text-[9px]"
             >
-              فتح الإعدادات
+              {copy.openSettings}
             </button>
           ) : null}
         </div>
@@ -133,45 +203,45 @@ function SettingField({ label, value, onChange, placeholder, type = "text" }) {
   );
 }
 
-function PricingSettingsPanel({ settings, onUpdateSetting }) {
+function PricingSettingsPanel({ settings, onUpdateSetting, copy }) {
   return (
     <div className="grid gap-1.5">
       <div className="rounded-[14px] border border-[#eadfca] bg-[#fff8ec] px-3 py-2 shadow-[0_10px_22px_rgba(15,23,42,0.05)]">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-[10px] font-bold text-slate-900">بيئة التسعير الحالية</p>
+            <p className="text-[10px] font-bold text-slate-900">{copy.pricingEnvironment}</p>
             <p className="mt-0.5 text-[9px] text-slate-500">
-              {settings.country} - {settings.currency} - ربح {settings.profitPercent}%
+              {settings.country} - {settings.currency} - {copy.profitSummary} {settings.profitPercent}%
             </p>
           </div>
           <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-bold text-[#b8893d]">
-            نشطة
+            {copy.pricingActive}
           </span>
         </div>
       </div>
 
-      <SectionCard title="إعدادات الدولة والتسعير" icon="⚙️">
-        <div className="grid grid-cols-2 gap-2">
+      <SectionCard title={copy.pricingCountryTitle} icon="⚙️">
+        <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
           <SettingField
-            label="الدولة"
+            label={copy.country}
             value={settings.country}
             onChange={(value) => onUpdateSetting("country", value)}
             placeholder="السعودية"
           />
           <SettingField
-            label="المدينة"
+            label={copy.city}
             value={settings.city}
             onChange={(value) => onUpdateSetting("city", value)}
             placeholder="الرياض"
           />
           <SettingField
-            label="العملة"
+            label={copy.currency}
             value={settings.currency}
             onChange={(value) => onUpdateSetting("currency", value)}
             placeholder="SAR"
           />
           <SettingField
-            label="عامل الموقع"
+            label={copy.locationFactor}
             type="number"
             value={settings.locationFactor}
             onChange={(value) => onUpdateSetting("locationFactor", value)}
@@ -180,24 +250,24 @@ function PricingSettingsPanel({ settings, onUpdateSetting }) {
         </div>
       </SectionCard>
 
-      <SectionCard title="نسب التسعير" icon="📈">
-        <div className="grid grid-cols-3 gap-2">
+      <SectionCard title={copy.pricingRatios} icon="📈">
+        <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-3">
           <SettingField
-            label="الربح %"
+            label={copy.profitPercent}
             type="number"
             value={settings.profitPercent}
             onChange={(value) => onUpdateSetting("profitPercent", value)}
             placeholder="15"
           />
           <SettingField
-            label="المصاريف %"
+            label={copy.overheadPercent}
             type="number"
             value={settings.overheadPercent}
             onChange={(value) => onUpdateSetting("overheadPercent", value)}
             placeholder="6"
           />
           <SettingField
-            label="الضريبة %"
+            label={copy.taxPercent}
             type="number"
             value={settings.taxPercent}
             onChange={(value) => onUpdateSetting("taxPercent", value)}
@@ -222,6 +292,7 @@ function AccountPanel({
   sessionMeta,
 }) {
   const text = getAppText(settings.language);
+  const copy = getSettingsPanelCopy(settings.language);
   const isGuest = authMode === "guest";
   const isPrimaryAdmin =
     authMode !== "guest" && settings.userEmail?.toLowerCase() === PRIMARY_ADMIN_EMAIL;
@@ -299,10 +370,7 @@ function AccountPanel({
       <SectionCard title={text.settings.languageSwitch} icon="🌐">
         <div className="flex flex-wrap items-center justify-end gap-1.5">
           <div className="flex items-center gap-1">
-            <ToneToggle
-              active={settings.language === "ar"}
-              onClick={() => onUpdateSetting("language", "ar")}
-            >
+            <ToneToggle active={settings.language === "ar"} onClick={() => onUpdateSetting("language", "ar")}>
               العربية
             </ToneToggle>
             <ToneToggle
@@ -329,7 +397,7 @@ function AccountPanel({
           </div>
 
           {isGuest ? (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
               <button
                 type="button"
                 onClick={() => onOpenAuthScreen?.("login")}
@@ -346,7 +414,7 @@ function AccountPanel({
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
               <button
                 type="button"
                 onClick={() => onOpenAuthScreen?.("login")}
@@ -378,37 +446,38 @@ function AccountPanel({
         ))}
       </div>
 
-      <SectionCard title="صلاحيات الهاتف والتكامل" icon="📱">
+      <SectionCard title={copy.phonePermissions} icon="📱">
         <div className="grid gap-2">
           {Object.values(systemBridge.permissions || {}).map((permission) => (
             <PermissionBadge
               key={permission.key}
               permission={permission}
+              copy={copy}
               onRequest={() => systemBridge.requestNotificationsPermission?.()}
               onOpenSettings={() => systemBridge.openAppSettings?.()}
             />
           ))}
           <div className="rounded-[12px] border border-[#f0e6d5] bg-[#fffdfa] px-3 py-2 text-[9px] leading-4 text-slate-600">
             <p className="font-bold text-slate-900">
-              {systemBridge.isAndroid ? "بيئة Android متصلة" : "وضع الويب / المعاينة"}
+              {systemBridge.isAndroid ? copy.androidConnected : copy.webPreview}
             </p>
             <p className="mt-1">
               {systemBridge.isAndroid
-                ? `الحزمة: ${systemBridge.platformInfo.packageName} - الإصدار: ${systemBridge.platformInfo.appVersion}`
-                : "يمكن معاينة الواجهة هنا، بينما صلاحيات النظام الكاملة تظهر وتُطلب من داخل تطبيق Android."}
+                ? `${copy.androidSummaryPrefix}: ${systemBridge.platformInfo.packageName} - ${copy.androidVersion}: ${systemBridge.platformInfo.appVersion}`
+                : copy.webSummary}
             </p>
           </div>
         </div>
       </SectionCard>
 
-      <SectionCard title="حالة البيانات" icon="📊">
-        <div className="grid grid-cols-2 gap-2">
+      <SectionCard title={copy.dataState} icon="📊">
+        <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
           <div className="rounded-[12px] border border-[#f0e6d5] bg-white px-3 py-2 text-center">
-            <p className="text-[9px] text-slate-500">تحليلات محفوظة</p>
+            <p className="text-[9px] text-slate-500">{copy.savedAnalyses}</p>
             <p className="mt-1 text-[12px] font-bold text-slate-900">{savedAnalyses.length}</p>
           </div>
           <div className="rounded-[12px] border border-[#f0e6d5] bg-white px-3 py-2 text-center">
-            <p className="text-[9px] text-slate-500">طلبات عروض سعر</p>
+            <p className="text-[9px] text-slate-500">{copy.rfqs}</p>
             <p className="mt-1 text-[12px] font-bold text-slate-900">{rfqRequests.length}</p>
           </div>
         </div>
@@ -421,7 +490,7 @@ function AccountPanel({
               <p className="text-[11px] font-bold text-slate-900">{text.settings.adminPrimary}</p>
               <p className="mt-0.5 text-[10px] text-slate-500">{settings.userEmail}</p>
             </div>
-            <div className="grid grid-cols-3 gap-1">
+            <div className="grid grid-cols-1 gap-1 min-[380px]:grid-cols-3">
               <div className="rounded-[10px] border border-[#f0e6d5] bg-white px-2 py-1.5 text-center text-[9px] font-bold text-slate-700">
                 {text.settings.manageCompanies}
               </div>
@@ -468,6 +537,7 @@ export default function SettingsPanel({
   onOpenAuthScreen,
   sessionMeta,
 }) {
+  const copy = getSettingsPanelCopy(settings.language);
   const settingsNavigation = useBackStack({
     initialEntry: { section: "pricing" },
     registerBackHandler: navigationBridge?.registerBackHandler,
@@ -487,25 +557,25 @@ export default function SettingsPanel({
         </button>
       ) : null}
 
-      <div className="self-start min-w-[calc(100%-4px)] rounded-[10px] bg-[#f7f1e6] p-[2px] shadow-[0_6px_14px_rgba(15,23,42,0.04)]">
+      <div className="w-full self-start rounded-[10px] bg-[#f7f1e6] p-[2px] shadow-[0_6px_14px_rgba(15,23,42,0.04)]">
         <div className="flex gap-1">
           <SwitchPill
             active={activeView === "pricing"}
             onClick={() => settingsNavigation.navigate({ section: "pricing" })}
           >
-            التسعير
+            {copy.pricingTab}
           </SwitchPill>
           <SwitchPill
             active={activeView === "account"}
             onClick={() => settingsNavigation.navigate({ section: "account" })}
           >
-            الحساب
+            {copy.accountTab}
           </SwitchPill>
         </div>
       </div>
 
       {activeView === "pricing" ? (
-        <PricingSettingsPanel settings={settings} onUpdateSetting={onUpdateSetting} />
+        <PricingSettingsPanel settings={settings} onUpdateSetting={onUpdateSetting} copy={copy} />
       ) : (
         <AccountPanel
           settings={settings}

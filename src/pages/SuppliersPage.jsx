@@ -1,13 +1,16 @@
 import PageHeader from "../components/PageHeader";
 import SuppliersPanel from "../components/SuppliersPanel";
+import { getAppText } from "../data/appText";
 
 export default function SuppliersPage(props) {
+  const text = getAppText(props.settings?.language);
+
   return (
-    <div className="grid h-full grid-rows-[auto_1fr] gap-3 overflow-hidden">
+    <div className="grid gap-3 pb-2">
       <PageHeader
-        eyebrow="الموردين"
-        title="دليل الموردين وعروض الأسعار"
-        description="اعرض الموردين المرتبطين بالسوق، وافتح بياناتهم، وقارن بينهم للوصول إلى أفضل جهة توريد لكل بند."
+        eyebrow={text.pages.suppliers.eyebrow}
+        title=""
+        description={text.pages.suppliers.description}
       />
       <SuppliersPanel {...props} />
     </div>
