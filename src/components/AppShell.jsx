@@ -6,10 +6,10 @@ import {
 } from "./icons";
 
 const navItems = [
-  { id: "companies", label: "الشركات", icon: BuildingsIcon },
-  { id: "pricing", label: "التسعير", icon: PricingIcon },
-  { id: "suppliers", label: "الموردين", icon: SuppliersIcon },
-  { id: "settings", label: "الإعدادات", icon: SettingsIcon },
+  { id: "companies", label: "الشركات", labelEn: "Companies", icon: BuildingsIcon },
+  { id: "pricing", label: "التسعير", labelEn: "Pricing", icon: PricingIcon },
+  { id: "suppliers", label: "الموردين", labelEn: "Suppliers", icon: SuppliersIcon },
+  { id: "settings", label: "الإعدادات", labelEn: "Settings", icon: SettingsIcon },
 ];
 
 export default function AppShell({
@@ -20,85 +20,139 @@ export default function AppShell({
   language = "ar",
   theme = "dark",
 }) {
+  const isRtl = language !== "en";
+  const isLight = theme === "light";
+
   const localizedItems = navItems.map((item) => ({
     ...item,
-    label: navText?.[item.id] || item.label,
+    label: navText?.[item.id] || (language === "en" ? item.labelEn : item.label),
   }));
-
-  const isLight = theme === "light";
 
   return (
     <div
-      dir={language === "en" ? "ltr" : "rtl"}
-      className={`h-[100dvh] overflow-hidden pb-[env(safe-area-inset-bottom)] text-slate-900 ${
+      dir={isRtl ? "rtl" : "ltr"}
+      className={`fixed inset-0 flex flex-col overflow-hidden ${
         isLight
-          ? "bg-[radial-gradient(circle_at_top,#f8f1e6_0%,#eee4d3_52%,#d9c7a5_100%)]"
-          : "bg-[radial-gradient(circle_at_top,#16203a_0%,#0f172a_55%,#020617_100%)]"
+          ? "bg-[#f5efe4]"
+          : "bg-[#0c1829]"
       }`}
     >
-      <div className="flex h-[100dvh] w-full items-stretch justify-center">
-        <div
-          className={`flex h-[100dvh] w-full flex-col overflow-hidden ${
-            isLight ? "bg-[#fffdfa]" : "bg-slate-100"
-          }`}
-        >
-            <div
-              className={`flex items-center justify-between px-3 py-2 ${
-                isLight
-                  ? "bg-[linear-gradient(135deg,#173a67_0%,#002D5A_70%,#214b7c_100%)] text-white"
-                  : "bg-[linear-gradient(135deg,#13294b_0%,#10213e_60%,#182a48_100%)] text-white"
-              }`}
-            >
-              <div>
-                <p className="text-[22px] uppercase tracking-[0.24em] text-[#d9b36a]">
-                  Taseera
-                </p>
-                <p className="mt-0.5 text-[22px] font-medium text-slate-200">
-                  Construction Pricing Intelligence
-                </p>
-              </div>
-            </div>
+      {/* Top Brand Bar */}
+      <div
+        className={`shrink-0 flex items-center justify-between px-4 py-2.5 ${
+          isLight
+            ? "bg-[#0d2545]"
+            : "bg-[#0a1e3d]"
+        }`}
+        style={{ paddingTop: "max(0.625rem, env(safe-area-inset-top))" }}
+      >
+        <div className="flex items-center gap-2.5">
+          {/* Logo mark */}
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#d4a843]">
+            <svg viewBox="0 0 20 20" fill="none" className="h-4 w-4">
+              <path d="M10 2L3 7v11h14V7L10 2Z" fill="white" fillOpacity="0.9" />
+              <path d="M7 18v-6h6v6" fill="#d4a843" />
+              <path d="M10 2L3 7v11h14V7L10 2Z" stroke="white" strokeWidth="0.5" strokeOpacity="0.3" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-[11px] font-bold tracking-[0.18em] text-[#d4a843] leading-none">
+              TASEERA
+            </p>
+            <p className="mt-0.5 text-[8px] font-medium text-white/50 leading-none tracking-wide">
+              Construction Pricing Intelligence
+            </p>
+          </div>
+        </div>
 
-            <main
-              className={`min-h-0 flex-1 overflow-y-auto px-2 py-2 pb-[5.5rem] ${
-                isLight
-                  ? "bg-[linear-gradient(180deg,#fffaf1_0%,#fbf5eb_24%,#ffffff_100%)]"
-                  : "bg-[linear-gradient(180deg,#f7f2e9_0%,#f4efe7_24%,#fbfbfb_100%)]"
-              }`}
-            >
-              {children}
-            </main>
-
-            <nav className="sticky bottom-0 z-20 grid grid-cols-4 gap-1 border-t border-[#e8dcc6] bg-white px-1.5 py-1.5 pb-[max(0.35rem,env(safe-area-inset-bottom))] shadow-[0_-10px_24px_rgba(15,23,42,0.08)]">
-              {localizedItems.map((item) => {
-                const isActive = item.id === activePage;
-                const Icon = item.icon;
-
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => onNavigate(item.id)}
-                    className={`grid min-h-[48px] place-items-center gap-1 rounded-[12px] px-1 py-1.5 text-center text-[17px] font-medium transition ${
-                      isActive
-                        ? "bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] text-white shadow-lg shadow-slate-950/20"
-                        : "text-slate-500 hover:bg-[#f6efe4]"
-                    }`}
-                  >
-                    <span
-                      className={`grid h-10 w-10 place-items-center rounded-full text-[22px] ${
-                        isActive ? "bg-white/10 text-[#d9b36a]" : "bg-[#f5ede0] text-slate-500"
-                      }`}
-                    >
-                      <Icon className="h-[1.3rem] w-[1.3rem]" />
-                    </span>
-                    <span className="leading-3 min-[390px]:text-[21px]">{item.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
+        {/* Active page indicator */}
+        <div className="flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#d4a843]" />
+          <span className="text-[9px] font-semibold text-white/60 uppercase tracking-wider">
+            {localizedItems.find(i => i.id === activePage)?.label}
+          </span>
         </div>
       </div>
+
+      {/* Thin gold accent line */}
+      <div className="h-[2px] shrink-0 bg-gradient-to-r from-transparent via-[#d4a843]/40 to-transparent" />
+
+      {/* Main content */}
+      <main
+        className={`flex-1 overflow-y-auto overflow-x-hidden ${
+          isLight
+            ? "bg-gradient-to-b from-[#faf5eb] to-[#f5eedf]"
+            : "bg-gradient-to-b from-[#f8f3ea] to-[#f2ead8]"
+        }`}
+        style={{ paddingBottom: "5.5rem" }}
+      >
+        <div className="mx-auto w-full max-w-lg px-3 py-3">
+          {children}
+        </div>
+      </main>
+
+      {/* Bottom Navigation */}
+      <nav
+        className={`shrink-0 border-t ${
+          isLight
+            ? "border-[#e8dcc8] bg-white"
+            : "border-[#1e3050] bg-[#0e1f3a]"
+        }`}
+        style={{
+          paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))",
+          boxShadow: "0 -8px 32px rgba(0,0,0,0.12)",
+        }}
+      >
+        <div className="mx-auto flex w-full max-w-lg items-stretch">
+          {localizedItems.map((item) => {
+            const isActive = item.id === activePage;
+            const Icon = item.icon;
+
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onNavigate(item.id)}
+                className={`relative flex flex-1 flex-col items-center justify-center gap-1 px-1 pt-2 pb-1.5 transition-all duration-200 ${
+                  isActive ? "" : "opacity-50 hover:opacity-75"
+                }`}
+              >
+                {/* Active indicator */}
+                {isActive && (
+                  <span className="absolute top-0 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-b-full bg-[#d4a843]" />
+                )}
+
+                {/* Icon container */}
+                <span
+                  className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-200 ${
+                    isActive
+                      ? "bg-[#d4a843] text-white shadow-[0_4px_12px_rgba(212,168,67,0.4)]"
+                      : isLight
+                        ? "text-slate-500"
+                        : "text-[#8899bb]"
+                  }`}
+                >
+                  <Icon className="h-[18px] w-[18px]" />
+                </span>
+
+                {/* Label */}
+                <span
+                  className={`text-center text-[9px] font-semibold leading-none ${
+                    isActive
+                      ? "text-[#d4a843]"
+                      : isLight
+                        ? "text-slate-400"
+                        : "text-[#566a8a]"
+                  }`}
+                  style={{ fontFamily: "'Cairo', 'Tajawal', sans-serif" }}
+                >
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }

@@ -76,10 +76,8 @@ public class MainActivity extends AppCompatActivity {
 
         setContentView(root);
 
-        // Initialize Firebase Auth
         firebaseAuth = FirebaseAuth.getInstance();
 
-        // Initialize Google Sign-In
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(getString(R.string.default_web_client_id))
             .requestEmail()
