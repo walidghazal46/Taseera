@@ -11,6 +11,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.util.Base64;
 import android.util.Log;
 import android.view.ViewGroup;
 import android.webkit.ConsoleMessage;
@@ -22,6 +23,8 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.Toast;
+
+import java.io.OutputStream;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
@@ -50,10 +53,15 @@ public class MainActivity extends AppCompatActivity {
     private static final String START_URL = "https://appassets.androidplatform.net/assets/web/index.html";
     private static final int REQUEST_NOTIFICATIONS_PERMISSION = 4102;
     private static final int REQUEST_GOOGLE_SIGN_IN = 4103;
+    private static final int REQUEST_SAVE_FILE = 4104;
 
     private WebView webView;
     private GoogleSignInClient googleSignInClient;
     private FirebaseAuth firebaseAuth;
+
+    private String mPendingFileName;
+    private String mPendingBase64Data;
+    private String mPendingMimeType;
 
     @SuppressLint({"SetJavaScriptEnabled", "JavascriptInterface"})
     @Override
@@ -277,6 +285,30 @@ public class MainActivity extends AppCompatActivity {
                 Log.w(TAG, "Google sign in failed", e);
                 emitGoogleSignInError("Google sign in failed");
             }
+        } else if (requestCode == REQUEST_SAVE_FILE && resultCode == RESULT_OK && data != null) {
+            Uri uri = data.getData();
+            if (uri != null) {
+                writeFileToUri(uri);
+            }
+        }
+    }
+
+    private void writeFileToUri(Uri uri) {
+        try {
+            byte[] decodedBytes = Base64.decode(mPendingBase64Data, Base64.DEFAULT);
+            try (OutputStream outputStream = getContentResolver().openOutputStream(uri)) {
+                if (outputStream != null) {
+                    outputStream.write(decodedBytes);
+                    runOnUiThread(() -> Toast.makeText(this, "تم حفظ الملف بنجاح", Toast.LENGTH_SHORT).show());
+                }
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Error writing file", e);
+            runOnUiThread(() -> Toast.makeText(this, "فشل حفظ الملف: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+        } finally {
+            mPendingBase64Data = null;
+            mPendingFileName = null;
+            mPendingMimeType = null;
         }
     }
 
@@ -468,6 +500,27 @@ public class MainActivity extends AppCompatActivity {
         public void signInWithGoogle() {
             Intent signInIntent = googleSignInClient.getSignInIntent();
             startActivityForResult(signInIntent, REQUEST_GOOGLE_SIGN_IN);
+        }
+
+        @JavascriptInterface
+        public void saveFile(String fileName, String base64Data, String mimeType) {
+            runOnUiThread(() -> {
+                try {
+                    Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    intent.setType(mimeType);
+                    intent.putExtra(Intent.EXTRA_TITLE, fileName);
+
+                    // We need to store these temporarily to use in onActivityResult
+                    mPendingFileName = fileName;
+                    mPendingBase64Data = base64Data;
+                    mPendingMimeType = mimeType;
+
+                    startActivityForResult(intent, REQUEST_SAVE_FILE);
+                } catch (Exception e) {
+                    showToast("Error saving file: " + e.getMessage());
+                }
+            });
         }
     }
 }

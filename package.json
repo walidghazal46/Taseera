@@ -18,6 +18,8 @@
   "scripts": {
     "start": "set \"DISABLE_ESLINT_PLUGIN=true\" && react-scripts start",
     "build": "react-scripts build",
+    "sync:android": "node scripts/syncAndroidAssets.js",
+    "build:android": "npm run build && npm run sync:android",
     "test": "react-scripts test",
     "import:pricing": "node scripts/importWorkbook.js",
     "eject": "react-scripts eject"

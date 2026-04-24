@@ -11,8 +11,8 @@ android {
         applicationId = "com.taseera.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 5
-        versionName = "5"
+        versionCode = 6
+        versionName = "6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -342,51 +342,6 @@ export default function App() {
     }
   }, [companies, selectedCompanyId, selectedProjectId, setSelectedProjectId]);
 
-  useEffect(() => {
-    window.history.replaceState({ source: "taseera-root" }, "");
-    window.history.pushState({ source: "taseera-guard" }, "");
-
-    const handlePopState = () => {
-      if (allowExitRef.current) {
-        allowExitRef.current = false;
-        return;
-      }
-
-      if (pageBackHandlerRef.current?.()) {
-        setShowExitPrompt(false);
-        window.history.pushState({ source: "taseera-guard" }, "");
-        return;
-      }
-
-      const currentStack = routeStackRef.current;
-
-      if (currentStack.length > 1) {
-        const nextStack = currentStack.slice(0, -1);
-        const previousRoute = nextStack[nextStack.length - 1];
-
-        setRouteStack(nextStack);
-
-        if (previousRoute.kind === "login") {
-          setAuthMode(null);
-          setActivePage("companies");
-        } else {
-          setActivePage(previousRoute.page);
-        }
-
-        return;
-      }
-
-      setShowExitPrompt(true);
-      window.history.pushState({ source: "taseera-guard" }, "");
-    };
-
-    window.addEventListener("popstate", handlePopState);
-
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-    };
-  }, [setActivePage, setAuthMode]);
-
   const registerPageBackHandler = useCallback((handler) => {
     pageBackHandlerRef.current = handler;
 
@@ -400,6 +355,69 @@ export default function App() {
   const pushHistoryEntry = useCallback(() => {
     window.history.pushState({ source: "taseera-guard" }, "");
   }, []);
+
+  const performBackNavigation = useCallback(() => {
+    if (pageBackHandlerRef.current?.()) {
+      setShowExitPrompt(false);
+      return true;
+    }
+
+    const currentStack = routeStackRef.current;
+
+    if (currentStack.length > 1) {
+      const nextStack = currentStack.slice(0, -1);
+      const previousRoute = nextStack[nextStack.length - 1];
+
+      setRouteStack(nextStack);
+
+      if (previousRoute.kind === "login") {
+        setAuthMode(null);
+        setActivePage("companies");
+      } else {
+        setActivePage(previousRoute.page);
+      }
+
+      setShowExitPrompt(false);
+      return true;
+    }
+
+    if (activePage !== "companies") {
+      setActivePage("companies");
+      setRouteStack([createRoute(authMode, "companies")]);
+      setShowExitPrompt(false);
+      return true;
+    }
+
+    setShowExitPrompt(true);
+    return false;
+  }, [activePage, authMode, setActivePage, setAuthMode]);
+
+  const handleTopLevelBack = useCallback(() => {
+    const handled = performBackNavigation();
+    if (handled) {
+      pushHistoryEntry();
+    }
+  }, [performBackNavigation, pushHistoryEntry]);
+
+  useEffect(() => {
+    window.history.replaceState({ source: "taseera-root" }, "");
+    window.history.pushState({ source: "taseera-guard" }, "");
+
+    const handlePopState = () => {
+      if (allowExitRef.current) {
+        allowExitRef.current = false;
+        return;
+      }
+      performBackNavigation();
+      window.history.pushState({ source: "taseera-guard" }, "");
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [performBackNavigation]);
 
   const pushRoute = useCallback((route) => {
     setRouteStack((current) => {
@@ -631,7 +649,8 @@ export default function App() {
   };
 
   const handleSaveAnalysis = useCallback(
-    ({ item, result, quantity, profit }) => {
+    ({ item, resources, results, params, mode }) => {
+      console.log("Saving Analysis:", { item, resources, results, params, mode });
       if (authMode === "guest") {
         showStatus(systemText.loginRequiredToSave, "warning");
         return;
@@ -649,12 +668,14 @@ export default function App() {
         companyName: selectedCompany.name,
         projectId: selectedProject.id,
         projectName: selectedProject.name,
-        itemId: item.id,
-        itemName: item.name,
-        quantity: Number(quantity) || 0,
-        profitPercent: Number(profit) || 0,
-        finalUnitPrice: result.finalUnitPrice,
-        projectTotal: result.projectTotal,
+        mode: mode, // 'area' or 'item'
+        itemName: item.ar,
+        itemNum: item.num,
+        resources: resources,
+        results: results,
+        params: params,
+        finalUnitPrice: results.unitPrice || results.finalTotal / (params.qty || 1),
+        projectTotal: results.total || results.finalTotal,
       };
 
       setSavedAnalyses((current) => [nextAnalysis, ...current].slice(0, 50));
@@ -681,8 +702,8 @@ export default function App() {
         id: createId("rfq"),
         createdAt: new Date().toISOString(),
         source,
-        itemId: item?.id || null,
-        itemName: item?.name || systemText.genericRequest,
+        itemId: item?.id || item?.num || null,
+        itemName: item?.name || item?.ar || systemText.genericRequest,
         supplierId: supplier?.id || null,
         supplierName: supplier?.name || systemText.market,
         companyId: selectedCompany?.id || null,
@@ -697,12 +718,12 @@ export default function App() {
       // Send email to admin
       await bridge.openEmail(
         "walidghazal46@gmail.com",
-        systemText.rfqSubject(item?.name || systemText.supplyService),
-        `${systemText.rfqGreeting("Admin", item?.name || supplier?.category)}\n\n` +
+        systemText.rfqSubject(item?.name || item?.ar || systemText.supplyService),
+        `${systemText.rfqGreeting("Admin", item?.name || item?.ar || supplier?.category)}\n\n` +
         `البيانات:\n` +
         `الشركة: ${selectedCompany?.name || "غير محدد"}\n` +
         `المشروع: ${selectedProject?.name || "غير محدد"}\n` +
-        `البند: ${item?.name || "غير محدد"}\n` +
+        `البند: ${item?.name || item?.ar || "غير محدد"}\n` +
         `المورد: ${supplier?.name || "غير محدد"}\n` +
         `البريد الإلكتروني للمورد: ${supplier?.email || "غير متوفر"}\n` +
         `رقم المورد: ${supplier?.phone || "غير متوفر"}`
@@ -711,13 +732,13 @@ export default function App() {
       if (supplier?.email) {
         await bridge.openEmail(
           supplier.email,
-          systemText.rfqSubject(item?.name || systemText.supplyService),
-          systemText.rfqGreeting(supplier.contactPerson || supplier.name, item?.name || supplier.category)
+          systemText.rfqSubject(item?.name || item?.ar || systemText.supplyService),
+          systemText.rfqGreeting(supplier.contactPerson || supplier.name, item?.name || item?.ar || supplier.category)
         );
       } else {
         await bridge.shareText(
           systemText.rfqShareTitle,
-          systemText.rfqShareBody(item?.name || systemText.genericRequest)
+          systemText.rfqShareBody(item?.name || item?.ar || systemText.genericRequest)
         );
       }
 
@@ -947,6 +968,8 @@ export default function App() {
           <AppShell
             activePage={activePage}
             onNavigate={handleNavigate}
+            onBack={handleTopLevelBack}
+            canGoBack={routeStack.length > 1 || activePage !== "companies"}
             selectedCompany={selectedCompany}
             selectedProject={selectedProject}
             authMode={authMode}
@@ -962,8 +985,8 @@ export default function App() {
               onClose={() => setShowExitPrompt(false)}
               hideCloseButton
             >
-              <div className="grid gap-3 text-right">
-                <p className="text-sm text-slate-700">
+              <div className="grid gap-3 rounded-[16px] border border-red-200 bg-[radial-gradient(circle_at_top,#fff5f5_0%,#fff1f1_55%,#ffe4e6_100%)] p-1 text-right shadow-[0_0_24px_rgba(239,68,68,0.18)]">
+                <p className="text-sm font-semibold text-red-700">
                   {settings.language === "en"
                     ? "Do you want to exit the app?"
                     : "هل تريد الخروج من التطبيق؟"}
@@ -972,14 +995,14 @@ export default function App() {
                   <button
                     type="button"
                     onClick={confirmExit}
-                    className="rounded-[12px] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] px-3 py-2 text-xs font-bold text-white"
+                    className="rounded-[12px] bg-[linear-gradient(135deg,#b91c1c_0%,#dc2626_100%)] px-3 py-2 text-xs font-bold text-white shadow-[0_8px_18px_rgba(220,38,38,0.24)]"
                   >
                     {settings.language === "en" ? "Yes, Exit" : "نعم، خروج"}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowExitPrompt(false)}
-                    className="rounded-[12px] border border-[#d8b16c] bg-white px-3 py-2 text-xs font-bold text-[#b8893d]"
+                    className="rounded-[12px] border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-600"
                   >
                     {settings.language === "en" ? "Cancel" : "إلغاء"}
                   </button>

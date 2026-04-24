@@ -1,21 +1,14 @@
 export default function PageHeader({ eyebrow, title, description, actions }) {
   return (
-    <div className="mb-2 overflow-hidden rounded-2xl bg-gradient-to-br from-[#0d2545] to-[#162e52] px-4 py-3.5 shadow-[0_8px_32px_rgba(13,37,69,0.2)]">
-      {/* Decorative corner accent */}
-      <div
-        className="pointer-events-none absolute left-0 top-0 h-24 w-24 opacity-10"
-        style={{
-          background: "radial-gradient(circle at 0 0, #d4a843, transparent 70%)",
-        }}
-      />
-
-      <div className="relative flex items-start justify-between gap-3">
+    <div className="mb-4 overflow-hidden rounded-[24px] bg-[#082555] px-5 py-5 shadow-xl relative">
+      <div className="absolute inset-0 bg-gradient-to-br from-[#C9A84C]/15 to-transparent pointer-events-none" />
+      <div className="relative flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           {/* Eyebrow */}
-          <div className="flex items-center gap-1.5">
-            <span className="h-1 w-4 rounded-full bg-[#d4a843]" />
+          <div className="flex items-center gap-2">
+            <span className="h-1.5 w-6 rounded-full bg-[#C9A84C]" />
             <p
-              className="text-[9px] font-bold uppercase tracking-[0.25em] text-[#d4a843]"
+              className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#C9A84C]"
               style={{ fontFamily: "'Cairo', 'Tajawal', sans-serif" }}
             >
               {eyebrow}
@@ -25,7 +18,7 @@ export default function PageHeader({ eyebrow, title, description, actions }) {
           {/* Title */}
           {title ? (
             <h2
-              className="mt-1.5 text-[15px] font-bold leading-snug text-white"
+              className="mt-3 text-[18px] font-bold leading-tight text-white"
               style={{ fontFamily: "'Cairo', 'Tajawal', sans-serif" }}
             >
               {title}
@@ -34,7 +27,7 @@ export default function PageHeader({ eyebrow, title, description, actions }) {
 
           {/* Description */}
           <p
-            className={`${title ? "mt-1" : "mt-1.5"} max-w-[28rem] text-[10px] leading-[1.6] text-white/60`}
+            className={`${title ? "mt-2" : "mt-3"} text-[11px] font-medium leading-relaxed text-[#9A8A6A]`}
             style={{ fontFamily: "'Cairo', 'Tajawal', sans-serif" }}
           >
             {description}

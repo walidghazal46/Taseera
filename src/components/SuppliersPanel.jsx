@@ -3,6 +3,9 @@ import Modal from "./Modal";
 import { PhoneIcon, MailIcon, ShareIcon, PlusIcon, SearchIcon } from "./icons";
 import useBackStack from "../hooks/useBackStack";
 
+const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
+const MONO = "'IBM Plex Mono',monospace";
+
 function getSuppliersCopy(language) {
   return language === "en"
     ? {
@@ -42,7 +45,7 @@ function StarRow({ rating }) {
   return (
     <div className="flex items-center gap-0.5">
       {Array.from({ length: 5 }).map((_, i) => (
-        <span key={i} className={`text-[10px] ${i < filled ? "text-[#d4a843]" : "text-slate-200"}`}>★</span>
+        <span key={i} className={`text-[12px] ${i < filled ? "text-[#C9A84C]" : "text-[#E2D8C4]"}`}>★</span>
       ))}
     </div>
   );
@@ -51,12 +54,12 @@ function StarRow({ rating }) {
 function FormField({ label, value, onChange, placeholder }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[10px] font-bold text-slate-600" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+      <span className="mb-2 block text-[12px] font-bold text-[#082555] mr-1" style={{ fontFamily: AR }}>
         {label}
       </span>
       <input value={value} onChange={onChange} placeholder={placeholder}
-        className="w-full rounded-xl border border-[#e8dcc8] bg-white px-3 py-2.5 text-[11px] text-slate-900 outline-none transition focus:border-[#d4a843] focus:ring-2 focus:ring-[#d4a843]/20"
-        style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }} />
+        className="min-h-[48px] w-full rounded-xl border-2 border-[#E2D8C4] bg-[#F7F3EC] px-4 py-2.5 text-[14px] font-medium text-[#082555] outline-none transition focus:border-[#C9A84C] focus:ring-4 focus:ring-[#C9A84C]/10"
+        style={{ fontFamily: AR }} />
     </label>
   );
 }
@@ -115,16 +118,16 @@ export default function SuppliersPanel({
   useEffect(() => { setActiveGroup(copy.all); }, [copy.all]);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Tab bar */}
-      <div className="rounded-2xl bg-gradient-to-br from-[#0d2545] to-[#162e52] p-3 shadow-[0_8px_24px_rgba(13,37,69,0.25)]">
-        <div className="flex gap-1 rounded-xl bg-white/10 p-1">
+      <div className="rounded-2xl bg-[#082555] p-1.5 shadow-xl">
+        <div className="flex gap-1.5">
           {[{ id: "directory", label: copy.directory }, { id: "add", label: copy.addSupplier }].map((tab) => (
             <button key={tab.id} type="button"
               onClick={() => nav.navigate({ section: tab.id })}
-              className={`flex-1 rounded-[10px] px-2 py-2 text-[10px] font-bold transition-all ${
-                activeSection === tab.id ? "bg-[#d4a843] text-white shadow-[0_2px_8px_rgba(212,168,67,0.35)]" : "text-white/70"
-              }`} style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+              className={`flex-1 min-h-[44px] rounded-xl px-2 py-2 text-[13px] font-bold transition-all duration-300 ${
+                activeSection === tab.id ? "bg-[#C9A84C] text-[#082555] shadow-md" : "text-[#9A8A6A] hover:text-white"
+              }`} style={{ fontFamily: AR }}>
               {tab.label}
             </button>
           ))}
@@ -134,97 +137,97 @@ export default function SuppliersPanel({
       {activeSection === "directory" && (
         <>
           {/* Search & filters */}
-          <div className="rounded-2xl border border-[#e8dcc8] bg-white p-3 shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] font-bold text-slate-700" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+          <div className="rounded-3xl border-2 border-[#E2D8C4] bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[12px] font-bold text-[#082555] uppercase tracking-wider" style={{ fontFamily: AR }}>
                 {copy.supplierSpecialties}
               </p>
-              <p className="text-[9px] text-slate-400" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
-                {copy.showingNow} {paged.length} {copy.outOf} {filtered.length}
+              <p className="text-[11px] font-bold text-[#9A8A6A]" style={{ fontFamily: MONO }}>
+                {filtered.length} {copy.outOf} {suppliers.length}
               </p>
             </div>
 
             {/* Search */}
-            <div className="flex items-center gap-2 rounded-xl border border-[#e8dcc8] bg-[#faf6ef] px-3 py-2">
-              <SearchIcon className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+            <div className="relative mb-4">
+              <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#9A8A6A]" />
               <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={copy.searchPlaceholder}
-                className="w-full bg-transparent text-[10px] text-slate-700 placeholder:text-slate-400 outline-none"
-                style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }} />
+                className="min-h-[52px] w-full rounded-2xl border-2 border-[#E2D8C4] bg-[#F7F3EC] pr-12 pl-4 text-[14px] font-medium text-[#082555] outline-none transition focus:border-[#C9A84C]"
+                style={{ fontFamily: AR }} />
             </div>
 
             {/* Group chips */}
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {groupOptions.map((g) => (
                 <button key={g.label} type="button" onClick={() => setActiveGroup(g.label)}
-                  className={`rounded-full px-2.5 py-1 text-[9px] font-bold transition ${
+                  className={`min-h-[36px] rounded-xl px-4 py-1.5 text-[11px] font-bold transition-all border-2 ${
                     activeGroup === g.label
-                      ? "bg-gradient-to-r from-[#0d2545] to-[#162e52] text-white shadow-sm"
-                      : "border border-[#e8dcc8] bg-[#faf6ef] text-slate-600"
-                  }`} style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
-                  {g.label} <span className="opacity-60">({g.count})</span>
+                      ? "bg-[#082555] border-[#082555] text-white shadow-md"
+                      : "border-[#E2D8C4] bg-white text-[#9A8A6A] hover:border-[#C9A84C]"
+                  }`} style={{ fontFamily: AR }}>
+                  {g.label} <span className="opacity-60" style={{ fontFamily: MONO }}>({g.count})</span>
                 </button>
               ))}
             </div>
           </div>
 
           {/* Supplier cards */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             {paged.map((supplier) => (
               <div key={supplier.id}
-                className="overflow-hidden rounded-2xl border border-[#e8dcc8] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
-                <div className="p-3">
-                  <div className="flex items-start gap-2.5">
+                className="overflow-hidden rounded-2xl border-2 border-[#E2D8C4] bg-white shadow-sm hover:shadow-md transition-all">
+                <div className="p-4">
+                  <div className="flex items-start gap-4">
                     {/* Avatar */}
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#0d2545] to-[#162e52] text-[13px] font-bold text-[#d4a843] shadow-sm">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#082555] text-[18px] font-bold text-[#C9A84C] shadow-lg">
                       {supplier.logo}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-1">
                         <div className="min-w-0">
-                          <h3 className="text-[11px] font-bold text-slate-900 leading-snug"
-                            style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+                          <h3 className="text-[14px] font-bold text-[#082555] leading-snug"
+                            style={{ fontFamily: AR }}>
                             {supplier.name}
                           </h3>
-                          <p className="mt-0.5 text-[9px] font-semibold text-[#b8893d]"
-                            style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+                          <p className="mt-1 text-[11px] font-bold text-[#C9A84C]"
+                            style={{ fontFamily: AR }}>
                             {supplier.group}
                           </p>
                         </div>
                         <div className="shrink-0 text-left">
-                          <p className="text-[10px] font-bold text-[#b8893d]">{supplier.rating || "—"}</p>
+                          <p className="text-[12px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{supplier.rating || "—"}</p>
                           <StarRow rating={supplier.rating || 0} />
                         </div>
                       </div>
-                      <p className="mt-1 text-[9px] text-slate-500"
-                        style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
-                        {copy.materials}: {supplier.materials?.join("، ") || supplier.category}
+                      <p className="mt-2 text-[11px] font-medium text-[#9A8A6A] leading-relaxed"
+                        style={{ fontFamily: AR }}>
+                        <span className="font-bold text-[#5A4E38]">{copy.materials}:</span> {supplier.materials?.join("، ") || supplier.category}
                       </p>
                     </div>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2 border-t border-[#f0e8d8] bg-[#faf6ef] px-3 py-2">
+                <div className="flex gap-3 border-t-2 border-[#E2D8C4] bg-[#FAFAFA] px-4 py-3">
                   <button type="button" onClick={() => setSelectedSupplier(supplier)}
-                    className="flex-1 rounded-xl border border-[#d4a843]/50 bg-white py-1.5 text-[9px] font-bold text-[#b8893d]"
-                    style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+                    className="flex-1 min-h-[40px] rounded-xl border-2 border-[#E2D8C4] bg-white text-[12px] font-bold text-[#082555] transition hover:border-[#C9A84C] hover:text-[#C9A84C]"
+                    style={{ fontFamily: AR }}>
                     {copy.contact}
                   </button>
                   <button type="button"
                     onClick={() => onCreateRfq?.({ supplier, source: "supplier-directory" })}
                     disabled={authMode === "guest"}
-                    className={`flex-1 rounded-xl py-1.5 text-[9px] font-bold ${
+                    className={`flex-1 min-h-[40px] rounded-xl text-[12px] font-bold transition-all shadow-md ${
                       authMode === "guest"
-                        ? "cursor-not-allowed bg-slate-200 text-slate-400"
-                        : "bg-gradient-to-r from-[#c49830] to-[#d4a843] text-white shadow-[0_2px_8px_rgba(212,168,67,0.3)]"
-                    }`} style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+                        ? "cursor-not-allowed bg-[#F7F3EC] text-[#9A8A6A] border-2 border-[#E2D8C4]"
+                        : "bg-[#C9A84C] text-[#082555] hover:bg-[#E8C97A]"
+                    }`} style={{ fontFamily: AR }}>
                     {copy.rfq}
                   </button>
                 </div>
                 {authMode === "guest" && (
-                  <p className="px-3 pb-2 text-[8px] text-slate-400" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
-                    {copy.guestRfqHint}
+                  <p className="px-4 pb-3 text-[10px] font-bold text-red-500/70" style={{ fontFamily: AR }}>
+                    ⚠ {copy.guestRfqHint}
                   </p>
                 )}
               </div>
@@ -232,28 +235,28 @@ export default function SuppliersPanel({
           </div>
 
           {!paged.length && (
-            <div className="rounded-2xl border border-dashed border-[#d4a843]/40 bg-[#faf6ef] py-8 text-center">
-              <p className="text-[11px] text-slate-500" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+            <div className="rounded-3xl border-2 border-dashed border-[#E2D8C4] bg-[#F7F3EC] py-12 text-center">
+              <p className="text-[13px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
                 {copy.noResults}
               </p>
             </div>
           )}
 
           {/* Pagination */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3 pt-2">
             <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
-              className={`flex-1 rounded-xl py-2.5 text-[10px] font-bold transition ${
-                page === 1 ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "border border-[#d4a843] bg-white text-[#b8893d]"
-              }`} style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+              className={`flex-1 min-h-[48px] rounded-2xl py-2 text-[13px] font-bold transition shadow-sm ${
+                page === 1 ? "bg-white border-2 border-[#E2D8C4] text-[#E2D8C4] cursor-not-allowed" : "border-2 border-[#C9A84C] bg-white text-[#C9A84C] hover:bg-[#F5EDD8]"
+              }`} style={{ fontFamily: AR }}>
               {copy.previous}
             </button>
-            <span className="text-[9px] text-slate-500 shrink-0" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
-              {copy.page} {page} / {totalPages}
-            </span>
+            <div className="bg-white border-2 border-[#E2D8C4] rounded-xl px-4 py-2 text-[11px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>
+               {page} / {totalPages}
+            </div>
             <button type="button" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-              className={`flex-1 rounded-xl py-2.5 text-[10px] font-bold transition ${
-                page === totalPages ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-gradient-to-r from-[#0d2545] to-[#162e52] text-white"
-              }`} style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+              className={`flex-1 min-h-[48px] rounded-2xl py-2 text-[13px] font-bold transition shadow-lg ${
+                page === totalPages ? "bg-white border-2 border-[#E2D8C4] text-[#E2D8C4] cursor-not-allowed" : "bg-[#082555] text-white hover:bg-[#2D2821]"
+              }`} style={{ fontFamily: AR }}>
               {copy.next}
             </button>
           </div>
@@ -261,23 +264,23 @@ export default function SuppliersPanel({
       )}
 
       {activeSection === "add" && (
-        <div className="overflow-hidden rounded-2xl border border-[#e8dcc8] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
-          <div className="flex items-center gap-2 bg-gradient-to-r from-[#0d2545] to-[#162e52] px-4 py-3">
-            <PlusIcon className="h-4 w-4 text-[#d4a843]" />
-            <p className="text-[12px] font-bold text-white" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+        <div className="overflow-hidden rounded-3xl border-2 border-[#E2D8C4] bg-white shadow-xl">
+          <div className="flex items-center gap-3 bg-[#082555] px-6 py-4">
+            <PlusIcon className="h-5 w-5 text-[#C9A84C]" />
+            <p className="text-[14px] font-bold text-white uppercase tracking-wider" style={{ fontFamily: AR }}>
               {copy.addSupplierTitle}
             </p>
           </div>
-          <form onSubmit={submitSupplier} className="space-y-3 p-4">
+          <form onSubmit={submitSupplier} className="space-y-4 p-6">
             <FormField label={copy.supplierName} value={form.name}
               onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))} placeholder={copy.writeSupplierName} />
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-4">
               <FormField label={copy.category} value={form.category}
                 onChange={(e) => setForm((c) => ({ ...c, category: e.target.value }))} placeholder="مواد كهربائية" />
               <FormField label={copy.location} value={form.location}
                 onChange={(e) => setForm((c) => ({ ...c, location: e.target.value }))} placeholder="الرياض" />
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-4">
               <FormField label={copy.phone} value={form.phone}
                 onChange={(e) => setForm((c) => ({ ...c, phone: e.target.value }))} placeholder="+9665…" />
               <FormField label={copy.email} value={form.email}
@@ -288,8 +291,8 @@ export default function SuppliersPanel({
             <FormField label={copy.website} value={form.website}
               onChange={(e) => setForm((c) => ({ ...c, website: e.target.value }))} placeholder="https://…" />
             <button type="submit"
-              className="w-full rounded-xl bg-gradient-to-r from-[#0d2545] to-[#162e52] py-3 text-[11px] font-bold text-white shadow-[0_4px_12px_rgba(13,37,69,0.25)] transition active:scale-[0.98]"
-              style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+              className="w-full min-h-[52px] rounded-2xl bg-[#082555] py-3 text-[14px] font-bold text-white shadow-lg transition hover:bg-[#2D2821] active:scale-[0.98]"
+              style={{ fontFamily: AR }}>
               {copy.saveSupplier}
             </button>
           </form>
@@ -299,7 +302,7 @@ export default function SuppliersPanel({
       {/* Supplier detail modal */}
       {selectedSupplier && (
         <Modal title={selectedSupplier.name} onClose={() => setSelectedSupplier(null)} closeLabel={copy.close}>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {[
               { label: copy.specialty, value: selectedSupplier.category },
               { label: copy.summary, value: selectedSupplier.description },
@@ -308,29 +311,29 @@ export default function SuppliersPanel({
               { label: copy.email, value: selectedSupplier.email },
               { label: copy.website, value: selectedSupplier.website },
             ].map(({ label, value }) => (
-              <div key={label} className="rounded-xl border border-[#e8dcc8] bg-white p-3">
-                <p className="text-[9px] text-slate-400 mb-0.5" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>{label}</p>
-                <p className="text-[11px] font-semibold text-slate-800" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>{value || "—"}</p>
+              <div key={label} className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-4 shadow-sm">
+                <p className="text-[10px] font-bold text-[#9A8A6A] mb-1 uppercase tracking-wider" style={{ fontFamily: AR }}>{label}</p>
+                <p className="text-[13px] font-bold text-[#082555]" style={{ fontFamily: AR }}>{value || "—"}</p>
               </div>
             ))}
 
-            <div className="grid grid-cols-3 gap-2 pt-1">
+            <div className="grid grid-cols-3 gap-3 pt-2">
               <button type="button" onClick={() => onContactSupplier?.(selectedSupplier, "phone")}
-                className="flex flex-col items-center gap-1 rounded-xl border border-[#e8dcc8] bg-white py-3 text-[9px] font-bold text-[#b8893d]"
-                style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
-                <PhoneIcon className="h-4 w-4" />
+                className="flex min-h-[72px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-[#E2D8C4] bg-white text-[11px] font-bold text-[#082555] transition hover:border-[#C9A84C] hover:bg-[#F5EDD8]"
+                style={{ fontFamily: AR }}>
+                <PhoneIcon className="h-5 w-5 text-[#C9A84C]" />
                 {copy.call}
               </button>
               <button type="button" onClick={() => onContactSupplier?.(selectedSupplier, "email")}
-                className="flex flex-col items-center gap-1 rounded-xl border border-[#e8dcc8] bg-white py-3 text-[9px] font-bold text-[#b8893d]"
-                style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
-                <MailIcon className="h-4 w-4" />
+                className="flex min-h-[72px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-[#E2D8C4] bg-white text-[11px] font-bold text-[#082555] transition hover:border-[#C9A84C] hover:bg-[#F5EDD8]"
+                style={{ fontFamily: AR }}>
+                <MailIcon className="h-5 w-5 text-[#C9A84C]" />
                 {copy.mail}
               </button>
               <button type="button" onClick={() => onContactSupplier?.(selectedSupplier, "share")}
-                className="flex flex-col items-center gap-1 rounded-xl bg-gradient-to-br from-[#0d2545] to-[#162e52] py-3 text-[9px] font-bold text-white"
-                style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
-                <ShareIcon className="h-4 w-4" />
+                className="flex min-h-[72px] flex-col items-center justify-center gap-2 rounded-2xl bg-[#082555] text-[11px] font-bold text-white shadow-lg transition hover:bg-[#2D2821]"
+                style={{ fontFamily: AR }}>
+                <ShareIcon className="h-5 w-5 text-[#C9A84C]" />
                 {copy.share}
               </button>
             </div>

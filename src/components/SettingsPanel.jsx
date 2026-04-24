@@ -38,15 +38,30 @@ function getSettingsCopy(language) {
       };
 }
 
-function SettingInput({ label, value, onChange, placeholder, type = "text" }) {
+function SettingInput({ label, value, onChange, placeholder, type = "text", options }) {
   return (
     <label className="block">
       <span className="mb-1 block text-[10px] font-bold text-slate-500" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
         {label}
       </span>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-        className="w-full rounded-xl border border-[#e8dcc8] bg-white px-3 py-2.5 text-[11px] text-slate-900 outline-none transition focus:border-[#d4a843] focus:ring-2 focus:ring-[#d4a843]/20"
-        style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }} />
+      {type === "select" ? (
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full rounded-xl border border-[#e8dcc8] bg-white px-3 py-2.5 text-[11px] text-slate-900 outline-none transition focus:border-[#d4a843] focus:ring-2 focus:ring-[#d4a843]/20"
+          style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}
+        >
+          {(options || []).map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
+          className="w-full rounded-xl border border-[#e8dcc8] bg-white px-3 py-2.5 text-[11px] text-slate-900 outline-none transition focus:border-[#d4a843] focus:ring-2 focus:ring-[#d4a843]/20"
+          style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }} />
+      )}
     </label>
   );
 }
@@ -92,6 +107,12 @@ function LangToggle({ active, onClick, children }) {
 }
 
 function PricingTab({ settings, onUpdateSetting, copy }) {
+  const countryOptions = [
+    { value: "السعودية", label: "السعودية" },
+    { value: "جمهورية مصر العربية", label: "جمهورية مصر العربية" },
+    { value: "الإمارات العربية المتحدة", label: "الإمارات العربية المتحدة" },
+  ];
+
   return (
     <div className="space-y-3">
       {/* Status banner */}
@@ -114,7 +135,7 @@ function PricingTab({ settings, onUpdateSetting, copy }) {
 
       <SectionCard title={copy.pricingCountryTitle} icon="⚙️">
         <div className="grid grid-cols-2 gap-3">
-          <SettingInput label={copy.country} value={settings.country} onChange={(v) => onUpdateSetting("country", v)} placeholder="السعودية" />
+          <SettingInput label={copy.country} type="select" value={settings.country} onChange={(v) => onUpdateSetting("country", v)} options={countryOptions} />
           <SettingInput label={copy.city} value={settings.city} onChange={(v) => onUpdateSetting("city", v)} placeholder="الرياض" />
           <SettingInput label={copy.currency} value={settings.currency} onChange={(v) => onUpdateSetting("currency", v)} placeholder="SAR" />
           <SettingInput label={copy.locationFactor} type="number" value={settings.locationFactor} onChange={(v) => onUpdateSetting("locationFactor", v)} placeholder="1" />

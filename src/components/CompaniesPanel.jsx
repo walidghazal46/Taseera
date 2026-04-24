@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { FolderIcon, PlusIcon, SearchIcon, StarIcon, ChevronRightIcon, BuildingsIcon } from "./icons";
 import useBackStack from "../hooks/useBackStack";
 
+const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
+const MONO = "'IBM Plex Mono',monospace";
+
 function getCompaniesCopy(language) {
   return language === "en"
     ? {
@@ -68,7 +71,7 @@ function Stars({ rating }) {
   return (
     <div className="flex items-center gap-0.5">
       {Array.from({ length: 5 }).map((_, i) => (
-        <StarIcon key={i} className={`h-3 w-3 ${i < filled ? "stroke-[#d4a843] fill-[#d4a843]" : "stroke-slate-300 fill-transparent"}`} />
+        <StarIcon key={i} className={`h-3.5 w-3.5 ${i < filled ? "stroke-[#C9A84C] fill-[#C9A84C]" : "stroke-[#E2D8C4] fill-transparent"}`} />
       ))}
     </div>
   );
@@ -76,18 +79,18 @@ function Stars({ rating }) {
 
 function TabBar({ tabs, active, onSelect }) {
   return (
-    <div className="flex gap-1 rounded-xl bg-[#0d2545]/8 p-1">
+    <div className="flex gap-1.5 rounded-2xl bg-[#082555] p-1.5 shadow-xl">
       {tabs.map((tab) => (
         <button
           key={tab.id}
           type="button"
           onClick={() => onSelect(tab.id)}
-          className={`flex-1 rounded-[10px] px-2 py-2 text-[10px] font-bold transition-all duration-200 ${
+          className={`flex-1 min-h-[44px] rounded-xl px-2 py-2 text-[13px] font-bold transition-all duration-300 ${
             active === tab.id
-              ? "bg-[#d4a843] text-white shadow-[0_2px_8px_rgba(212,168,67,0.35)]"
-              : "text-slate-500"
+              ? "bg-[#C9A84C] text-[#082555] shadow-md"
+              : "text-[#9A8A6A] hover:text-white"
           }`}
-          style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}
+          style={{ fontFamily: AR }}
         >
           {tab.label}
         </button>
@@ -98,9 +101,9 @@ function TabBar({ tabs, active, onSelect }) {
 
 function StatBadge({ label, value }) {
   return (
-    <div className="flex-1 rounded-xl border border-[#e8dcc8] bg-white px-2.5 py-2 text-center shadow-sm">
-      <p className="text-[15px] font-bold text-[#0d2545]">{value}</p>
-      <p className="mt-0.5 text-[9px] text-slate-500" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+    <div className="flex-1 rounded-2xl border-2 border-[#E2D8C4] bg-white px-2.5 py-3 text-center shadow-sm">
+      <p className="text-[16px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{value}</p>
+      <p className="mt-0.5 text-[10px] font-bold text-[#9A8A6A] uppercase tracking-wider" style={{ fontFamily: AR }}>
         {label}
       </p>
     </div>
@@ -110,22 +113,21 @@ function StatBadge({ label, value }) {
 function CompanyCard({ company, selected, onSelect, onShowDetails, copy }) {
   return (
     <div
-      className={`overflow-hidden rounded-2xl border transition-all duration-200 ${
+      className={`overflow-hidden rounded-2xl border-2 transition-all duration-300 ${
         selected
-          ? "border-[#d4a843] bg-gradient-to-br from-[#fffbf0] to-white shadow-[0_4px_20px_rgba(212,168,67,0.2)]"
-          : "border-[#e8dcc8] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]"
+          ? "border-[#C9A84C] bg-[#F5EDD8] shadow-md"
+          : "border-[#E2D8C4] bg-white shadow-sm hover:shadow-md"
       }`}
     >
       <button
         type="button"
         onClick={() => onSelect(company.id)}
-        className="w-full p-3 text-right"
+        className="w-full p-4 text-right"
       >
-        <div className="flex items-start gap-3">
-          {/* Logo */}
+        <div className="flex items-start gap-4">
           <div
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl shadow-sm ${
-              selected ? "bg-[#d4a843]/15 ring-2 ring-[#d4a843]/30" : "bg-[#f5ede0]"
+            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl shadow-sm ${
+              selected ? "bg-[#C9A84C] text-[#082555] ring-4 ring-[#C9A84C]/20" : "bg-[#F7F3EC] text-[#082555]"
             }`}
           >
             {company.logo}
@@ -134,42 +136,41 @@ function CompanyCard({ company, selected, onSelect, onShowDetails, copy }) {
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <h3
-                className="text-[12px] font-bold text-slate-900 leading-snug"
-                style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}
+                className="text-[14px] font-bold text-[#082555] leading-snug"
+                style={{ fontFamily: AR }}
               >
                 {company.name}
               </h3>
               <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-[8px] font-bold ${
+                className={`shrink-0 rounded-lg px-2 py-1 text-[9px] font-bold uppercase tracking-wider ${
                   company.type === "Consultant"
-                    ? "bg-blue-50 text-blue-600"
-                    : "bg-[#f5ede0] text-[#b8893d]"
+                    ? "bg-[#C9A84C]/10 text-[#C9A84C]"
+                    : "bg-[#E2D8C4] text-[#5A4E38]"
                 }`}
               >
                 {company.type === "Contractor" ? copy.contractor : copy.consultant}
               </span>
             </div>
 
-            <p className="mt-0.5 text-[10px] text-[#b8893d] font-medium" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+            <p className="mt-1 text-[11px] text-[#C9A84C] font-bold" style={{ fontFamily: AR }}>
               {company.specialization}
             </p>
 
-            <div className="mt-1.5 flex items-center justify-between gap-2">
+            <div className="mt-3 flex items-center justify-between gap-2">
               <Stars rating={company.rating} />
-              <div className="flex items-center gap-1 text-[9px] text-slate-400">
-                <FolderIcon className="h-3 w-3" />
-                <span>{company.projectsCount} {copy.projectCount}</span>
+              <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#9A8A6A]">
+                <FolderIcon className="h-3.5 w-3.5" />
+                <span style={{ fontFamily: MONO }}>{company.projectsCount} {copy.projectCount}</span>
               </div>
             </div>
           </div>
         </div>
       </button>
 
-      {/* Footer action */}
-      <div className="flex items-center justify-between border-t border-[#f0e8d8] bg-[#faf6ef] px-3 py-2">
-        <div className="flex gap-1">
+      <div className="flex items-center justify-between border-t-2 border-[#E2D8C4] bg-[#FAFAFA] px-4 py-3">
+        <div className="flex gap-1.5">
           {(company.headquarters || []).slice(0, 2).map((city) => (
-            <span key={city} className="rounded-full bg-white border border-[#e8dcc8] px-2 py-0.5 text-[8px] text-slate-500">
+            <span key={city} className="rounded-lg bg-white border border-[#E2D8C4] px-2.5 py-1 text-[10px] font-bold text-[#9A8A6A]">
               {city}
             </span>
           ))}
@@ -177,10 +178,11 @@ function CompanyCard({ company, selected, onSelect, onShowDetails, copy }) {
         <button
           type="button"
           onClick={() => onShowDetails(company.id)}
-          className="flex items-center gap-1 rounded-full border border-[#d4a843]/40 bg-white px-2.5 py-1 text-[9px] font-bold text-[#b8893d]"
+          className="flex min-h-[36px] items-center gap-1.5 rounded-xl bg-[#C9A84C] px-4 py-1.5 text-[11px] font-bold text-[#082555] transition hover:bg-[#E8C97A]"
+          style={{ fontFamily: AR }}
         >
           {copy.rating}
-          <ChevronRightIcon className="h-3 w-3" />
+          <ChevronRightIcon className="h-4 w-4" />
         </button>
       </div>
     </div>
@@ -190,29 +192,31 @@ function CompanyCard({ company, selected, onSelect, onShowDetails, copy }) {
 function CompanyDetailView({ company, onBack, copy }) {
   if (!company) return null;
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Header card */}
-      <div className="overflow-hidden rounded-2xl border border-[#d4a843]/30 bg-gradient-to-br from-[#fffbf0] to-white shadow-[0_4px_20px_rgba(212,168,67,0.15)]">
-        <div className="flex items-start gap-3 p-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#f5ede0] text-2xl shadow-sm">
+      <div className="relative overflow-hidden rounded-2xl bg-[#082555] p-6 shadow-xl">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#C9A84C]/20 to-transparent pointer-events-none" />
+        <div className="flex items-start gap-4">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-3xl shadow-sm backdrop-blur-sm">
             {company.logo}
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="text-[14px] font-bold text-slate-900" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+            <h2 className="text-[18px] font-bold text-white" style={{ fontFamily: AR }}>
               {company.name}
             </h2>
-            <p className="mt-0.5 text-[11px] text-[#b8893d] font-medium" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+            <p className="mt-1 text-[12px] text-[#E8C97A] font-bold" style={{ fontFamily: AR }}>
               {company.specialization}
             </p>
-            <div className="mt-1.5 flex items-center gap-2">
+            <div className="mt-3 flex items-center gap-3">
               <Stars rating={company.rating} />
-              <span className="text-[10px] font-bold text-[#b8893d]">{company.rating}/5</span>
+              <span className="text-[12px] font-bold text-white/60" style={{ fontFamily: MONO }}>{company.rating}/5</span>
             </div>
           </div>
           <button
             type="button"
             onClick={onBack}
-            className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[9px] font-bold text-slate-500"
+            className="shrink-0 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-[11px] font-bold text-white transition hover:bg-white/20"
+            style={{ fontFamily: AR }}
           >
             {copy.back}
           </button>
@@ -220,35 +224,35 @@ function CompanyDetailView({ company, onBack, copy }) {
       </div>
 
       {/* Info grid */}
-      <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-xl border border-[#e8dcc8] bg-white p-3 shadow-sm">
-          <p className="text-[9px] text-slate-400 mb-1">{copy.headquarters}</p>
-          <p className="text-[11px] font-semibold text-slate-800" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-4 shadow-sm">
+          <p className="text-[10px] font-bold text-[#9A8A6A] mb-2 uppercase tracking-wider">{copy.headquarters}</p>
+          <p className="text-[13px] font-bold text-[#082555]" style={{ fontFamily: AR }}>
             {(company.headquarters || []).join(" • ")}
           </p>
         </div>
-        <div className="rounded-xl border border-[#e8dcc8] bg-white p-3 shadow-sm">
-          <p className="text-[9px] text-slate-400 mb-1">{copy.website}</p>
+        <div className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-4 shadow-sm">
+          <p className="text-[10px] font-bold text-[#9A8A6A] mb-2 uppercase tracking-wider">{copy.website}</p>
           {company.website ? (
             <a href={company.website} target="_blank" rel="noreferrer"
-              className="text-[11px] font-semibold text-[#b8893d] underline underline-offset-2">
+              className="text-[13px] font-bold text-[#C9A84C] underline underline-offset-4">
               {copy.visitWebsite}
             </a>
           ) : (
-            <p className="text-[11px] text-slate-400">{copy.unavailable}</p>
+            <p className="text-[13px] font-bold text-[#9A8A6A]">{copy.unavailable}</p>
           )}
         </div>
       </div>
 
       {/* Key projects */}
-      <div className="rounded-xl border border-[#e8dcc8] bg-white p-3 shadow-sm">
-        <p className="text-[10px] font-bold text-slate-700 mb-2" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+      <div className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-4 shadow-sm">
+        <p className="text-[11px] font-bold text-[#082555] mb-3 uppercase tracking-wider" style={{ fontFamily: AR }}>
           {copy.keyProjects}
         </p>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {(company.keyProjects || []).map((p) => (
-            <span key={p} className="rounded-full border border-[#e8dcc8] bg-[#faf6ef] px-2.5 py-1 text-[9px] text-slate-600"
-              style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+            <span key={p} className="rounded-xl border-2 border-[#E2D8C4] bg-[#F7F3EC] px-3 py-1.5 text-[11px] font-bold text-[#5A4E38]"
+              style={{ fontFamily: AR }}>
               {p}
             </span>
           ))}
@@ -256,18 +260,18 @@ function CompanyDetailView({ company, onBack, copy }) {
       </div>
 
       {/* Reviews */}
-      <div className="rounded-xl border border-[#e8dcc8] bg-white p-3 shadow-sm">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-[10px] font-bold text-slate-700" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+      <div className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-[11px] font-bold text-[#082555] uppercase tracking-wider" style={{ fontFamily: AR }}>
             {copy.customerReviews}
           </p>
-          <span className="text-[9px] text-slate-400">{copy.reviewCount}</span>
+          <span className="text-[11px] font-bold text-[#9A8A6A]" style={{ fontFamily: MONO }}>{copy.reviewCount}</span>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-3">
           {[copy.reviewOne, copy.reviewTwo, copy.reviewThree].map((review, i) => (
-            <div key={i} className="flex gap-2 rounded-xl bg-[#faf6ef] px-3 py-2">
-              <span className="mt-0.5 text-[10px] text-[#d4a843]">★</span>
-              <p className="text-[10px] leading-relaxed text-slate-600" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+            <div key={i} className="flex gap-3 rounded-2xl bg-[#F7F3EC] p-4">
+              <span className="text-[14px] text-[#C9A84C]">★</span>
+              <p className="text-[12px] leading-relaxed font-medium text-[#5A4E38]" style={{ fontFamily: AR }}>
                 {review}
               </p>
             </div>
@@ -281,7 +285,7 @@ function CompanyDetailView({ company, onBack, copy }) {
 function FormField({ label, value, onChange, placeholder, type = "text" }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[10px] font-bold text-slate-600" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+      <span className="mb-2 block text-[12px] font-bold text-[#082555] mr-1" style={{ fontFamily: AR }}>
         {label}
       </span>
       <input
@@ -289,8 +293,8 @@ function FormField({ label, value, onChange, placeholder, type = "text" }) {
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-[#e8dcc8] bg-white px-3 py-2.5 text-[11px] text-slate-900 outline-none transition focus:border-[#d4a843] focus:ring-2 focus:ring-[#d4a843]/20"
-        style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}
+        className="min-h-[48px] w-full rounded-xl border-2 border-[#E2D8C4] bg-[#F7F3EC] px-4 py-2.5 text-[14px] font-medium text-[#082555] outline-none transition focus:border-[#C9A84C] focus:ring-4 focus:ring-[#C9A84C]/10"
+        style={{ fontFamily: AR }}
       />
     </label>
   );
@@ -372,27 +376,27 @@ export default function CompaniesPanel({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Nav tabs */}
       {activeSection !== "details" ? (
-        <div className="rounded-2xl bg-gradient-to-br from-[#0d2545] to-[#162e52] p-3 shadow-[0_8px_24px_rgba(13,37,69,0.25)]">
+        <div className="space-y-3">
           <TabBar tabs={tabs} active={activeSection} onSelect={(id) => nav.navigate({ section: id, detailCompanyId: null })} />
 
           {activeSection === "directory" && (
-            <div className="mt-3 space-y-2">
+            <div className="space-y-3">
               {/* Search */}
-              <div className="flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2.5">
-                <SearchIcon className="h-4 w-4 text-white/50 shrink-0" />
+              <div className="relative">
+                <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#9A8A6A]" />
                 <input
                   value={query}
                   onChange={(e) => { setQuery(e.target.value); setDirectoryPage(1); }}
                   placeholder={copy.searchPlaceholder}
-                  className="w-full bg-transparent text-[11px] text-white placeholder:text-white/40 outline-none"
-                  style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}
+                  className="min-h-[52px] w-full rounded-2xl border-2 border-[#E2D8C4] bg-white pr-12 pl-4 text-[14px] font-medium text-[#082555] outline-none transition focus:border-[#C9A84C] shadow-sm"
+                  style={{ fontFamily: AR }}
                 />
               </div>
               {/* Stats */}
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 <StatBadge label={copy.totalCompanies} value={summary.total} />
                 <StatBadge label={copy.contractors} value={summary.contractors} />
                 <StatBadge label={copy.consultants} value={summary.consultants} />
@@ -401,16 +405,16 @@ export default function CompaniesPanel({
           )}
         </div>
       ) : (
-        <div className="rounded-2xl bg-gradient-to-br from-[#0d2545] to-[#162e52] p-3 shadow-[0_8px_24px_rgba(13,37,69,0.25)]">
+        <div className="rounded-2xl bg-[#082555] p-4 shadow-xl">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[9px] text-[#d4a843] font-bold uppercase tracking-wider">{copy.companyDetails}</p>
-              <p className="mt-0.5 text-[13px] font-bold text-white" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+              <p className="text-[10px] text-[#C9A84C] font-bold uppercase tracking-widest">{copy.companyDetails}</p>
+              <p className="mt-1 text-[15px] font-bold text-white" style={{ fontFamily: AR }}>
                 {detailCompany?.name}
               </p>
             </div>
             <button type="button" onClick={() => nav.reset({ section: "directory", detailCompanyId: null })}
-              className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-bold text-white/80">
+              className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-[11px] font-bold text-white transition hover:bg-white/20">
               {copy.back}
             </button>
           </div>
@@ -419,12 +423,12 @@ export default function CompaniesPanel({
 
       {/* Directory */}
       {activeSection === "directory" && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between rounded-xl border border-[#e8dcc8] bg-white px-3 py-2 shadow-sm">
-            <span className="text-[10px] text-slate-500" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
-              {copy.currentShowing} <strong className="text-slate-800">{pagedCompanies.length}</strong> {copy.outOf} <strong className="text-slate-800">{filteredCompanies.length}</strong>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between rounded-2xl border-2 border-[#E2D8C4] bg-white px-4 py-3 shadow-sm">
+            <span className="text-[12px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+              {copy.currentShowing} <strong className="text-[#082555]">{pagedCompanies.length}</strong> {copy.outOf} <strong className="text-[#082555]">{filteredCompanies.length}</strong>
             </span>
-            <span className="text-[9px] font-semibold text-[#b8893d]">
+            <span className="text-[11px] font-bold text-[#C9A84C]" style={{ fontFamily: MONO }}>
               {copy.page} {directoryPage} / {totalPages}
             </span>
           </div>
@@ -439,19 +443,19 @@ export default function CompaniesPanel({
           ))}
 
           {/* Pagination */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3 pt-2">
             <button type="button" onClick={() => setDirectoryPage((p) => Math.max(1, p - 1))}
               disabled={directoryPage === 1}
-              className={`flex-1 rounded-xl py-2.5 text-[10px] font-bold transition ${
-                directoryPage === 1 ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "border border-[#d4a843] bg-white text-[#b8893d]"
-              }`} style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+              className={`flex-1 min-h-[48px] rounded-2xl py-2 text-[13px] font-bold transition shadow-sm ${
+                directoryPage === 1 ? "bg-white border-2 border-[#E2D8C4] text-[#E2D8C4] cursor-not-allowed" : "border-2 border-[#C9A84C] bg-white text-[#C9A84C] hover:bg-[#F5EDD8]"
+              }`} style={{ fontFamily: AR }}>
               {copy.previous}
             </button>
             <button type="button" onClick={() => setDirectoryPage((p) => Math.min(totalPages, p + 1))}
               disabled={directoryPage === totalPages}
-              className={`flex-1 rounded-xl py-2.5 text-[10px] font-bold transition ${
-                directoryPage === totalPages ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-gradient-to-r from-[#0d2545] to-[#162e52] text-white shadow-[0_4px_12px_rgba(13,37,69,0.25)]"
-              }`} style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+              className={`flex-1 min-h-[48px] rounded-2xl py-2 text-[13px] font-bold transition shadow-lg ${
+                directoryPage === totalPages ? "bg-white border-2 border-[#E2D8C4] text-[#E2D8C4] cursor-not-allowed" : "bg-[#082555] text-white hover:bg-[#2D2821]"
+              }`} style={{ fontFamily: AR }}>
               {copy.next}
             </button>
           </div>
@@ -465,51 +469,51 @@ export default function CompaniesPanel({
 
       {/* Projects view */}
       {activeSection === "projects" && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {companies.map((entry) => (
-            <div key={entry.id} className="overflow-hidden rounded-2xl border border-[#e8dcc8] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
+            <div key={entry.id} className="overflow-hidden rounded-2xl border-2 border-[#E2D8C4] bg-white shadow-sm transition-all hover:shadow-md">
               <button type="button" onClick={() => onSelectCompany(entry.id)}
-                className="flex w-full items-center justify-between gap-3 p-3 text-right">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f5ede0] text-lg shrink-0">
+                className="flex w-full items-center justify-between gap-4 p-4 text-right">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F7F3EC] text-2xl shrink-0 shadow-sm">
                     {entry.logo}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[12px] font-bold text-slate-900" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+                    <p className="text-[14px] font-bold text-[#082555]" style={{ fontFamily: AR }}>
                       {entry.name}
                     </p>
-                    <p className="text-[9px] text-[#b8893d]" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+                    <p className="text-[11px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
                       {(entry.headquarters || []).join(" • ")}
                     </p>
                   </div>
                 </div>
-                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[9px] font-bold ${
-                  selectedCompanyId === entry.id ? "bg-[#d4a843] text-white" : "bg-[#f5ede0] text-[#b8893d]"
-                }`}>
-                  {entry.projects.length} {copy.projectCount}
+                <span className={`shrink-0 rounded-lg px-3 py-1.5 text-[11px] font-bold ${
+                  selectedCompanyId === entry.id ? "bg-[#C9A84C] text-[#082555]" : "bg-[#F7F3EC] text-[#9A8A6A]"
+                }`} style={{ fontFamily: MONO }}>
+                  {entry.projects.length}
                 </span>
               </button>
 
               {entry.projects.length > 0 && (
-                <div className="border-t border-[#f0e8d8] bg-[#faf6ef] p-2 space-y-1.5">
+                <div className="border-t-2 border-[#E2D8C4] bg-[#FAFAFA] p-3 space-y-2">
                   {entry.projects.map((project) => {
                     const isSelected = selectedCompanyId === entry.id && selectedProjectId === project.id;
                     return (
                       <button key={project.id} type="button"
                         onClick={() => onSelectProject(entry.id, project.id)}
-                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-right transition ${
-                          isSelected ? "bg-[#d4a843]/15 border border-[#d4a843]/30" : "bg-white border border-[#e8dcc8]"
+                        className={`flex min-h-[56px] w-full items-center justify-between rounded-xl px-4 py-2.5 text-right transition-all border-2 ${
+                          isSelected ? "bg-[#C9A84C]/10 border-[#C9A84C]" : "bg-white border-transparent hover:border-[#E2D8C4]"
                         }`}>
                         <div>
-                          <p className="text-[11px] font-bold text-slate-900" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+                          <p className="text-[13px] font-bold text-[#082555]" style={{ fontFamily: AR }}>
                             {project.name}
                           </p>
-                          <p className="text-[9px] text-slate-500" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+                          <p className="text-[11px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
                             {project.location} • {project.stage}
                           </p>
                         </div>
-                        <span className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${
-                          isSelected ? "bg-[#d4a843] text-white" : "bg-[#f5ede0] text-[#b8893d]"
+                        <span className={`rounded-xl px-4 py-1.5 text-[11px] font-bold transition-all ${
+                          isSelected ? "bg-[#C9A84C] text-[#082555]" : "border-2 border-[#E2D8C4] text-[#9A8A6A]"
                         }`}>
                           {isSelected ? copy.selected : copy.choose}
                         </span>
@@ -520,8 +524,8 @@ export default function CompaniesPanel({
               )}
 
               {entry.projects.length === 0 && (
-                <div className="border-t border-[#f0e8d8] bg-[#faf6ef] px-3 py-2.5 text-center text-[10px] text-slate-400"
-                  style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+                <div className="border-t-2 border-[#E2D8C4] bg-[#FAFAFA] px-4 py-4 text-center text-[12px] font-bold text-[#9A8A6A]"
+                  style={{ fontFamily: AR }}>
                   {copy.noCompanyProjects}
                 </div>
               )}
@@ -532,31 +536,31 @@ export default function CompaniesPanel({
 
       {/* Create view */}
       {activeSection === "create" && (
-        <div className="space-y-3">
+        <div className="space-y-6">
           {/* Add Company */}
-          <div className="overflow-hidden rounded-2xl border border-[#e8dcc8] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
-            <div className="flex items-center gap-2 bg-gradient-to-r from-[#0d2545] to-[#162e52] px-4 py-3">
-              <PlusIcon className="h-4 w-4 text-[#d4a843]" />
-              <p className="text-[12px] font-bold text-white" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+          <div className="overflow-hidden rounded-3xl border-2 border-[#E2D8C4] bg-white shadow-xl">
+            <div className="flex items-center gap-3 bg-[#082555] px-6 py-4">
+              <PlusIcon className="h-5 w-5 text-[#C9A84C]" />
+              <p className="text-[14px] font-bold text-white uppercase tracking-wider" style={{ fontFamily: AR }}>
                 {copy.addCompany}
               </p>
             </div>
-            <form onSubmit={submitCompany} className="space-y-3 p-4">
+            <form onSubmit={submitCompany} className="space-y-4 p-6">
               <FormField label={copy.companyName} value={companyForm.name}
                 onChange={(e) => setCompanyForm((c) => ({ ...c, name: e.target.value }))}
                 placeholder={copy.enterCompanyName} />
               <FormField label={copy.specialization} value={companyForm.specialization}
                 onChange={(e) => setCompanyForm((c) => ({ ...c, specialization: e.target.value }))}
                 placeholder={copy.enterSpecialization} />
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-4">
                 <label className="block">
-                  <span className="mb-1 block text-[10px] font-bold text-slate-600" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+                  <span className="mb-2 block text-[12px] font-bold text-[#082555] mr-1" style={{ fontFamily: AR }}>
                     {copy.type}
                   </span>
                   <select value={companyForm.type}
                     onChange={(e) => setCompanyForm((c) => ({ ...c, type: e.target.value }))}
-                    className="w-full rounded-xl border border-[#e8dcc8] bg-white px-3 py-2.5 text-[11px] text-slate-900 outline-none"
-                    style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+                    className="min-h-[48px] w-full rounded-xl border-2 border-[#E2D8C4] bg-[#F7F3EC] px-4 py-2.5 text-[14px] font-bold text-[#082555] outline-none transition focus:border-[#C9A84C]"
+                    style={{ fontFamily: AR }}>
                     <option value="Contractor">{copy.contracting}</option>
                     <option value="Consultant">{copy.consulting}</option>
                   </select>
@@ -569,31 +573,31 @@ export default function CompaniesPanel({
                 onChange={(e) => setCompanyForm((c) => ({ ...c, headquarters: e.target.value }))}
                 placeholder={copy.citiesPlaceholder} />
               <button type="submit"
-                className="w-full rounded-xl bg-gradient-to-r from-[#0d2545] to-[#162e52] py-3 text-[11px] font-bold text-white shadow-[0_4px_12px_rgba(13,37,69,0.25)] transition active:scale-[0.98]"
-                style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+                className="w-full min-h-[52px] rounded-2xl bg-[#082555] py-3 text-[14px] font-bold text-white shadow-lg transition hover:bg-[#2D2821] active:scale-[0.98]"
+                style={{ fontFamily: AR }}>
                 {copy.saveCompany}
               </button>
             </form>
           </div>
 
           {/* Add Project */}
-          <div className="overflow-hidden rounded-2xl border border-[#e8dcc8] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]">
-            <div className="flex items-center justify-between bg-gradient-to-r from-[#c49830] to-[#d4a843] px-4 py-3">
-              <div className="flex items-center gap-2">
-                <PlusIcon className="h-4 w-4 text-white" />
-                <p className="text-[12px] font-bold text-white" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+          <div className="overflow-hidden rounded-3xl border-2 border-[#E2D8C4] bg-white shadow-xl">
+            <div className="flex items-center justify-between bg-[#C9A84C] px-6 py-4">
+              <div className="flex items-center gap-3">
+                <PlusIcon className="h-5 w-5 text-[#082555]" />
+                <p className="text-[14px] font-bold text-[#082555] uppercase tracking-wider" style={{ fontFamily: AR }}>
                   {copy.addProject}
                 </p>
               </div>
-              <span className="text-[9px] font-semibold text-white/80" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+              <span className="text-[11px] font-bold text-[#082555]/70" style={{ fontFamily: AR }}>
                 {company?.name || copy.chooseCompanyFirst}
               </span>
             </div>
-            <form onSubmit={submitProject} className="space-y-3 p-4">
+            <form onSubmit={submitProject} className="space-y-4 p-6">
               <FormField label={copy.projectName} value={projectForm.name}
                 onChange={(e) => setProjectForm((c) => ({ ...c, name: e.target.value }))}
                 placeholder={copy.enterProjectName} />
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-4">
                 <FormField label={copy.location} value={projectForm.location}
                   onChange={(e) => setProjectForm((c) => ({ ...c, location: e.target.value }))}
                   placeholder={settings?.language === "en" ? "Riyadh" : "الرياض"} />
@@ -605,11 +609,11 @@ export default function CompaniesPanel({
                 onChange={(e) => setProjectForm((c) => ({ ...c, budget: e.target.value }))}
                 placeholder="0" type="number" />
               <button type="submit" disabled={!company}
-                className={`w-full rounded-xl py-3 text-[11px] font-bold transition active:scale-[0.98] ${
+                className={`w-full min-h-[52px] rounded-2xl py-3 text-[14px] font-bold transition active:scale-[0.98] shadow-lg ${
                   company
-                    ? "bg-gradient-to-r from-[#c49830] to-[#d4a843] text-white shadow-[0_4px_12px_rgba(212,168,67,0.3)]"
-                    : "cursor-not-allowed bg-slate-100 text-slate-400"
-                }`} style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+                    ? "bg-[#C9A84C] text-[#082555] hover:bg-[#E8C97A]"
+                    : "cursor-not-allowed bg-[#F7F3EC] text-[#9A8A6A] border-2 border-[#E2D8C4]"
+                }`} style={{ fontFamily: AR }}>
                 {copy.saveProject}
               </button>
             </form>
