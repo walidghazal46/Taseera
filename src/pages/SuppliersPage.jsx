@@ -11,6 +11,7 @@ export default function SuppliersPage(props) {
         eyebrow={text.pages.suppliers.eyebrow}
         title=""
         description={text.pages.suppliers.description}
+        density="tight"
       />
       <SuppliersPanel {...props} />
     </div>

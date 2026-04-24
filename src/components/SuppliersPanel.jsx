@@ -5,6 +5,20 @@ import useBackStack from "../hooks/useBackStack";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
 const MONO = "'IBM Plex Mono',monospace";
+const COUNTRY_VALUES = {
+  sa: "السعودية",
+  eg: "مصر",
+  ae: "الإمارات",
+};
+
+function normalizeCountry(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (!text) return COUNTRY_VALUES.sa;
+  if (["السعودية", "saudi arabia", "ksa", "sa"].includes(text)) return COUNTRY_VALUES.sa;
+  if (["مصر", "egypt", "eg"].includes(text)) return COUNTRY_VALUES.eg;
+  if (["الإمارات", "الامارات", "uae", "u.a.e.", "united arab emirates", "ae"].includes(text)) return COUNTRY_VALUES.ae;
+  return String(value || "").trim();
+}
 
 function getSuppliersCopy(language) {
   return language === "en"
@@ -12,6 +26,10 @@ function getSuppliersCopy(language) {
         all: "All", other: "Other", directory: "Directory", addSupplier: "Add Supplier",
         supplierSpecialties: "Supplier Specialties", showingNow: "Showing", outOf: "of",
         searchPlaceholder: "Search by supplier name or specialty",
+        countryFilter: "Country", chooseCountry: "Choose country",
+        saudiArabia: "Saudi Arabia", egypt: "Egypt", uae: "U.A.E.",
+        cityFilter: "City", allCities: "All Cities", specialtyFilter: "Specialty",
+        chooseCity: "Choose city", chooseSpecialty: "Choose specialty",
         materials: "Materials", rating: "Rating", contact: "Contact", rfq: "Request Quote",
         guestRfqHint: "RFQs available after sign-in.", previous: "Prev", next: "Next",
         page: "Page", noResults: "No matching results in this specialty.",
@@ -26,6 +44,10 @@ function getSuppliersCopy(language) {
         all: "الكل", other: "أخرى", directory: "الدليل", addSupplier: "إضافة مورد",
         supplierSpecialties: "تخصصات الموردين", showingNow: "يظهر الآن", outOf: "من أصل",
         searchPlaceholder: "ابحث باسم المورد أو تخصصه",
+        countryFilter: "الدولة", chooseCountry: "اختر الدولة",
+        saudiArabia: "السعودية", egypt: "مصر", uae: "الإمارات",
+        cityFilter: "المدينة", allCities: "كل المدن", specialtyFilter: "التخصص",
+        chooseCity: "اختر المدينة", chooseSpecialty: "اختر التخصص",
         materials: "المواد", rating: "التقييم", contact: "تواصل", rfq: "طلب عرض سعر",
         guestRfqHint: "طلب عروض الأسعار متاح بعد تسجيل الدخول.",
         previous: "السابق", next: "التالي", page: "صفحة",
@@ -64,6 +86,34 @@ function FormField({ label, value, onChange, placeholder }) {
   );
 }
 
+function FilterSelect({ label, value, options, onChange, ariaLabel }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[10px] font-bold text-[#9A8A6A] mr-1" style={{ fontFamily: AR }}>
+        {label}
+      </span>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={onChange}
+          aria-label={ariaLabel || label}
+          className="min-h-[40px] w-full appearance-none rounded-2xl border-2 border-[#E2D8C4] bg-[#F7F3EC] px-4 pl-10 text-[12px] font-bold text-[#082555] outline-none transition focus:border-[#C9A84C]"
+          style={{ fontFamily: AR }}
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#9A8A6A]">
+          ▾
+        </span>
+      </div>
+    </label>
+  );
+}
+
 export default function SuppliersPanel({
   suppliers, authMode, settings, onAddSupplier, onContactSupplier, onCreateRfq, navigationBridge,
 }) {
@@ -71,7 +121,9 @@ export default function SuppliersPanel({
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeCountry, setActiveCountry] = useState(normalizeCountry(settings?.country || COUNTRY_VALUES.sa));
   const [activeGroup, setActiveGroup] = useState(copy.all);
+  const [activeCity, setActiveCity] = useState(copy.allCities);
   const [form, setForm] = useState({ name: "", category: "", location: "", phone: "", email: "", contactPerson: "", website: "" });
 
   const nav = useBackStack({
@@ -89,33 +141,74 @@ export default function SuppliersPanel({
     nav.reset({ section: "directory" });
   };
 
+  const countryOptions = useMemo(() => ([
+    { value: COUNTRY_VALUES.sa, label: copy.saudiArabia },
+    { value: COUNTRY_VALUES.eg, label: copy.egypt },
+    { value: COUNTRY_VALUES.ae, label: copy.uae },
+  ]), [copy.egypt, copy.saudiArabia, copy.uae]);
+
+  const countrySuppliers = useMemo(
+    () => suppliers.filter((supplier) => normalizeCountry(supplier.country) === normalizeCountry(activeCountry)),
+    [activeCountry, suppliers]
+  );
+
   const groupOptions = useMemo(() => {
-    const counts = suppliers.reduce((acc, s) => {
+    const counts = countrySuppliers.reduce((acc, s) => {
       const key = s.group || copy.other;
       acc[key] = (acc[key] || 0) + 1;
       return acc;
     }, {});
     return [
-      { label: copy.all, count: suppliers.length },
+      { label: copy.all, count: countrySuppliers.length },
       ...Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([label, count]) => ({ label, count })),
     ];
-  }, [copy.all, copy.other, suppliers]);
+  }, [copy.all, copy.other, countrySuppliers]);
+
+  const cityOptions = useMemo(() => {
+    const counts = countrySuppliers.reduce((acc, supplier) => {
+      const city = supplier.location || copy.other;
+      acc[city] = (acc[city] || 0) + 1;
+      return acc;
+    }, {});
+
+    return [
+      { value: copy.allCities, label: `${copy.allCities} (${countrySuppliers.length})` },
+      ...Object.entries(counts)
+        .sort((a, b) => a[0].localeCompare(b[0], "ar"))
+        .map(([label, count]) => ({ value: label, label: `${label} (${count})` })),
+    ];
+  }, [copy.allCities, copy.other, countrySuppliers]);
+
+  const specialtyOptions = useMemo(
+    () =>
+      groupOptions.map((group) => ({
+        value: group.label,
+        label: `${group.label} (${group.count})`,
+      })),
+    [groupOptions]
+  );
 
   const filtered = useMemo(() =>
-    suppliers.filter((s) => {
+    countrySuppliers.filter((s) => {
       if (activeGroup !== copy.all && s.group !== activeGroup) return false;
+      if (activeCity !== copy.allCities && s.location !== activeCity) return false;
       if (!searchTerm.trim()) return true;
       const q = searchTerm.trim();
-      return s.name.includes(q) || s.category.includes(q) || s.group?.includes(q) || s.materials?.some((m) => m.includes(q));
-    }), [activeGroup, copy.all, searchTerm, suppliers]);
+      return s.name.includes(q) || s.category.includes(q) || s.group?.includes(q) || s.location?.includes(q) || s.materials?.some((m) => m.includes(q));
+    }), [activeCity, activeGroup, copy.all, copy.allCities, countrySuppliers, searchTerm]);
 
   const pageSize = 5;
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
-  useEffect(() => { setPage(1); }, [activeGroup, searchTerm]);
+  useEffect(() => { setPage(1); }, [activeCity, activeCountry, activeGroup, searchTerm]);
   useEffect(() => { setActiveGroup(copy.all); }, [copy.all]);
+  useEffect(() => { setActiveCity(copy.allCities); }, [copy.allCities]);
+  useEffect(() => {
+    setActiveGroup(copy.all);
+    setActiveCity(copy.allCities);
+  }, [activeCountry, copy.all, copy.allCities]);
 
   return (
     <div className="space-y-4">
@@ -137,8 +230,8 @@ export default function SuppliersPanel({
       {activeSection === "directory" && (
         <>
           {/* Search & filters */}
-          <div className="rounded-3xl border-2 border-[#E2D8C4] bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
+          <div className="rounded-3xl border-2 border-[#E2D8C4] bg-white px-3 py-2 shadow-sm">
+            <div className="mb-1.5 flex items-center justify-between">
               <p className="text-[12px] font-bold text-[#082555] uppercase tracking-wider" style={{ fontFamily: AR }}>
                 {copy.supplierSpecialties}
               </p>
@@ -148,26 +241,39 @@ export default function SuppliersPanel({
             </div>
 
             {/* Search */}
-            <div className="relative mb-4">
+            <div className="relative mb-2">
               <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#9A8A6A]" />
               <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={copy.searchPlaceholder}
-                className="min-h-[52px] w-full rounded-2xl border-2 border-[#E2D8C4] bg-[#F7F3EC] pr-12 pl-4 text-[14px] font-medium text-[#082555] outline-none transition focus:border-[#C9A84C]"
+                className="min-h-[40px] w-full rounded-2xl border-2 border-[#E2D8C4] bg-[#F7F3EC] pr-12 pl-4 text-[12px] font-medium text-[#082555] outline-none transition focus:border-[#C9A84C]"
                 style={{ fontFamily: AR }} />
             </div>
 
-            {/* Group chips */}
-            <div className="flex flex-wrap gap-2">
-              {groupOptions.map((g) => (
-                <button key={g.label} type="button" onClick={() => setActiveGroup(g.label)}
-                  className={`min-h-[36px] rounded-xl px-4 py-1.5 text-[11px] font-bold transition-all border-2 ${
-                    activeGroup === g.label
-                      ? "bg-[#082555] border-[#082555] text-white shadow-md"
-                      : "border-[#E2D8C4] bg-white text-[#9A8A6A] hover:border-[#C9A84C]"
-                  }`} style={{ fontFamily: AR }}>
-                  {g.label} <span className="opacity-60" style={{ fontFamily: MONO }}>({g.count})</span>
-                </button>
-              ))}
+            <div className="mb-2">
+              <FilterSelect
+                label={copy.countryFilter}
+                value={activeCountry}
+                options={countryOptions}
+                onChange={(e) => setActiveCountry(e.target.value)}
+                ariaLabel={copy.chooseCountry}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <FilterSelect
+                label={copy.specialtyFilter}
+                value={activeGroup}
+                options={specialtyOptions}
+                onChange={(e) => setActiveGroup(e.target.value)}
+                ariaLabel={copy.chooseSpecialty}
+              />
+              <FilterSelect
+                label={copy.cityFilter}
+                value={activeCity}
+                options={cityOptions}
+                onChange={(e) => setActiveCity(e.target.value)}
+                ariaLabel={copy.chooseCity}
+              />
             </div>
           </div>
 
@@ -202,6 +308,10 @@ export default function SuppliersPanel({
                       <p className="mt-2 text-[11px] font-medium text-[#9A8A6A] leading-relaxed"
                         style={{ fontFamily: AR }}>
                         <span className="font-bold text-[#5A4E38]">{copy.materials}:</span> {supplier.materials?.join("، ") || supplier.category}
+                      </p>
+                      <p className="mt-1 text-[11px] font-medium text-[#9A8A6A] leading-relaxed"
+                        style={{ fontFamily: AR }}>
+                        <span className="font-bold text-[#5A4E38]">{copy.location}:</span> {supplier.location || "—"}
                       </p>
                     </div>
                   </div>

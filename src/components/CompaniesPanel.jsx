@@ -4,11 +4,27 @@ import useBackStack from "../hooks/useBackStack";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
 const MONO = "'IBM Plex Mono',monospace";
+const COUNTRY_VALUES = {
+  sa: "السعودية",
+  eg: "مصر",
+  ae: "الإمارات",
+};
+
+function normalizeCountry(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (!text) return COUNTRY_VALUES.sa;
+  if (["السعودية", "saudi arabia", "ksa", "sa"].includes(text)) return COUNTRY_VALUES.sa;
+  if (["مصر", "egypt", "eg"].includes(text)) return COUNTRY_VALUES.eg;
+  if (["الإمارات", "الامارات", "u.a.e.", "uae", "united arab emirates", "ae"].includes(text)) return COUNTRY_VALUES.ae;
+  return String(value || "").trim();
+}
 
 function getCompaniesCopy(language) {
   return language === "en"
     ? {
         contractor: "Contractor", consultant: "Consultant", back: "Back",
+        countryFilter: "Country", chooseCountry: "Choose country",
+        saudiArabia: "Saudi Arabia", egypt: "Egypt", uae: "U.A.E.",
         headquarters: "Headquarters", website: "Website", visitWebsite: "Visit",
         unavailable: "Unavailable", keyProjects: "Key Projects",
         projectCount: "projects", systemProjects: "Projects in System",
@@ -37,6 +53,8 @@ function getCompaniesCopy(language) {
       }
     : {
         contractor: "مقاول", consultant: "استشاري", back: "رجوع",
+        countryFilter: "الدولة", chooseCountry: "اختر الدولة",
+        saudiArabia: "السعودية", egypt: "مصر", uae: "الإمارات",
         headquarters: "المقرات", website: "الموقع", visitWebsite: "زيارة",
         unavailable: "غير متاح", keyProjects: "المشاريع الرئيسية",
         projectCount: "مشروع", systemProjects: "المشاريع في النظام",
@@ -106,6 +124,41 @@ function StatBadge({ label, value }) {
       <p className="mt-0.5 text-[10px] font-bold text-[#9A8A6A] uppercase tracking-wider" style={{ fontFamily: AR }}>
         {label}
       </p>
+    </div>
+  );
+}
+
+function CountrySelector({ options, activeCountry, onSelect, copy }) {
+  return (
+    <div className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-3 shadow-sm">
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-[11px] font-bold text-[#082555] uppercase tracking-wider" style={{ fontFamily: AR }}>
+          {copy.countryFilter}
+        </p>
+        <span className="text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+          {copy.chooseCountry}
+        </span>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        {options.map((option) => {
+          const active = option.value === activeCountry;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => onSelect(option.value)}
+              className={`min-h-[42px] rounded-xl border-2 px-2 py-2 text-[12px] font-bold transition-all ${
+                active
+                  ? "border-[#C9A84C] bg-[#C9A84C] text-[#082555] shadow-md"
+                  : "border-[#E2D8C4] bg-[#F7F3EC] text-[#5A4E38] hover:border-[#C9A84C]"
+              }`}
+              style={{ fontFamily: AR }}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -306,10 +359,16 @@ export default function CompaniesPanel({
   navigationBridge, settings,
 }) {
   const copy = getCompaniesCopy(settings?.language);
+  const countryOptions = useMemo(() => ([
+    { value: COUNTRY_VALUES.sa, label: copy.saudiArabia },
+    { value: COUNTRY_VALUES.eg, label: copy.egypt },
+    { value: COUNTRY_VALUES.ae, label: copy.uae },
+  ]), [copy.egypt, copy.saudiArabia, copy.uae]);
+  const [activeCountry, setActiveCountry] = useState(normalizeCountry(settings?.country || COUNTRY_VALUES.sa));
   const [query, setQuery] = useState("");
   const [companyForm, setCompanyForm] = useState({
     name: "", type: "Contractor",
-    country: settings?.language === "en" ? "Saudi Arabia" : "السعودية",
+    country: normalizeCountry(settings?.country || COUNTRY_VALUES.sa),
     specialization: "", headquarters: "",
   });
   const [projectForm, setProjectForm] = useState({
@@ -324,24 +383,29 @@ export default function CompaniesPanel({
   const activeSection = nav.currentEntry.section;
   const detailCompanyId = nav.currentEntry.detailCompanyId;
 
+  const countryCompanies = useMemo(
+    () => companies.filter((entry) => normalizeCountry(entry.country) === normalizeCountry(activeCountry)),
+    [activeCountry, companies]
+  );
+
   const filteredCompanies = useMemo(() => {
     const q = query.trim();
-    if (!q) return companies;
-    return companies.filter((e) =>
+    if (!q) return countryCompanies;
+    return countryCompanies.filter((e) =>
       [e.name, e.specialization, e.description, ...(e.headquarters || []), ...(e.keyProjects || [])]
         .filter(Boolean).some((v) => v.includes(q))
     );
-  }, [companies, query]);
+  }, [countryCompanies, query]);
 
   const pageSize = 4;
   const totalPages = Math.max(1, Math.ceil(filteredCompanies.length / pageSize));
   const pagedCompanies = filteredCompanies.slice((directoryPage - 1) * pageSize, directoryPage * pageSize);
 
   const summary = useMemo(() => ({
-    total: companies.length,
-    contractors: companies.filter((e) => e.type === "Contractor").length,
-    consultants: companies.filter((e) => e.type === "Consultant").length,
-  }), [companies]);
+    total: countryCompanies.length,
+    contractors: countryCompanies.filter((e) => e.type === "Contractor").length,
+    consultants: countryCompanies.filter((e) => e.type === "Consultant").length,
+  }), [countryCompanies]);
 
   const detailCompany = useMemo(() => companies.find((e) => e.id === detailCompanyId) || null, [companies, detailCompanyId]);
 
@@ -356,15 +420,30 @@ export default function CompaniesPanel({
   }, [directoryPage, totalPages]);
 
   useEffect(() => {
+    setDirectoryPage(1);
+    setQuery("");
+  }, [activeCountry]);
+
+  useEffect(() => {
     if (activeSection === "details") nav.reset({ section: "directory", detailCompanyId: null });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [directoryPage, query]);
+  }, [directoryPage, query, activeCountry]);
+
+  useEffect(() => {
+    setCompanyForm((current) => ({ ...current, country: activeCountry }));
+  }, [activeCountry]);
+
+  useEffect(() => {
+    if (!countryOptions.some((option) => option.value === activeCountry)) {
+      setActiveCountry(COUNTRY_VALUES.sa);
+    }
+  }, [activeCountry, countryOptions]);
 
   const submitCompany = (e) => {
     e.preventDefault();
     if (!companyForm.name.trim() || !companyForm.country.trim() || !companyForm.specialization.trim()) return;
     onAddCompany(companyForm);
-    setCompanyForm({ name: "", type: "Contractor", country: settings?.language === "en" ? "Saudi Arabia" : "السعودية", specialization: "", headquarters: "" });
+    setCompanyForm({ name: "", type: "Contractor", country: activeCountry, specialization: "", headquarters: "" });
     nav.navigate({ section: "projects", detailCompanyId: null });
   };
 
@@ -384,6 +463,12 @@ export default function CompaniesPanel({
 
           {activeSection === "directory" && (
             <div className="space-y-3">
+              <CountrySelector
+                options={countryOptions}
+                activeCountry={activeCountry}
+                onSelect={setActiveCountry}
+                copy={copy}
+              />
               {/* Search */}
               <div className="relative">
                 <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#9A8A6A]" />
@@ -470,7 +555,7 @@ export default function CompaniesPanel({
       {/* Projects view */}
       {activeSection === "projects" && (
         <div className="space-y-4">
-          {companies.map((entry) => (
+          {countryCompanies.map((entry) => (
             <div key={entry.id} className="overflow-hidden rounded-2xl border-2 border-[#E2D8C4] bg-white shadow-sm transition-all hover:shadow-md">
               <button type="button" onClick={() => onSelectCompany(entry.id)}
                 className="flex w-full items-center justify-between gap-4 p-4 text-right">

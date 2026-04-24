@@ -1,6 +1,18 @@
-export default function PageHeader({ eyebrow, title, description, actions }) {
+export default function PageHeader({
+  eyebrow,
+  title,
+  description,
+  actions,
+  compact = false,
+  density = "normal",
+}) {
+  const isCompact = compact || density !== "normal";
+  const isTight = density === "tight";
+
   return (
-    <div className="mb-4 overflow-hidden rounded-[24px] bg-[#082555] px-5 py-5 shadow-xl relative">
+    <div className={`mb-4 overflow-hidden rounded-[24px] bg-[#082555] px-5 shadow-xl relative ${
+      isTight ? "py-3" : isCompact ? "py-4" : "py-5"
+    }`}>
       <div className="absolute inset-0 bg-gradient-to-br from-[#C9A84C]/15 to-transparent pointer-events-none" />
       <div className="relative flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
@@ -27,7 +39,11 @@ export default function PageHeader({ eyebrow, title, description, actions }) {
 
           {/* Description */}
           <p
-            className={`${title ? "mt-2" : "mt-3"} text-[11px] font-medium leading-relaxed text-[#9A8A6A]`}
+            className={`${
+              title ? "mt-2" : isCompact ? "mt-1.5" : "mt-3"
+            } text-[11px] font-medium ${
+              isTight ? "leading-[1.45]" : isCompact ? "leading-[1.55]" : "leading-relaxed"
+            } text-[#9A8A6A]`}
             style={{ fontFamily: "'Cairo', 'Tajawal', sans-serif" }}
           >
             {description}

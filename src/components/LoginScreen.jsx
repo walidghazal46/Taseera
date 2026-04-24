@@ -114,12 +114,18 @@ export default function LoginScreen({
 
         {/* Logo section */}
         <div className="flex flex-col items-center pt-4 pb-6">
-          <div className="mx-auto w-[min(55vw,14rem)]">
+          <div
+            className="mx-auto overflow-hidden rounded-[3.1rem] w-[min(55vw,14rem)]"
+            style={{
+              boxShadow: "0 0 0 1px rgba(255,255,255,0.04)",
+              background: "radial-gradient(circle at center, rgba(8,27,53,0) 58%, rgba(8,27,53,0.38) 76%, rgba(8,27,53,0.72) 88%, rgba(8,27,53,0.96) 100%)",
+            }}
+          >
             <img src="./taseera-logo.png" alt="Taseera"
-              className="block w-full object-contain"
+              className="block w-full rounded-[3.1rem] object-contain"
               style={{
-                WebkitMaskImage: "radial-gradient(circle at center, rgba(0,0,0,1) 62%, rgba(0,0,0,0.92) 74%, rgba(0,0,0,0.68) 86%, rgba(0,0,0,0) 100%)",
-                maskImage: "radial-gradient(circle at center, rgba(0,0,0,1) 62%, rgba(0,0,0,0.92) 74%, rgba(0,0,0,0.68) 86%, rgba(0,0,0,0) 100%)",
+                WebkitMaskImage: "radial-gradient(circle at center, rgba(0,0,0,1) 56%, rgba(0,0,0,0.96) 68%, rgba(0,0,0,0.82) 80%, rgba(0,0,0,0.45) 91%, rgba(0,0,0,0) 100%)",
+                maskImage: "radial-gradient(circle at center, rgba(0,0,0,1) 56%, rgba(0,0,0,0.96) 68%, rgba(0,0,0,0.82) 80%, rgba(0,0,0,0.45) 91%, rgba(0,0,0,0) 100%)",
               }} />
           </div>
           <p className="mt-3 text-center text-[11px] font-medium leading-relaxed text-white/70 max-w-[16rem]">

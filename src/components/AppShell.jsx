@@ -4,9 +4,9 @@ import {
   SettingsIcon,
   SuppliersIcon,
 } from "./icons";
+import taseeraLogo from "../assets/taseera-logo.png";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
-const MONO = "'IBM Plex Mono',monospace";
 
 const navItems = [
   { id: "companies", label: "الشركات", labelEn: "Companies", icon: BuildingsIcon },
@@ -55,18 +55,19 @@ export default function AppShell({
               <path d={isRtl ? "m9 6 6 6-6 6" : "m15 6-6 6 6 6"} strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          {/* Logo mark */}
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#C9A84C] shadow-lg shadow-[#C9A84C]/20">
-            <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6 text-[#082555]">
-              <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71L12 2z" />
-            </svg>
+          <div className="px-0 py-0">
+            <img
+              src={taseeraLogo}
+              alt="Taseera"
+              className="h-10 w-auto max-w-[160px] rounded-2xl object-contain"
+            />
           </div>
-          <div>
-            <p className="text-[15px] font-bold tracking-[0.2em] text-[#C9A84C] leading-none" style={{ fontFamily: MONO }}>
-              TASEERA
-            </p>
-            <p className="mt-1.5 text-[9px] font-bold text-[#9A8A6A] leading-none tracking-widest uppercase" style={{ fontFamily: AR }}>
-              Pricing Intelligence
+          <div className="hidden min-[430px]:block">
+            <p
+              className="text-[16px] font-extrabold leading-none text-white"
+              style={{ fontFamily: AR }}
+            >
+              Taseera - تسعيرة
             </p>
           </div>
         </div>

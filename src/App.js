@@ -328,6 +328,56 @@ export default function App() {
   }, [companies, selectedCompanyId, setSelectedCompanyId, setSelectedProjectId]);
 
   useEffect(() => {
+    const existingIds = new Set(companies.map((company) => company.id));
+    const missingSeedCompanies = sampleCompanies.filter((company) => !existingIds.has(company.id));
+
+    if (missingSeedCompanies.length) {
+      setCompanies((current) => {
+        const currentIds = new Set(current.map((company) => company.id));
+        const nextMissing = sampleCompanies.filter((company) => !currentIds.has(company.id));
+        return nextMissing.length ? [...current, ...nextMissing] : current;
+      });
+    }
+  }, [companies, setCompanies]);
+
+  useEffect(() => {
+    setSuppliers((current) => {
+      const seedSupplierMap = new Map(sampleSuppliers.map((supplier) => [supplier.id, supplier]));
+      let changed = false;
+
+      const nextSuppliers = current.map((supplier) => {
+        if (!/^sup-\d+$/.test(supplier.id)) {
+          return supplier;
+        }
+
+        const seedSupplier = seedSupplierMap.get(supplier.id);
+        if (!seedSupplier) {
+          return supplier;
+        }
+
+        const mergedSupplier = { ...supplier, ...seedSupplier };
+
+        if (JSON.stringify(mergedSupplier) !== JSON.stringify(supplier)) {
+          changed = true;
+          return mergedSupplier;
+        }
+
+        return supplier;
+      });
+
+      const currentIds = new Set(nextSuppliers.map((supplier) => supplier.id));
+      const missingSeedSuppliers = sampleSuppliers.filter((supplier) => !currentIds.has(supplier.id));
+
+      if (missingSeedSuppliers.length) {
+        changed = true;
+        nextSuppliers.push(...missingSeedSuppliers);
+      }
+
+      return changed ? nextSuppliers : current;
+    });
+  }, [setSuppliers]);
+
+  useEffect(() => {
     const selectedCompany = companies.find((company) => company.id === selectedCompanyId);
     if (!selectedCompany) {
       return;
@@ -467,16 +517,14 @@ export default function App() {
         userEmail: payload.userEmail || current.userEmail,
       }));
       window.history.pushState({ source: "taseera-guard" }, "");
-      showStatus(
-        mode === "guest"
-          ? settings.language === "en"
-            ? "Guest mode is now active."
-            : "تم الدخول بوضع الضيف."
-          : settings.language === "en"
+      if (mode !== "guest") {
+        showStatus(
+          settings.language === "en"
             ? "Signed in successfully."
             : "تم تسجيل الدخول بنجاح.",
-        "success"
-      );
+          "success"
+        );
+      }
     },
     [
       setActivePage,
@@ -507,14 +555,14 @@ export default function App() {
 
   const confirmExit = useCallback(() => {
     setShowExitPrompt(false);
-    allowExitRef.current = true;
-    if (bridge.isAndroid) {
-      bridge.exitApp();
-      return;
-    }
-
-    window.history.back();
-  }, [bridge]);
+    pageBackHandlerRef.current = () => false;
+    setAuthMode(null);
+    setAuthSession(null);
+    setActivePage("companies");
+    setAuthScreenMode("login");
+    setRouteStack([createRoute(null)]);
+    window.history.pushState({ source: "taseera-guard" }, "");
+  }, [setActivePage, setAuthMode, setAuthSession]);
 
   const selectedCompany = useMemo(
     () => companies.find((companyItem) => companyItem.id === selectedCompanyId) || null,
@@ -940,8 +988,8 @@ export default function App() {
               <div className="grid gap-3 rounded-[16px] border border-red-200 bg-[radial-gradient(circle_at_top,#fff5f5_0%,#fff1f1_55%,#ffe4e6_100%)] p-1 text-right shadow-[0_0_24px_rgba(239,68,68,0.18)]">
                 <p className="text-sm font-semibold text-red-700">
                   {settings.language === "en"
-                    ? "Do you want to exit the app?"
-                    : "هل تريد الخروج من التطبيق؟"}
+                    ? "Do you want to exit?"
+                    : "هل تريد الخروج؟"}
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -988,8 +1036,8 @@ export default function App() {
               <div className="grid gap-3 rounded-[16px] border border-red-200 bg-[radial-gradient(circle_at_top,#fff5f5_0%,#fff1f1_55%,#ffe4e6_100%)] p-1 text-right shadow-[0_0_24px_rgba(239,68,68,0.18)]">
                 <p className="text-sm font-semibold text-red-700">
                   {settings.language === "en"
-                    ? "Do you want to exit the app?"
-                    : "هل تريد الخروج من التطبيق؟"}
+                    ? "Do you want to exit?"
+                    : "هل تريد الخروج؟"}
                 </p>
                 <div className="grid grid-cols-2 gap-2">
                   <button

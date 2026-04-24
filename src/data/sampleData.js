@@ -493,7 +493,117 @@ const supplierSeedsSecond = [
   { name: "شركة بولاركس للإنشاءات (Polarix)", category: "مقاولات وأعمال تيار خفيف", description: "تنفذ أعمال التيار الخفيف، أنظمة الإنذار والصوتيات، وتأسيس شبكات الجهد المتوسط والسنترال." },
 ];
 
-const supplierCities = ["الرياض", "جدة", "الدمام", "الخبر", "الجبيل", "تبوك"];
+const egyptSupplierSeeds = [
+  { name: "السويدي إليكتريك", category: "الأعمال الكهربائية - كابلات ولوحات", description: "مجموعة صناعية مصرية كبرى لتوريد الكابلات، مهمات الكهرباء، اللوحات، وحلول البنية الكهربائية.", location: "القاهرة" },
+  { name: "حديد عز", category: "الحديد والصلب", description: "مورد رئيسي لحديد التسليح ولفائف الصلب للمشروعات الإنشائية والصناعية في مصر.", location: "القاهرة" },
+  { name: "بشاي ستيل", category: "الحديد والصلب", description: "شركة مصرية بارزة في تصنيع وتوريد حديد التسليح وقطاعات الصلب للمقاولات.", location: "السادس من أكتوبر" },
+  { name: "حديد المصريين", category: "الحديد والصلب", description: "مجموعة موردة لمنتجات حديد التسليح ولفائف الصلب مع تغطية واسعة لقطاع البناء.", location: "بني سويف" },
+  { name: "السويس للصلب", category: "الحديد والصلب", description: "شركة متخصصة في إنتاج وتوريد البيليت وحديد التسليح والمنتجات الفولاذية.", location: "السويس" },
+  { name: "العتال ستيل", category: "الحديد والصلب", description: "مورد معروف في سوق الحديد المصري لتوريد حديد التسليح والمقاطع المعدنية.", location: "القاهرة" },
+  { name: "الجيوشي للصلب", category: "الحديد والصلب", description: "تقوم بتوريد حديد التسليح ومنتجات الصلب للمشروعات السكنية والتجارية.", location: "العاشر من رمضان" },
+  { name: "METALCO", category: "الأعمال الإنشائية - هياكل معدنية", description: "متخصصة في الهياكل المعدنية والإنشاءات الفولاذية والخزانات ومهمات المشروعات.", location: "القاهرة" },
+  { name: "Elsewedy Steel", category: "الأعمال الإنشائية - هياكل معدنية", description: "توريد تطبيقات الصلب والشدادات والأسلاك الفولاذية وحلول الهياكل المعدنية.", location: "العاشر من رمضان" },
+  { name: "Egyptalum", category: "الأعمال المعمارية - ألمنيوم", description: "شركة مصر للألومنيوم وتورد قطاعات ومنتجات الألمنيوم للمشروعات والواجهات.", location: "نجع حمادي" },
+  { name: "Alumil Egypt", category: "الأعمال المعمارية - ألمنيوم", description: "توفر أنظمة الألمنيوم للواجهات والأبواب والشبابيك والمشاريع المعمارية.", location: "القاهرة" },
+  { name: "سيراميكا كليوباترا", category: "التشطيبات والأدوات الصحية", description: "أحد أكبر موردي السيراميك والبورسلين والأدوات الصحية في السوق المصري.", location: "الجيزة" },
+  { name: "ليسيكو مصر", category: "التشطيبات والأدوات الصحية", description: "مورد رئيسي للأدوات الصحية والبلاط ومنتجات الحمامات للمشاريع السكنية والفندقية.", location: "الإسكندرية" },
+  { name: "أحمد السلاب", category: "التشطيبات - سيراميك وأدوات صحية", description: "شبكة توزيع كبيرة لمنتجات السيراميك والبورسلين والأدوات الصحية والرخام.", location: "القاهرة" },
+  { name: "Duravit Egypt", category: "التشطيبات والأدوات الصحية", description: "توريد منتجات الأدوات الصحية والمغاسل والحلول المخصصة للحمامات الحديثة.", location: "القاهرة" },
+  { name: "Ideal Standard Egypt", category: "التشطيبات والأدوات الصحية", description: "شركة متخصصة في الأدوات الصحية والخلاطات وتجهيزات الحمامات للمشروعات.", location: "القاهرة" },
+  { name: "Roca Egypt", category: "التشطيبات والأدوات الصحية", description: "توفر أطقم الحمامات والخلاطات ومنتجات التشطيب الصحي للقطاع السكني والتجاري.", location: "القاهرة" },
+  { name: "Grohe Egypt", category: "التشطيبات والأدوات الصحية", description: "مورد لحلول الخلاطات وتجهيزات الحمامات والمطابخ ذات المواصفات العالية.", location: "القاهرة" },
+  { name: "السويس للأسمنت", category: "المواد الإنشائية - أسمنت", description: "منتج ومورد رئيسي للأسمنت والكلنكر للمشاريع ومصانع الخرسانة الجاهزة.", location: "القاهرة" },
+  { name: "Lafarge Egypt", category: "المواد الإنشائية - أسمنت", description: "توفر الأسمنت ومواد البناء الأساسية لمشروعات البنية التحتية والإسكان.", location: "القاهرة" },
+  { name: "العربية للأسمنت", category: "المواد الإنشائية - أسمنت", description: "شركة مصرية لتصنيع وتوريد الأسمنت للمقاولين ومحطات الخرسانة.", location: "السويس" },
+  { name: "أسمنت مصر بني سويف", category: "المواد الإنشائية - أسمنت", description: "تورد الأسمنت البورتلاندي ومنتجات الأسمنت للمشروعات المختلفة.", location: "بني سويف" },
+  { name: "أسمنت أسيوط سيمكس", category: "المواد الإنشائية - أسمنت", description: "مورد أسمنت معروف يخدم مشاريع الصعيد والوجه البحري.", location: "أسيوط" },
+  { name: "أسمنت العامرية", category: "المواد الإنشائية - أسمنت", description: "شركة متخصصة في توريد الأسمنت لمشروعات الإنشاءات والخرسانة الجاهزة.", location: "الإسكندرية" },
+  { name: "أسمنت سيناء", category: "المواد الإنشائية - أسمنت", description: "توفر الأسمنت للمشروعات السكنية والصناعية ومشاريع التطوير الكبرى.", location: "القاهرة" },
+  { name: "CMB Group Egypt", category: "كيماويات مواد البناء", description: "مجموعة مصرية متخصصة في كيماويات البناء ومواد العزل والمواد التكميلية للمشروعات.", location: "القاهرة" },
+  { name: "Sika Egypt", category: "كيماويات مواد البناء", description: "توريد إضافات الخرسانة، العزل، اللواصق، ومواد الإصلاح والحماية للمباني.", location: "القاهرة" },
+  { name: "Saveto Egypt", category: "كيماويات مواد البناء", description: "مورد معروف للمونة الجاهزة، اللاصق، المعاجين، وحلول العزل والإنهاءات.", location: "العاشر من رمضان" },
+  { name: "Insutech Egypt", category: "العزل وكيماويات البناء", description: "حلول العزل المائي والحراري ورغوات البوليسترين ومواد حماية المباني.", location: "القاهرة الجديدة" },
+  { name: "GLC Paints", category: "التشطيبات - دهانات", description: "شركة مصرية لتصنيع وتوريد الدهانات المعمارية والديكورية للمشاريع.", location: "القاهرة" },
+  { name: "Jotun Egypt", category: "التشطيبات - دهانات", description: "توريد دهانات المباني والواجهات والدهانات الواقية للمشروعات المختلفة.", location: "القاهرة" },
+  { name: "MIDO Coatings", category: "التشطيبات - دهانات", description: "توفر الدهانات المعمارية ومواد التشطيب والحماية للأسطح والواجهات.", location: "القاهرة" },
+  { name: "CAPCI", category: "التشطيبات - دهانات وكيماويات", description: "مورد لمنتجات الدهانات والكيماويات والمواد التكميلية للتشطيبات.", location: "القاهرة" },
+  { name: "Electro Cable Egypt", category: "الأعمال الكهربائية - كابلات", description: "شركة متخصصة في تصنيع وتوريد الكابلات والأسلاك للمشاريع الكهربائية.", location: "العاشر من رمضان" },
+  { name: "Schneider Electric Egypt", category: "الأعمال الكهربائية", description: "توفر القواطع ولوحات التوزيع وأنظمة التحكم والحلول الكهربائية الذكية.", location: "القاهرة" },
+  { name: "Legrand Egypt", category: "الأعمال الكهربائية", description: "مورد لمفاتيح الكهرباء، أنظمة المسارات، اللوحات، وحلول المباني الذكية.", location: "القاهرة" },
+  { name: "ABB Egypt", category: "الأعمال الكهربائية", description: "توريد منتجات الجهد المنخفض والمتوسط وأنظمة التحكم والأتمتة.", location: "القاهرة" },
+  { name: "Siemens Egypt", category: "الأعمال الكهربائية", description: "توفر أنظمة الكهرباء والتحكم والطاقة للمشروعات والمرافق الكبرى.", location: "القاهرة" },
+  { name: "Miraco Carrier", category: "الأعمال الميكانيكية - HVAC", description: "مورد رئيسي لحلول التكييف المركزي والوحدات التجارية والسكنية في مصر.", location: "القاهرة" },
+  { name: "Carrier Egypt", category: "الأعمال الميكانيكية - HVAC", description: "حلول متكاملة للتكييف والتهوية وخدمة مشروعات المكاتب والمجمعات السكنية.", location: "القاهرة" },
+  { name: "TROX Egypt", category: "الأعمال الميكانيكية - HVAC", description: "توريد مخارج الهواء والدكت والأنظمة الطرفية والتهوية للمشروعات.", location: "القاهرة" },
+  { name: "York Egypt", category: "الأعمال الميكانيكية - HVAC", description: "توفر وحدات التكييف المركزي وأنظمة إدارة الهواء للمباني.", location: "القاهرة" },
+  { name: "Egyptian German Porcelain", category: "التشطيبات - سيراميك وبورسلين", description: "توريد البورسلين والأرضيات والحوائط للمشاريع السكنية والتجارية.", location: "العاشر من رمضان" },
+  { name: "Prima Ceramics", category: "التشطيبات - سيراميك", description: "شركة مصرية لتوريد السيراميك والبورسلين ومنتجات الأرضيات.", location: "العاشر من رمضان" },
+  { name: "Royal Ceramica", category: "التشطيبات - سيراميك", description: "مورد معروف في السوق المصري للسيراميك والبورسلين بتشكيلات متعددة.", location: "العاشر من رمضان" },
+  { name: "Kiriazi Ceramics", category: "التشطيبات - سيراميك", description: "توريد بلاط وسيراميك ومنتجات تشطيب للمشروعات السكنية والفندقية.", location: "الجيزة" },
+  { name: "El Nasr Trading", category: "توريد عام لمواد البناء", description: "موزع لمجموعة من المواد والمنتجات المعمارية والأرضيات والتجهيزات.", location: "القاهرة" },
+  { name: "Acrow Misr", category: "الأعمال الإنشائية - شدات وسقالات", description: "توفر أنظمة الشدات المعدنية والسقالات والحلول المؤقتة للموقع.", location: "القاهرة" },
+  { name: "Elsewedy PSP", category: "السباكة والأنابيب", description: "توريد أنظمة المواسير والحلول الصحية والبنية التحتية للمياه.", location: "القاهرة" },
+  { name: "H.O.M Egypt", category: "الأعمال الكهروميكانيكية (MEP)", description: "شركة متخصصة في أعمال الميكانيكا والكهرباء والسباكة والتكييف والخدمات الفنية.", location: "القاهرة" },
+];
+
+const uaeSupplierSeeds = [
+  { name: "Danube Building Materials", category: "توريد الجملة - مواد بناء", description: "أحد أكبر موردي مواد البناء في الإمارات ويغطي الأخشاب، الحديد، الأدوات الصحية، والعدد.", location: "دبي" },
+  { name: "RAK Ceramics", category: "التشطيبات والأدوات الصحية", description: "شركة إماراتية عالمية متخصصة في السيراميك والبورسلين والأدوات الصحية.", location: "رأس الخيمة" },
+  { name: "EMSTEEL", category: "الحديد والصلب", description: "أكبر منتج للصلب ومواد البناء الثقيلة في الإمارات ويخدم مشاريع كبرى في الدولة.", location: "أبوظبي" },
+  { name: "Conares", category: "الحديد والصلب", description: "مورد ومصنع لحديد التسليح واللفائف والأسلاك الفولاذية للمقاولات.", location: "دبي" },
+  { name: "Al Ghurair Iron & Steel", category: "الحديد والصلب", description: "شركة متخصصة في الصلب المجلفن والمطلي والمنتجات المعدنية للمباني والصناعة.", location: "أبوظبي" },
+  { name: "Juma Al Majid Building Materials", category: "توريد الجملة - مواد بناء", description: "قطاع مواد البناء في مجموعة جمعة الماجد يوفر الأسمنت والحديد والمواد الكهربائية والتشطيبات.", location: "دبي" },
+  { name: "Faisal Jassim Trading", category: "الأعمال الميكانيكية والكهربائية", description: "مورد معروف لحلول الـ MEP، يشمل التكييف، المضخات، السخانات، ومنتجات السباكة.", location: "دبي" },
+  { name: "Leminar Air Conditioning", category: "الأعمال الميكانيكية - HVAC", description: "شركة إماراتية بارزة في تصنيع وتوريد حلول التكييف والتهوية ومخارج الهواء.", location: "دبي" },
+  { name: "Trosten Industries", category: "الأعمال الميكانيكية - HVAC", description: "توريد وحدات مناولة الهواء، الدكت، وأنظمة التهوية للمشاريع التجارية والصناعية.", location: "دبي" },
+  { name: "SKM Air Conditioning", category: "الأعمال الميكانيكية - HVAC", description: "شركة متخصصة في الشيلرات ووحدات التكييف التجارية والمركزية.", location: "الشارقة" },
+  { name: "Ducab", category: "الأعمال الكهربائية - كابلات", description: "من أكبر موردي ومصنعي الكابلات والأسلاك الكهربائية في الإمارات.", location: "دبي" },
+  { name: "National Cables Industry", category: "الأعمال الكهربائية - كابلات", description: "شركة متخصصة في إنتاج وتوريد كابلات الجهد المنخفض والمتوسط.", location: "أبوظبي" },
+  { name: "Union Pipes Industry", category: "السباكة والأنابيب", description: "توفر أنابيب البولي إيثيلين وأنظمة الشبكات للمياه والبنية التحتية.", location: "أبوظبي" },
+  { name: "Hepworth PME UAE", category: "السباكة والأنابيب", description: "مورد لأنظمة المواسير والوصلات والأنابيب البلاستيكية للمشروعات.", location: "دبي" },
+  { name: "Cosmoplast", category: "السباكة والأنابيب", description: "توفر الأنابيب والخزانات والمنتجات البلاستيكية لقطاعات البناء والمياه.", location: "الشارقة" },
+  { name: "Interplast", category: "السباكة والأنابيب", description: "شركة إماراتية لتوريد أنظمة الأنابيب والعزل والمواد البلاستيكية للمشاريع.", location: "الشارقة" },
+  { name: "National Paints UAE", category: "التشطيبات - دهانات", description: "شركة رائدة في الدهانات المعمارية والوقائية للمباني والمشروعات.", location: "الشارقة" },
+  { name: "Jotun UAE", category: "التشطيبات - دهانات", description: "توريد الدهانات المعمارية والصناعية والدهانات الواقية في السوق الإماراتي.", location: "دبي" },
+  { name: "Terrex Building Materials", category: "توريد الجملة - مواد بناء", description: "توفر مواد البناء والكهربائيات والإنارة والمنتجات الصحية والخشب ومستلزمات السلامة.", location: "دبي" },
+  { name: "Fakhri Electrical & Sanitary Trading", category: "توريد الجملة - سباكة وكهرباء", description: "موزع ومخزن للمواد الكهربائية والصحية ومواد البناء والعدد اليدوية.", location: "عجمان" },
+  { name: "Al Egaby Gen. Tr. LLC", category: "الأعمال الميكانيكية - HVAC", description: "مورد لـ HVAC ومواد البناء والدهانات والكهربائيات والسباكة في الإمارات.", location: "الشارقة" },
+  { name: "Manali Building Materials", category: "توريد الجملة - مواد بناء", description: "توفر مواد البناء، التثبيت، الكهرباء، الصحي، ومنتجات الحديد والألومنيوم.", location: "دبي" },
+  { name: "Junaid Group", category: "السباكة والأدوات الصحية", description: "مورد B2B للسباكة والأدوات الصحية وأنظمة المياه الساخنة ومكونات المشاريع.", location: "دبي" },
+  { name: "Frazer Building Material Trading", category: "توريد الجملة - مواد بناء", description: "يوفر منتجات السباكة والكهرباء ومواد البناء والـ HVAC للمشروعات.", location: "عجمان" },
+  { name: "Al Zafeer Building Materials", category: "توريد الجملة - مواد بناء", description: "مورد لمواد البناء والعدد والسباكة والكهرباء ومستلزمات التشطيب الداخلي.", location: "دبي" },
+  { name: "Safinath Al Salam Building Materials", category: "توريد الجملة - مواد بناء", description: "شركة تجارة مواد بناء تقدم مجموعة واسعة من المنتجات للمقاولين في الإمارات.", location: "دبي" },
+  { name: "Emirates Glass", category: "الأعمال المعمارية - الزجاج", description: "شركة متخصصة في الزجاج المعماري عالي الأداء للواجهات والمشروعات الكبرى.", location: "أبوظبي" },
+  { name: "Gulf Glass Industries", category: "الأعمال المعمارية - الزجاج", description: "توفر الزجاج المسطح والمعماري والحلول الزجاجية للمباني السكنية والتجارية.", location: "الشارقة" },
+  { name: "Decoduct", category: "الأعمال الكهربائية - مسارات وكابلات", description: "مورد لأنظمة القنوات البلاستيكية، المسارات، وإدارة الكابلات.", location: "الشارقة" },
+  { name: "Geberit Gulf", category: "التشطيبات والأدوات الصحية", description: "توفير أنظمة الصرف المخفي والحلول الصحية والتجهيزات الخاصة بالمشروعات.", location: "دبي" },
+  { name: "GROHE Middle East", category: "التشطيبات والأدوات الصحية", description: "مورد لخلاطات وتجهيزات الحمامات والمطابخ للمشاريع السكنية والفندقية.", location: "دبي" },
+  { name: "RAKtherm", category: "السباكة والأنابيب", description: "أنظمة مواسير بلاستيكية متقدمة للمياه الساخنة والباردة ومشاريع الـ MEP.", location: "رأس الخيمة" },
+  { name: "UNIMIX", category: "الخرسانة والمنتجات الإسمنتية", description: "مورد خرسانة جاهزة يخدم مشاريع البنية التحتية والعقارات في الإمارات.", location: "دبي" },
+  { name: "National Ready Mix", category: "الخرسانة والمنتجات الإسمنتية", description: "شركة متخصصة في الخرسانة الجاهزة وخدمة المشروعات الإنشائية في الإمارات الشمالية.", location: "رأس الخيمة" },
+  { name: "Hard Block Factory", category: "المنتجات الإسمنتية والبلك", description: "توريد البلوك ومنتجات الخرسانة المسبقة للمشاريع السكنية والخدمية.", location: "أبوظبي" },
+  { name: "Emirates Blocks Factories", category: "المنتجات الإسمنتية والبلك", description: "مورد إقليمي للبلوك والمنتجات الإسمنتية والخرسانية.", location: "العين" },
+  { name: "Fujairah Building Industries", category: "المواد الإنشائية - أسمنت وجبس", description: "تقدم مواد بناء أساسية ومنتجات إسمنتية للمقاولين في الإمارات.", location: "الفجيرة" },
+  { name: "Union Cement Company", category: "المواد الإنشائية - أسمنت", description: "شركة إماراتية لإنتاج وتوريد الأسمنت لمصانع الخرسانة والمشاريع الكبرى.", location: "رأس الخيمة" },
+  { name: "National Cement Co", category: "المواد الإنشائية - أسمنت", description: "توفر الأسمنت ومواد البناء الأساسية لمشاريع البنية التحتية والإنشاء.", location: "دبي" },
+  { name: "Oryx Doors & Windows", category: "الأعمال المعمارية - أبواب ونوافذ", description: "مورد لحلول الأبواب والنوافذ والواجهات المعدنية والزجاجية.", location: "أبوظبي" },
+  { name: "Alumil Middle East", category: "الأعمال المعمارية - ألمنيوم", description: "توفر أنظمة الألمنيوم للواجهات والأبواب والنوافذ في الإمارات.", location: "دبي" },
+  { name: "Alubond U.S.A.", category: "الأعمال المعمارية - كلادينج وألمنيوم", description: "مورد لأنظمة ألواح الألمنيوم المركبة وكسوات الواجهات الخارجية.", location: "أم القيوين" },
+  { name: "Emirates Insolaire", category: "الأعمال المعمارية - زجاج وطاقة شمسية", description: "حلول واجهات زجاجية مدمج بها خلايا شمسية للمشاريع المتقدمة.", location: "دبي" },
+  { name: "Technomec Building Industries", category: "مواد بناء وتجهيزات صناعية", description: "توريد مواد بناء، أدوات، ومستلزمات صناعية وموقعية للمقاولين.", location: "دبي" },
+  { name: "Harmony Building & Sanitary Materials", category: "توريد الجملة - مواد بناء وصحي", description: "مورد محلي في الشارقة لمنتجات البناء والمواد الصحية.", location: "الشارقة" },
+  { name: "Al Sabouh Building Materials", category: "توريد الجملة - مواد بناء", description: "شركة تجارة مواد بناء تقدم مستلزمات المشاريع والمقاولات في الشارقة.", location: "الشارقة" },
+  { name: "Four Star Ceramic & Sanitary", category: "التشطيبات والأدوات الصحية", description: "موزع للسيراميك والبورسلين والأدوات الصحية في السوق الإماراتي.", location: "الشارقة" },
+  { name: "CB Electrical & Sanitary Materials", category: "توريد الجملة - سباكة وكهرباء", description: "مورد لمستلزمات الكهرباء والسباكة والمواد الصحية للمشاريع الصغيرة والمتوسطة.", location: "عجمان" },
+  { name: "Al Rayhan Electrical Devices Sanitary & Paints", category: "توريد الجملة - سباكة وكهرباء ودهانات", description: "مورد محلي لمنتجات الكهرباء والصحي والدهانات في الشارقة.", location: "الشارقة" },
+  { name: "Fine Tools Trading", category: "توريد الجملة - عدد ومواد بناء", description: "يوفر العدد والأدوات وملحقات السباكة والكهرباء ومنتجات المعادن.", location: "دبي" },
+];
+
+const supplierCitiesByCountry = {
+  السعودية: ["الرياض", "جدة", "الدمام", "الخبر", "الجبيل", "تبوك"],
+  مصر: ["القاهرة", "الجيزة", "الإسكندرية", "العاشر من رمضان", "السادس من أكتوبر", "العلمين"],
+  الإمارات: ["دبي", "أبوظبي", "الشارقة", "عجمان", "رأس الخيمة", "العين"],
+};
 
 function sanitizeSupplierText(value) {
   return value.replace(/\[\d+\]/g, "").replace(/\s+/g, " ").trim();
@@ -542,15 +652,34 @@ function inferSupplierMaterials(category, name) {
   return [...new Set(derived)].slice(0, 3);
 }
 
-const mergedSupplierSeeds = [...supplierSeeds, ...supplierSeedsSecond].filter(
+const saudiSupplierSeeds = [...supplierSeeds, ...supplierSeedsSecond]
+  .filter(
+    (supplier, index, array) =>
+      index ===
+      array.findIndex((item) => normalizeSupplierName(item.name) === normalizeSupplierName(supplier.name))
+  )
+  .map((supplier) => ({ ...supplier, country: "السعودية" }));
+
+const curatedSupplierSeeds = [
+  ...saudiSupplierSeeds,
+  ...egyptSupplierSeeds.map((supplier) => ({ ...supplier, country: "مصر" })),
+  ...uaeSupplierSeeds.map((supplier) => ({ ...supplier, country: "الإمارات" })),
+].filter(
   (supplier, index, array) =>
-    index === array.findIndex((item) => normalizeSupplierName(item.name) === normalizeSupplierName(supplier.name))
+    index ===
+    array.findIndex(
+      (item) =>
+        `${normalizeSupplierName(item.name)}|${item.country}` ===
+        `${normalizeSupplierName(supplier.name)}|${supplier.country}`
+    )
 );
 
-export const sampleSuppliers = mergedSupplierSeeds.map((supplier, index) => {
+export const sampleSuppliers = curatedSupplierSeeds.map((supplier, index) => {
   const safeName = sanitizeSupplierText(supplier.name);
   const slug = `supplier${index + 1}`;
-  const city = supplierCities[index % supplierCities.length];
+  const country = supplier.country;
+  const cityOptions = supplierCitiesByCountry[country];
+  const city = sanitizeSupplierText(supplier.location || "") || cityOptions[index % cityOptions.length];
   const group = inferSupplierGroup(supplier.category);
   const materials = inferSupplierMaterials(supplier.category, safeName);
 
@@ -559,6 +688,7 @@ export const sampleSuppliers = mergedSupplierSeeds.map((supplier, index) => {
     name: safeName,
     category: sanitizeSupplierText(supplier.category),
     group,
+    country,
     description: sanitizeSupplierText(supplier.description),
     location: city,
     phone: `+9665${String(10000000 + index * 137).slice(0, 8)}`,
@@ -571,7 +701,7 @@ export const sampleSuppliers = mergedSupplierSeeds.map((supplier, index) => {
   };
 });
 
-const companySeeds = [
+const saCompanySeeds = [
   { id: 1, name: "مجموعة بن لادن السعودية", headquarters: ["جدة", "الرياض"], specialization: "مقاولات عامة شاملة", keyProjects: ["توسعة الحرمين", "مطار الملك عبد العزيز"] },
   { id: 2, name: "شركة نسما وشركاهم", headquarters: ["الخبر", "الرياض"], specialization: "EPC، طاقة، بنية تحتية", keyProjects: ["نيوم", "مترو الرياض", "البحر الأحمر"] },
   { id: 3, name: "شركة السيف للمقاولات", headquarters: ["الرياض"], specialization: "أبراج، بنية تحتية معقدة", keyProjects: ["برج المملكة", "بوابة الدرعية", "القدية"] },
@@ -674,6 +804,51 @@ const companySeeds = [
   { id: 100, name: "أركان البناء الذهبية", headquarters: ["جدة"], specialization: "تطوير", keyProjects: ["سكني"] },
 ];
 
+const egCompanySeeds = [
+  { id: 101, name: "أوراسكوم كونستراكشون", headquarters: ["القاهرة", "الجيزة"], specialization: "مقاولات عامة وبنية تحتية", keyProjects: ["المتحف المصري الكبير", "شبكات طرق", "محطات طاقة"] },
+  { id: 102, name: "مجموعة طلعت مصطفى القابضة", headquarters: ["القاهرة"], specialization: "تطوير عقاري متكامل", keyProjects: ["مدينتي", "الرحاب", "ساوث ميد"] },
+  { id: 103, name: "بالم هيلز للتطوير", headquarters: ["القاهرة", "الإسكندرية"], specialization: "تطوير عقاري وسكني", keyProjects: ["بادية", "بالم هيلز أكتوبر", "هاسيندا"] },
+  { id: 104, name: "إعمار مصر", headquarters: ["القاهرة"], specialization: "تطوير عقاري وسياحي", keyProjects: ["ميفيدا", "أب تاون كايرو", "مراسي"] },
+  { id: 105, name: "أوراسكوم للتنمية مصر", headquarters: ["القاهرة", "البحر الأحمر"], specialization: "تطوير مدن ومجتمعات متكاملة", keyProjects: ["الجونة", "مكادي هايتس", "أو ويست"] },
+  { id: 106, name: "مدينة مصر", headquarters: ["القاهرة"], specialization: "تطوير عقاري حضري", keyProjects: ["تاج سيتي", "سراي"] },
+  { id: 107, name: "سوديك", headquarters: ["القاهرة", "الشيخ زايد"], specialization: "تطوير عقاري وتجاري", keyProjects: ["إيستاون", "فيليت", "ذا إستيتس"] },
+  { id: 108, name: "حسن علام القابضة", headquarters: ["القاهرة"], specialization: "مقاولات وبنية تحتية وطاقة", keyProjects: ["العلمين الجديدة", "محطات معالجة", "مشروعات قومية"] },
+  { id: 109, name: "حسن علام للتطوير", headquarters: ["القاهرة", "الساحل الشمالي"], specialization: "تطوير عقاري فاخر", keyProjects: ["بارك فيو", "هاب تاون", "سيزونز"] },
+  { id: 110, name: "ماونتن فيو", headquarters: ["القاهرة"], specialization: "تطوير عقاري سكني", keyProjects: ["آي سيتي", "تشيل أوت بارك", "رأس الحكمة"] },
+  { id: 111, name: "ريدكون للتعمير", headquarters: ["القاهرة"], specialization: "مقاولات عامة وأبراج", keyProjects: ["أبراج تجارية", "مقار إدارية", "مشروعات فندقية"] },
+  { id: 112, name: "المقاولون العرب", headquarters: ["القاهرة", "الإسكندرية"], specialization: "مقاولات عامة وطرق وجسور", keyProjects: ["محاور وكباري", "إسكان", "مشروعات تصدير"] },
+  { id: 113, name: "كونكورد للمقاولات", headquarters: ["القاهرة"], specialization: "مقاولات عامة ومطارات", keyProjects: ["مبانٍ حكومية", "مطارات", "بنية تحتية"] },
+  { id: 114, name: "سامكريت", headquarters: ["القاهرة"], specialization: "مقاولات وإنشاءات", keyProjects: ["مبانٍ إدارية", "مرافق", "مشروعات جامعية"] },
+  { id: 115, name: "درة جروب", headquarters: ["القاهرة"], specialization: "مقاولات وتطوير", keyProjects: ["أبراج", "مولات", "مشروعات سكنية"] },
+  { id: 116, name: "مصر إيطاليا العقارية", headquarters: ["القاهرة"], specialization: "تطوير عقاري", keyProjects: ["البوسكو", "كايرو بيزنس بارك", "فينشي"] },
+  { id: 117, name: "سيتي إيدج للتطوير العقاري", headquarters: ["القاهرة", "العلمين"], specialization: "تطوير عقاري حكومي", keyProjects: ["أبراج العلمين", "مقصد", "داون تاون الجديدة"] },
+  { id: 118, name: "هايد بارك للتطوير", headquarters: ["القاهرة"], specialization: "تطوير عقاري", keyProjects: ["هايد بارك القاهرة الجديدة", "سي شور"] },
+];
+
+const aeCompanySeeds = [
+  { id: 201, name: "إعمار العقارية", headquarters: ["دبي"], specialization: "تطوير عقاري وإنشاءات", keyProjects: ["برج خليفة", "دبي مول", "دبي كريك هاربور"] },
+  { id: 202, name: "إعمار للتطوير", headquarters: ["دبي"], specialization: "تطوير مجتمعات سكنية", keyProjects: ["دبي هيلز", "إعمار بيتش فرونت", "المرابع"] },
+  { id: 203, name: "الدار العقارية", headquarters: ["أبوظبي"], specialization: "تطوير عقاري واستثمار", keyProjects: ["ياس آيلاند", "جزيرة السعديات", "الريم"] },
+  { id: 204, name: "داماك العقارية", headquarters: ["دبي"], specialization: "تطوير عقاري فاخر", keyProjects: ["داماك هيلز", "لاجونز", "صفا ون"] },
+  { id: 205, name: "شوبا العقارية", headquarters: ["دبي"], specialization: "تطوير عقاري فاخر", keyProjects: ["شوبا هارتلاند", "شوبا ريزيرف"] },
+  { id: 206, name: "عزيزي للتطوير", headquarters: ["دبي"], specialization: "تطوير عقاري", keyProjects: ["عزيزي فينيسيا", "ريفييرا", "ميناء"] },
+  { id: 207, name: "دانوب العقارية", headquarters: ["دبي"], specialization: "تطوير عقاري متوسط وفاخر", keyProjects: ["بايز", "إليت", "أوشنز"] },
+  { id: 208, name: "نخيل", headquarters: ["دبي"], specialization: "تطوير عمراني وجزر", keyProjects: ["نخلة جميرا", "ورسان", "ديرة آيلاندز"] },
+  { id: 209, name: "مِراس", headquarters: ["دبي"], specialization: "تطوير حضري وترفيهي", keyProjects: ["بلوواترز", "سيتي ووك", "لا مير"] },
+  { id: 210, name: "دبي القابضة العقارية", headquarters: ["دبي"], specialization: "تطوير عقاري متكامل", keyProjects: ["جميرا فيليج", "تلال الغاف", "مجتمعات دبي"] },
+  { id: 211, name: "بن غاطي", headquarters: ["دبي"], specialization: "تطوير أبراج سكنية", keyProjects: ["برج بن غاطي", "مشروعات الخليج التجاري", "قرية جميرا"] },
+  { id: 212, name: "أمنيات", headquarters: ["دبي"], specialization: "تطوير عقاري فاخر", keyProjects: ["ذا لانا", "أورا", "ون بالم"] },
+  { id: 213, name: "إلينغتون العقارية", headquarters: ["دبي"], specialization: "تطوير عقاري فاخر", keyProjects: ["إلينغتون هاوس", "كوستا ماري"] },
+  { id: 214, name: "تقرير العقارية", headquarters: ["أبوظبي", "دبي"], specialization: "تطوير عقاري سكني", keyProjects: ["مشروعات جزيرة الريم", "دبي لاند"] },
+  { id: 215, name: "خنصهب للهندسة المدنية", headquarters: ["دبي"], specialization: "مقاولات عامة ومباني", keyProjects: ["مطارات", "فنادق", "مبانٍ تعليمية"] },
+  { id: 216, name: "أليك للهندسة والمقاولات", headquarters: ["دبي", "أبوظبي"], specialization: "مقاولات عامة وأبراج", keyProjects: ["مطارات", "أبراج دبي", "مشروعات ضيافة"] },
+  { id: 217, name: "ASGC للمقاولات", headquarters: ["دبي"], specialization: "مقاولات عامة", keyProjects: ["مشروعات حكومية", "أبراج", "مستشفيات"] },
+  { id: 218, name: "تروجان للإنشاءات", headquarters: ["أبوظبي"], specialization: "مقاولات وبنية تحتية", keyProjects: ["بنية تحتية", "أبراج", "مرافق"] },
+  { id: 219, name: "UNEC", headquarters: ["أبوظبي", "دبي"], specialization: "مقاولات عامة", keyProjects: ["مجمعات سكنية", "فنادق", "تجاري"] },
+  { id: 220, name: "الحبتور للمشاريع الهندسية", headquarters: ["دبي"], specialization: "مقاولات وأبراج وفنادق", keyProjects: ["فنادق", "أبراج", "مشروعات بنية"] },
+  { id: 221, name: "النبودة للمقاولات", headquarters: ["دبي"], specialization: "طرق ومطارات وبنية تحتية", keyProjects: ["طرق دبي", "مطارات", "مرافق"] },
+];
+
 const companyWebsiteMap = {
   "مجموعة بن لادن السعودية": "https://www.sbg.com.sa/ar",
   "شركة نسما وشركاهم": "https://www.nesmapartners.com/ar",
@@ -684,6 +859,27 @@ const companyWebsiteMap = {
   الكفاح: "https://www.alkifah.com.sa/",
   الفنار: "https://www.alfanarprojects.com/",
   الروشن: "https://www.roshn.sa/en/",
+  "أوراسكوم كونستراكشون": "https://www.orascom.com/",
+  "مجموعة طلعت مصطفى القابضة": "https://www.talaatmoustafa.com/",
+  "بالم هيلز للتطوير": "https://palmhillsdevelopments.com/",
+  "إعمار مصر": "https://www.emaarmisr.com/",
+  "أوراسكوم للتنمية مصر": "https://www.orascomdh.com/",
+  سوديك: "https://www.sodic.com/",
+  "حسن علام القابضة": "https://www.hassanallam.com/",
+  "حسن علام للتطوير": "https://www.hassanallamproperties.com/",
+  "إعمار العقارية": "https://properties.emaar.com/",
+  "إعمار للتطوير": "https://www.emaar.com/",
+  "الدار العقارية": "https://www.aldar.com/",
+  "داماك العقارية": "https://www.damacproperties.com/",
+  "شوبا العقارية": "https://www.sobharealty.com/",
+  "عزيزي للتطوير": "https://www.azizidevelopments.com/",
+  نخيل: "https://www.nakheel.com/",
+  مراس: "https://www.meraas.com/",
+  "خنصهب للهندسة المدنية": "https://www.khansaheb.ae/",
+  "أليك للهندسة والمقاولات": "https://www.alec.ae/",
+  "ASGC للمقاولات": "https://www.asgcgroup.com/",
+  "تروجان للإنشاءات": "https://trojanholding.ae/",
+  UNEC: "https://www.unec.ae/",
 };
 
 function createCompanyWebsite(name) {
@@ -732,30 +928,38 @@ function getCompanyLogo(specialization, type) {
 
 const projectStages = ["نشط", "تسعير", "تخطيط"];
 
-export const sampleCompanies = companySeeds.map((entry, index) => {
-  const type = getCompanyType(entry.specialization);
-  const logo = getCompanyLogo(entry.specialization, type);
+function mapCompanySeeds(entries, country) {
+  return entries.map((entry) => {
+    const type = getCompanyType(entry.specialization);
+    const logo = getCompanyLogo(entry.specialization, type);
 
-  return {
-    id: `comp-${entry.id}`,
-    name: entry.name,
-    type,
-    country: "السعودية",
-    logo,
-    specialization: entry.specialization,
-    headquarters: entry.headquarters,
-    keyProjects: entry.keyProjects,
-    website: createCompanyWebsite(entry.name),
-    description: `متخصصة في ${entry.specialization} مع حضور قوي في ${entry.headquarters.join(" و")}.`,
-    rating: Number((4.1 + ((entry.id % 8) * 0.1)).toFixed(1)),
-    projectsCount: entry.keyProjects.length,
-    projects: entry.keyProjects.map((projectName, projectIndex) => ({
-      id: `proj-${entry.id}-${projectIndex + 1}`,
-      name: projectName,
-      location: entry.headquarters[projectIndex % entry.headquarters.length],
-      stage: projectStages[(entry.id + projectIndex) % projectStages.length],
-      budget: "",
-      pricingItems: [],
-    })),
-  };
-});
+    return {
+      id: `comp-${entry.id}`,
+      name: entry.name,
+      type,
+      country,
+      logo,
+      specialization: entry.specialization,
+      headquarters: entry.headquarters,
+      keyProjects: entry.keyProjects,
+      website: createCompanyWebsite(entry.name),
+      description: `متخصصة في ${entry.specialization} مع حضور قوي في ${entry.headquarters.join(" و")}.`,
+      rating: Number((4.1 + ((entry.id % 8) * 0.1)).toFixed(1)),
+      projectsCount: entry.keyProjects.length,
+      projects: entry.keyProjects.map((projectName, projectIndex) => ({
+        id: `proj-${entry.id}-${projectIndex + 1}`,
+        name: projectName,
+        location: entry.headquarters[projectIndex % entry.headquarters.length],
+        stage: projectStages[(entry.id + projectIndex) % projectStages.length],
+        budget: "",
+        pricingItems: [],
+      })),
+    };
+  });
+}
+
+export const sampleCompanies = [
+  ...mapCompanySeeds(saCompanySeeds, "السعودية"),
+  ...mapCompanySeeds(egCompanySeeds, "مصر"),
+  ...mapCompanySeeds(aeCompanySeeds, "الإمارات"),
+];
