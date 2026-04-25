@@ -1,4 +1,22 @@
 // Pricing Constants per Country for Area-based calculation (Price per m2)
+
+// Maps Arabic country names (from CountryPicker) to internal country codes
+export const COUNTRY_NAME_TO_CODE = {
+  "السعودية": "sa",
+  "مصر": "eg",
+  "الإمارات": "ae",
+  sa: "sa",
+  eg: "eg",
+  ae: "ae",
+};
+
+// Currency info per country code
+export const CURRENCY_INFO = {
+  sa: { code: "SAR", symbol: "ر.س", name: "ريال سعودي" },
+  eg: { code: "EGP", symbol: "ج.م", name: "جنيه مصري" },
+  ae: { code: "AED", symbol: "د.إ", name: "درهم إماراتي" },
+};
+
 export const AREA_PRICING_BASE = {
   sa: {
     baseRate: 2000, // Average SAR per m2 for standard residential

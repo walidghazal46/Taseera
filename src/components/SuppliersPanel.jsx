@@ -115,13 +115,13 @@ function FilterSelect({ label, value, options, onChange, ariaLabel }) {
 }
 
 export default function SuppliersPanel({
-  suppliers, authMode, settings, onAddSupplier, onContactSupplier, onCreateRfq, navigationBridge,
+  suppliers, authMode, settings, onAddSupplier, onContactSupplier, onCreateRfq, navigationBridge, initialCountry,
 }) {
   const copy = getSuppliersCopy(settings?.language);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeCountry, setActiveCountry] = useState(normalizeCountry(settings?.country || COUNTRY_VALUES.sa));
+  const [activeCountry, setActiveCountry] = useState(normalizeCountry(initialCountry || settings?.country || COUNTRY_VALUES.sa));
   const [activeGroup, setActiveGroup] = useState(copy.all);
   const [activeCity, setActiveCity] = useState(copy.allCities);
   const [form, setForm] = useState({ name: "", category: "", location: "", phone: "", email: "", contactPerson: "", website: "" });
@@ -211,7 +211,7 @@ export default function SuppliersPanel({
   }, [activeCountry, copy.all, copy.allCities]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Tab bar */}
       <div className="rounded-2xl bg-[#082555] p-1.5 shadow-xl">
         <div className="flex gap-1.5">
@@ -249,17 +249,7 @@ export default function SuppliersPanel({
                 style={{ fontFamily: AR }} />
             </div>
 
-            <div className="mb-2">
-              <FilterSelect
-                label={copy.countryFilter}
-                value={activeCountry}
-                options={countryOptions}
-                onChange={(e) => setActiveCountry(e.target.value)}
-                ariaLabel={copy.chooseCountry}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-1.5">
               <FilterSelect
                 label={copy.specialtyFilter}
                 value={activeGroup}
@@ -278,11 +268,11 @@ export default function SuppliersPanel({
           </div>
 
           {/* Supplier cards */}
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {paged.map((supplier) => (
               <div key={supplier.id}
                 className="overflow-hidden rounded-2xl border-2 border-[#E2D8C4] bg-white shadow-sm hover:shadow-md transition-all">
-                <div className="p-4">
+                <div className="p-3.5">
                   <div className="flex items-start gap-4">
                     {/* Avatar */}
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#082555] text-[18px] font-bold text-[#C9A84C] shadow-lg">
@@ -305,11 +295,11 @@ export default function SuppliersPanel({
                           <StarRow rating={supplier.rating || 0} />
                         </div>
                       </div>
-                      <p className="mt-2 text-[11px] font-medium text-[#9A8A6A] leading-relaxed"
+                      <p className="mt-1.5 text-[11px] font-medium text-[#9A8A6A] leading-relaxed"
                         style={{ fontFamily: AR }}>
                         <span className="font-bold text-[#5A4E38]">{copy.materials}:</span> {supplier.materials?.join("، ") || supplier.category}
                       </p>
-                      <p className="mt-1 text-[11px] font-medium text-[#9A8A6A] leading-relaxed"
+                      <p className="mt-0.5 text-[11px] font-medium text-[#9A8A6A] leading-relaxed"
                         style={{ fontFamily: AR }}>
                         <span className="font-bold text-[#5A4E38]">{copy.location}:</span> {supplier.location || "—"}
                       </p>
@@ -318,7 +308,7 @@ export default function SuppliersPanel({
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-3 border-t-2 border-[#E2D8C4] bg-[#FAFAFA] px-4 py-3">
+                <div className="flex gap-2.5 border-t-2 border-[#E2D8C4] bg-[#FAFAFA] px-4 py-2.5">
                   <button type="button" onClick={() => setSelectedSupplier(supplier)}
                     className="flex-1 min-h-[40px] rounded-xl border-2 border-[#E2D8C4] bg-white text-[12px] font-bold text-[#082555] transition hover:border-[#C9A84C] hover:text-[#C9A84C]"
                     style={{ fontFamily: AR }}>
@@ -353,7 +343,7 @@ export default function SuppliersPanel({
           )}
 
           {/* Pagination */}
-          <div className="flex items-center gap-3 pt-2">
+          <div className="flex items-center gap-3 pt-1">
             <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
               className={`flex-1 min-h-[48px] rounded-2xl py-2 text-[13px] font-bold transition shadow-sm ${
                 page === 1 ? "bg-white border-2 border-[#E2D8C4] text-[#E2D8C4] cursor-not-allowed" : "border-2 border-[#C9A84C] bg-white text-[#C9A84C] hover:bg-[#F5EDD8]"

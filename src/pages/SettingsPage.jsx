@@ -11,6 +11,8 @@ export default function SettingsPage(props) {
         eyebrow={text.pages.settings.eyebrow}
         title={text.pages.settings.title}
         description={text.pages.settings.description}
+        density="ultra-tight"
+        hideEyebrow
       />
       <SettingsPanel {...props} />
     </div>

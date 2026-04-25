@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import {
   BuildingsIcon,
   PricingIcon,
@@ -26,11 +27,16 @@ export default function AppShell({
   theme = "dark",
 }) {
   const isRtl = language !== "en";
+  const mainRef = useRef(null);
 
   const localizedItems = navItems.map((item) => ({
     ...item,
     label: navText?.[item.id] || (language === "en" ? item.labelEn : item.label),
   }));
+
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, behavior: "auto" });
+  }, [activePage]);
 
   return (
     <div
@@ -83,8 +89,9 @@ export default function AppShell({
 
       {/* Main content */}
       <main
+        ref={mainRef}
         className="flex-1 overflow-y-auto overflow-x-hidden bg-[#F7F3EC]"
-        style={{ paddingBottom: "7rem" }}
+        style={{ paddingBottom: "5.6rem" }}
       >
         <div className="mx-auto w-full max-w-2xl px-4 py-6">
           {children}
@@ -95,7 +102,7 @@ export default function AppShell({
       <nav
         className="shrink-0 border-t-2 border-[#E2D8C4] bg-[#082555]"
         style={{
-          paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))",
+          paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
           boxShadow: "0 -12px 40px rgba(0,0,0,0.3)",
         }}
       >
@@ -103,13 +110,15 @@ export default function AppShell({
           {localizedItems.map((item) => {
             const isActive = item.id === activePage;
             const Icon = item.icon;
+            const labelSize = isActive ? "11px" : "10px";
+            const iconSize = isActive ? 26.4 : 24;
 
             return (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => onNavigate(item.id)}
-                className={`relative flex flex-1 flex-col items-center justify-center gap-2.5 px-1 pt-4 pb-2 transition-all duration-300 ${
+                className={`relative flex flex-1 flex-col items-center justify-center gap-2 px-1 pt-3 pb-1.5 transition-all duration-300 ${
                   isActive ? "" : "opacity-40 hover:opacity-80"
                 }`}
               >
@@ -122,21 +131,22 @@ export default function AppShell({
                 <span
                   className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-all duration-300 ${
                     isActive
-                      ? "bg-[#C9A84C] text-[#082555] shadow-[0_8px_20px_rgba(201,168,76,0.4)] scale-110"
+                      ? "bg-[#C9A84C] text-[#082555] shadow-[0_8px_20px_rgba(201,168,76,0.4)]"
                       : "text-white/60"
                   }`}
+                  style={isActive ? { width: "52.8px", height: "52.8px" } : undefined}
                 >
-                  <Icon className="h-6 w-6" />
+                  <Icon style={{ width: `${iconSize}px`, height: `${iconSize}px` }} />
                 </span>
 
                 {/* Label */}
                 <span
-                  className={`text-center text-[10px] font-bold leading-none uppercase tracking-wider ${
+                  className={`text-center font-bold leading-none uppercase tracking-wider ${
                     isActive
                       ? "text-[#C9A84C]"
                       : "text-white/40"
                   }`}
-                  style={{ fontFamily: AR }}
+                  style={{ fontFamily: AR, fontSize: labelSize }}
                 >
                   {item.label}
                 </span>

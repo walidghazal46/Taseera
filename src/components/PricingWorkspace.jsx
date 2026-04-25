@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from 'xlsx';
 import { SaveIcon, TagIcon, BuildingsIcon, PricingIcon, ChevronLeftIcon, ArrowRightIcon, ShareIcon, PrinterIcon, FileIcon } from "./icons";
-import { CSI_DIVISIONS, COUNTRIES, getDefaultResources, AREA_PRICING_BASE } from "../data/csiData";
+import { CSI_DIVISIONS, COUNTRIES, getDefaultResources, AREA_PRICING_BASE, CURRENCY_INFO } from "../data/csiData";
 import usePersistentState from "../hooks/usePersistentState";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
@@ -114,10 +114,14 @@ function CountryModal({ onConfirm, current }) {
 // --- Mode Selection Screen ---
 function ModeSelection({ onSelect }) {
   return (
-    <div className="flex flex-col gap-4 py-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="mb-2 px-2">
-        <h2 className="text-[18px] font-bold text-white" style={{ fontFamily: AR }}>مرحباً بك في محرك التسعير</h2>
-        <p className="text-[13px] text-gray-400 font-medium" style={{ fontFamily: AR }}>اختر طريقة التسعير المناسبة لاحتياجك</p>
+    <div className="flex flex-col gap-3 py-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="mb-1 px-2">
+        <div className="inline-flex rounded-2xl bg-[#082555] px-4 py-3 shadow-lg shadow-[#082555]/15">
+          <div>
+            <h2 className="text-[18px] font-bold text-white" style={{ fontFamily: AR }}>مرحباً بك في محرك التسعير</h2>
+            <p className="mt-1 text-[13px] font-medium text-[#E2D8C4]" style={{ fontFamily: AR }}>اختر طريقة التسعير المناسبة لاحتياجك</p>
+          </div>
+        </div>
       </div>
 
       <button onClick={() => onSelect("items")}
@@ -154,7 +158,7 @@ function ModeSelection({ onSelect }) {
         </div>
       </button>
 
-      <div className="mt-8 rounded-2xl bg-white/5 border-2 border-dashed border-white/10 p-5 text-center">
+      <div className="mt-4 rounded-2xl bg-white/5 border-2 border-dashed border-white/10 p-5 text-center">
          <p className="text-[12px] font-bold text-gray-500 leading-relaxed" style={{ fontFamily: AR }}>
            جميع الحسابات تقديرية وتعتمد على متوسطات السوق الحالية في الدولة المختارة.
          </p>
@@ -322,6 +326,383 @@ function buildAreaSectionDraft(sectionId, params, results) {
   }, params);
 }
 
+function BuildingEstimatorGraphic({ country, area, floors, finish, type, scope }) {
+  const config = AREA_PRICING_BASE[country] || AREA_PRICING_BASE.sa;
+  const numericArea = Math.max(0, Number(area) || 0);
+  const numericFloors = Math.max(1, Number(floors) || 1);
+  const totalArea = numericArea * numericFloors;
+  const finishFactor = config.finishFactors?.[finish] || 1;
+  const typeFactor = config.typeFactors?.[type] || 1;
+  const previewUnit = roundTo(config.baseRate * finishFactor * typeFactor);
+  const previewTotal = roundTo(previewUnit * totalArea);
+  const scopeLabel = SCOPES.find((item) => item.id === scope)?.ar || "تسعير المبنى";
+  const finishLabel = FINISH_LEVELS.find((item) => item.id === finish)?.ar || "متوسط";
+  const typeLabel = BUILDING_TYPES.find((item) => item.id === type)?.ar || "سكني";
+  const graphicFloors = Math.min(6, Math.max(2, numericFloors));
+  const windows = Array.from({ length: graphicFloors * 3 }, (_, index) => index);
+
+  return (
+    <div className="relative overflow-hidden rounded-[28px] bg-[#082555] p-5 shadow-2xl border border-[#C9A84C]/20">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(201,168,76,0.18),transparent_40%)] pointer-events-none" />
+      <div className="absolute inset-y-0 left-0 w-32 bg-[linear-gradient(90deg,rgba(201,168,76,0.06),transparent)] pointer-events-none" />
+
+      <div className="relative grid grid-cols-[1.15fr_0.85fr] gap-4 items-center">
+        <div className="space-y-4">
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-bold text-[#C9A84C] uppercase tracking-[0.18em]">
+            <span>Building Pricing Snapshot</span>
+          </div>
+          <div>
+            <div className="text-[23px] font-bold text-white leading-tight" style={{ fontFamily: AR }}>
+              {typeLabel}
+            </div>
+            <div className="mt-1 text-[12px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+              {scopeLabel} · تشطيب {finishLabel}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: "الدور", value: `${fmtNum(numericArea)} م²` },
+              { label: "الأدوار", value: fmtNum(numericFloors) },
+              { label: "الإجمالي", value: `${fmtNum(totalArea)} م²` },
+            ].map((card) => (
+              <div key={card.label} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-center">
+                <div className="text-[9px] font-bold uppercase tracking-widest text-[#9A8A6A] mb-1">{card.label}</div>
+                <div className="text-[13px] font-bold text-white" style={{ fontFamily: MONO }}>{card.value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-2xl border border-[#C9A84C]/20 bg-[#C9A84C]/10 px-4 py-3">
+            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#9A8A6A] mb-2">Preview Range</div>
+            <div className="flex items-end gap-2">
+              <div className="text-[26px] font-bold text-[#E8C97A] leading-none" style={{ fontFamily: MONO }}>{fmtNum(previewTotal)}</div>
+              <div className="pb-1 text-[11px] font-bold text-[#9A8A6A]">{COUNTRIES[country]?.currency}</div>
+            </div>
+            <div className="mt-2 text-[11px] font-bold text-white/70" style={{ fontFamily: AR }}>
+              سعر متر تقديري {fmtNum(previewUnit)} {COUNTRIES[country]?.currency}
+            </div>
+          </div>
+        </div>
+
+        <div className="relative flex items-end justify-center min-h-[240px]">
+          <div className="absolute bottom-0 h-24 w-24 rounded-full bg-[#C9A84C]/15 blur-2xl" />
+          <div className="relative flex flex-col items-center">
+            <div className="mb-3 flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-bold text-white/75">
+              <span>{finishLabel}</span>
+              <span className="h-1 w-1 rounded-full bg-[#C9A84C]" />
+              <span>{scopeLabel}</span>
+            </div>
+            <div className="relative w-[150px] rounded-t-[28px] border border-white/10 bg-[linear-gradient(180deg,#244b81_0%,#0c2241_100%)] px-4 pt-5 pb-4 shadow-[0_18px_50px_rgba(2,12,27,0.45)]">
+              <div className="absolute inset-x-4 top-3 h-[1px] bg-white/10" />
+              <div className="grid grid-cols-3 gap-2">
+                {windows.map((windowIndex) => (
+                  <div
+                    key={windowIndex}
+                    className="h-4 rounded-md border border-[#C9A84C]/20 bg-[linear-gradient(180deg,rgba(245,237,216,0.95),rgba(201,168,76,0.55))] shadow-[0_0_10px_rgba(201,168,76,0.15)]"
+                  />
+                ))}
+              </div>
+              <div className="mt-3 h-7 rounded-xl border border-white/10 bg-[#06172e]" />
+            </div>
+            <div className="mt-2 h-2 w-[180px] rounded-full bg-white/10" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CostDistributionGraphic({ sections, total, currency }) {
+  if (!sections?.length || !total) return null;
+
+  return (
+    <div className="rounded-3xl border-2 border-[#E2D8C4] bg-white p-5 shadow-sm">
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <div>
+          <h3 className="text-[16px] font-bold text-[#082555]" style={{ fontFamily: AR }}>الجرافيك التوزيعي للتكلفة</h3>
+          <p className="mt-1 text-[11px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+            رؤية بصرية سريعة توضح وزن كل تخصص داخل تكلفة المبنى الحالية
+          </p>
+        </div>
+        <div className="rounded-2xl bg-[#F7F3EC] px-3 py-2 text-left">
+          <div className="text-[10px] font-bold text-[#9A8A6A] uppercase">Total Mix</div>
+          <div className="text-[16px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{fmtNum(total)} {currency}</div>
+        </div>
+      </div>
+
+      <div className="mb-5 h-5 overflow-hidden rounded-full bg-[#F7F3EC]">
+        <div className="flex h-full w-full">
+          {sections.map((section) => (
+            <div
+              key={section.id}
+              className="h-full transition-all duration-700"
+              style={{ width: `${Math.max(6, section.pct * 100)}%`, backgroundColor: section.color }}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {sections.map((section) => (
+          <div key={section.id} className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] p-3">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl text-lg" style={{ backgroundColor: `${section.color}20`, color: section.color }}>
+                  {section.icon}
+                </div>
+                <div>
+                  <div className="text-[13px] font-bold text-[#082555]" style={{ fontFamily: AR }}>{section.label}</div>
+                  <div className="text-[10px] font-bold text-[#9A8A6A]">{(section.pct * 100).toFixed(0)}%</div>
+                </div>
+              </div>
+              <div className="text-left">
+                <div className="text-[14px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{fmtNum(section.value)}</div>
+                <div className="text-[9px] font-bold text-[#9A8A6A]">{currency}</div>
+              </div>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-[#EFE8D9]">
+              <div className="h-full rounded-full transition-all duration-700" style={{ width: `${section.pct * 100}%`, backgroundColor: section.color }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SectionDetailGraphic({ draft, totalArea, overallShare, currency }) {
+  if (!draft?.items?.length) return null;
+
+  const maxItemTotal = Math.max(...draft.items.map((item) => Number(item.total) || 0), 1);
+
+  return (
+    <div className="rounded-3xl border-2 border-[#E2D8C4] bg-white p-5 shadow-sm">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-[16px] font-bold text-[#082555]" style={{ fontFamily: AR }}>جرافيك توزيع بنود التخصص</h3>
+          <p className="mt-1 text-[11px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+            قراءة سريعة لأثقل البنود داخل هذا التخصص وتأثيرها على إجمالي المسطح
+          </p>
+        </div>
+        <div className="rounded-2xl px-3 py-2 text-left" style={{ backgroundColor: `${draft.color}12` }}>
+          <div className="text-[10px] font-bold text-[#9A8A6A] uppercase">Share</div>
+          <div className="text-[16px] font-bold" style={{ fontFamily: MONO, color: draft.color }}>{overallShare.toFixed(1)}%</div>
+        </div>
+      </div>
+
+      <div className="mb-5 grid grid-cols-3 gap-3">
+        {[
+          { label: "إجمالي التخصص", value: `${fmtNum(draft.sectionTotal)} ${currency}` },
+          { label: "متوسط / م²", value: `${fmtNum(draft.unitPrice)} ${currency}` },
+          { label: "المساحة المرجعية", value: `${fmtNum(totalArea)} م²` },
+        ].map((card) => (
+          <div key={card.label} className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-3 py-3 text-center">
+            <div className="mb-1 text-[10px] font-bold text-[#9A8A6A] uppercase">{card.label}</div>
+            <div className="text-[14px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{card.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-[28px] border border-[#E2D8C4] bg-[linear-gradient(180deg,#fcfbf8_0%,#f7f3ec_100%)] p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-[11px] font-bold text-[#082555]" style={{ fontFamily: AR }}>أثقل البنود تكلفة</span>
+          <span className="text-[10px] font-bold text-[#9A8A6A]">Top Cost Drivers</span>
+        </div>
+
+        <div className="flex h-[150px] items-end justify-between gap-3">
+          {draft.items.map((item) => {
+            const ratio = ((Number(item.total) || 0) / maxItemTotal) * 100;
+            return (
+              <div key={item.id} className="flex min-w-0 flex-1 flex-col items-center gap-2">
+                <div className="text-[11px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>
+                  {fmtNum(item.total)}
+                </div>
+                <div className="flex h-[92px] w-full items-end justify-center rounded-t-[18px] border border-white/60 px-1.5 pb-2 shadow-inner" style={{ background: `linear-gradient(180deg, ${draft.color}22 0%, ${draft.color}80 100%)` }}>
+                  <div
+                    className="w-full rounded-t-[14px] transition-all duration-700"
+                    style={{ height: `${Math.max(18, ratio)}%`, backgroundColor: draft.color }}
+                  />
+                </div>
+                <div className="line-clamp-2 text-center text-[10px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+                  {item.label}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HistoryInsightGraphic({ savedAnalyses }) {
+  if (!savedAnalyses?.length) return null;
+
+  const areaCount = savedAnalyses.filter((item) => item.mode === "area").length;
+  const itemCount = savedAnalyses.filter((item) => item.mode !== "area").length;
+  const latest = savedAnalyses[0];
+  const latestTotal = latest?.projectTotal || latest?.results?.finalTotal || latest?.results?.total || 0;
+  const latestUnit = latest?.finalUnitPrice || latest?.results?.unitPrice || 0;
+  const totalCount = Math.max(savedAnalyses.length, 1);
+
+  return (
+    <div className="relative overflow-hidden rounded-[28px] bg-[#082555] p-5 shadow-xl border border-[#C9A84C]/20">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(201,168,76,0.16),transparent_38%)] pointer-events-none" />
+      <div className="relative">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#9A8A6A]">History Overview</div>
+            <div className="mt-1 text-[18px] font-bold text-white" style={{ fontFamily: AR }}>نظرة سريعة على السجل</div>
+          </div>
+          <div className="rounded-2xl bg-white/5 px-3 py-2 text-left">
+            <div className="text-[9px] font-bold text-[#9A8A6A] uppercase">Latest Total</div>
+            <div className="text-[16px] font-bold text-[#E8C97A]" style={{ fontFamily: MONO }}>{fmtNum(latestTotal)}</div>
+          </div>
+        </div>
+
+        <div className="mb-4 grid grid-cols-3 gap-3">
+          {[
+            { label: "الكل", value: savedAnalyses.length, color: "#E8C97A" },
+            { label: "مباني", value: areaCount, color: "#6FCF97" },
+            { label: "بنود", value: itemCount, color: "#E07B2A" },
+          ].map((card) => (
+            <div key={card.label} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-center">
+              <div className="mb-1 text-[10px] font-bold text-[#9A8A6A] uppercase">{card.label}</div>
+              <div className="text-[18px] font-bold" style={{ fontFamily: MONO, color: card.color }}>{card.value}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mb-4 h-3 overflow-hidden rounded-full bg-white/10">
+          <div className="flex h-full">
+            <div className="h-full" style={{ width: `${(areaCount / totalCount) * 100}%`, backgroundColor: "#6FCF97" }} />
+            <div className="h-full" style={{ width: `${(itemCount / totalCount) * 100}%`, backgroundColor: "#E07B2A" }} />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+          <div>
+            <div className="text-[10px] font-bold text-[#9A8A6A] uppercase">Latest Unit Price</div>
+            <div className="text-[15px] font-bold text-white" style={{ fontFamily: MONO }}>{fmtNum(latestUnit)}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-[10px] font-bold text-[#9A8A6A] uppercase">Last Analysis</div>
+            <div className="text-[13px] font-bold text-[#E8C97A]" style={{ fontFamily: AR }}>
+              {latest?.mode === "area" ? "تسعير مبنى" : "تحليل بند"}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AreaScenarioCompare({ scenarios, currentScenario, currency, onAddCurrent, onRemove }) {
+  const mergedScenarios = [
+    ...(currentScenario ? [{ ...currentScenario, id: "__current__", live: true }] : []),
+    ...scenarios,
+  ];
+
+  if (!mergedScenarios.length) return null;
+
+  const minTotal = Math.min(...mergedScenarios.map((scenario) => scenario.total || 0));
+
+  return (
+    <div className="rounded-3xl border-2 border-[#E2D8C4] bg-white p-5 shadow-sm">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-[16px] font-bold text-[#082555]" style={{ fontFamily: AR }}>مقارنة السيناريوهات</h3>
+          <p className="mt-1 text-[11px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+            قارن بين بدائل المبنى الحالية قبل النزول للتفاصيل
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onAddCurrent}
+          disabled={!currentScenario || scenarios.length >= 3}
+          className="rounded-2xl bg-[#082555] px-4 py-2 text-[12px] font-bold text-[#C9A84C] disabled:opacity-40"
+        >
+          إضافة السيناريو الحالي
+        </button>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        {mergedScenarios.map((scenario, index) => {
+          const isBest = (scenario.total || 0) === minTotal;
+          return (
+            <div
+              key={scenario.id}
+              className={`rounded-2xl border p-4 text-right ${isBest ? "border-[#C9A84C] bg-[#F5EDD8]" : "border-[#E2D8C4] bg-[#FCFBF8]"}`}
+            >
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[13px] font-bold text-[#082555]" style={{ fontFamily: AR }}>
+                    {scenario.live ? "السيناريو الحالي" : `سيناريو ${index}`}
+                  </div>
+                  <div className="mt-1 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+                    {scenario.typeLabel} · {scenario.finishLabel}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isBest && (
+                    <span className="rounded-full bg-[#082555] px-2 py-1 text-[10px] font-bold text-[#C9A84C]">الأوفر</span>
+                  )}
+                  {!scenario.live && (
+                    <button type="button" onClick={() => onRemove(scenario.id)} className="text-[12px] font-bold text-[#9A8A6A]">
+                      حذف
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="mb-3 grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-white/60 bg-white px-3 py-3">
+                  <div className="text-[9px] font-bold text-[#9A8A6A] uppercase">Total</div>
+                  <div className="mt-1 text-[16px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>
+                    {fmtNum(scenario.total)}
+                  </div>
+                  <div className="text-[9px] font-bold text-[#9A8A6A]">{currency}</div>
+                </div>
+                <div className="rounded-xl border border-white/60 bg-white px-3 py-3">
+                  <div className="text-[9px] font-bold text-[#9A8A6A] uppercase">Unit</div>
+                  <div className="mt-1 text-[16px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>
+                    {fmtNum(scenario.unitPrice)}
+                  </div>
+                  <div className="text-[9px] font-bold text-[#9A8A6A]">{currency}/م²</div>
+                </div>
+              </div>
+
+              <div className="mb-3 h-2 overflow-hidden rounded-full bg-[#EFE8D9]">
+                <div
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${minTotal > 0 ? Math.min(100, ((scenario.total || 0) / minTotal) * 35 + 35) : 35}%`,
+                    background: isBest ? "linear-gradient(90deg,#6FCF97 0%,#C9A84C 100%)" : "linear-gradient(90deg,#082555 0%,#C9A84C 100%)",
+                  }}
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-center">
+                {[
+                  { label: "المسطح", value: `${fmtNum(scenario.totalArea)} م²` },
+                  { label: "الأدوار", value: fmtNum(scenario.floors) },
+                  { label: "النطاق", value: scenario.scopeLabel },
+                ].map((meta) => (
+                  <div key={meta.label} className="rounded-xl bg-white/70 px-2 py-2">
+                    <div className="text-[9px] font-bold text-[#9A8A6A]">{meta.label}</div>
+                    <div className="mt-1 text-[11px] font-bold text-[#082555]" style={{ fontFamily: AR }}>{meta.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function AreaPricingForm({ country, onCalculate }) {
   const [area, setArea] = useState(500);
   const [floors, setFloors] = useState(2);
@@ -331,6 +712,15 @@ function AreaPricingForm({ country, onCalculate }) {
 
   return (
     <div className="space-y-6 pb-8 animate-in fade-in slide-in-from-right-4 duration-500">
+      <BuildingEstimatorGraphic
+        country={country}
+        area={area}
+        floors={floors}
+        finish={finish}
+        type={type}
+        scope={scope}
+      />
+
       <div className="rounded-3xl bg-white border-2 border-[#E2D8C4] p-6 shadow-sm">
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="space-y-2">
@@ -409,7 +799,7 @@ function AreaPricingForm({ country, onCalculate }) {
   );
 }
 
-function AreaResultsView({ country, params, results, onBack, onExport, onSave, onOpenSection }) {
+function AreaResultsView({ country, params, results, onBack, onExport, onSave, onOpenSection, scenarios, currentScenario, onAddScenario, onRemoveScenario }) {
   const c = COUNTRIES[country] || COUNTRIES.sa;
   const finishLabel = FINISH_LEVELS.find(f => f.id === params.finish)?.ar;
   const typeLabel = BUILDING_TYPES.find(t => t.id === params.type)?.ar;
@@ -456,6 +846,12 @@ function AreaResultsView({ country, params, results, onBack, onExport, onSave, o
         </div>
       </div>
 
+      <CostDistributionGraphic
+        sections={sections.map((section) => ({ ...section, value: results.breakdown[section.id] }))}
+        total={results.total}
+        currency={c.currency}
+      />
+
       <div className="rounded-3xl bg-white border-2 border-[#E2D8C4] p-6 shadow-sm">
         <h3 className="text-[16px] font-bold text-[#082555] mb-6 flex items-center gap-2" style={{ fontFamily: AR }}>
           <div className="h-2 w-2 rounded-full bg-[#C9A84C]" /> ملخص المشروع
@@ -474,6 +870,14 @@ function AreaResultsView({ country, params, results, onBack, onExport, onSave, o
           ))}
         </div>
       </div>
+
+      <AreaScenarioCompare
+        scenarios={scenarios}
+        currentScenario={currentScenario}
+        currency={c.currency}
+        onAddCurrent={onAddScenario}
+        onRemove={onRemoveScenario}
+      />
 
       <div className="space-y-3">
         <h3 className="text-[16px] font-bold text-[#082555] px-1 mb-2" style={{ fontFamily: AR }}>تفاصيل التكلفة حسب التخصصات</h3>
@@ -576,6 +980,13 @@ function AreaSectionDetailView({ country, params, draft, overallResults, onBack,
         </div>
       </div>
 
+      <SectionDetailGraphic
+        draft={draft}
+        totalArea={totalArea}
+        overallShare={overallShare}
+        currency={c.currency}
+      />
+
       <div className="rounded-3xl border-2 border-[#E2D8C4] bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-[17px] font-bold text-[#082555]" style={{ fontFamily: AR }}>البنود التقريبية القابلة للتعديل</h3>
@@ -650,18 +1061,20 @@ function AreaSectionDetailView({ country, params, draft, overallResults, onBack,
 
 // --- Main Pricing Workspace Component ---
 
-export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge }) {
-  const [country, setCountry] = usePersistentState("taseera.v3.country", "sa");
+export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry }) {
+  // initialCountry comes from the CountryPicker on PricingPage; always override persisted value
+  const [country, setCountry] = useState(initialCountry || "sa");
   const [mode, setMode] = useState("selection"); // selection, items, area, area-results
   const [tab, setTab] = useState("csi");
   const [selectedItem, setSelectedItem] = useState(null);
   const [resources, setResources] = useState({ مواد: [], عمالة: [], معدات: [] });
   const [areaParams, setAreaParams] = useState(null);
   const [areaResults, setAreaResults] = useState(null);
+  const [areaScenarios, setAreaScenarios] = useState([]);
   const [areaSectionDrafts, setAreaSectionDrafts] = useState({});
   const [selectedAreaSection, setSelectedAreaSection] = useState(null);
   const [addModalType, setAddModalType] = useState(null);
-  const [showCountryModal, setShowCountryModal] = useState(false);
+
   const { msg: toastMsg, visible: toastVisible, show: showToast } = useToast();
 
   // Analysis Parameters (Moved up for persistence and export)
@@ -773,6 +1186,20 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     };
   }, [areaResults, areaSectionDrafts, areaParams]);
 
+  const currentAreaScenario = useMemo(() => {
+    if (!areaParams || !effectiveAreaResults) return null;
+    return {
+      id: `scenario-${areaParams.type}-${areaParams.scope}-${areaParams.finish}-${areaParams.area}-${areaParams.floors}`,
+      total: effectiveAreaResults.total,
+      unitPrice: effectiveAreaResults.unitPrice,
+      totalArea: (Number(areaParams.area) || 0) * (Number(areaParams.floors) || 0),
+      floors: Number(areaParams.floors) || 0,
+      typeLabel: BUILDING_TYPES.find((item) => item.id === areaParams.type)?.ar || areaParams.type,
+      finishLabel: FINISH_LEVELS.find((item) => item.id === areaParams.finish)?.ar || areaParams.finish,
+      scopeLabel: SCOPES.find((item) => item.id === areaParams.scope)?.ar || areaParams.scope,
+    };
+  }, [areaParams, effectiveAreaResults]);
+
   const handleCalculateArea = (params) => {
     const config = AREA_PRICING_BASE[country] || AREA_PRICING_BASE.sa;
     let rate = config.baseRate;
@@ -835,6 +1262,20 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     if (!resetDraft) return;
     setAreaSectionDrafts((current) => ({ ...current, [selectedAreaSection]: resetDraft }));
   }, [selectedAreaSection, areaParams, areaResults]);
+
+  const handleAddAreaScenario = useCallback(() => {
+    if (!currentAreaScenario) return;
+    setAreaScenarios((current) => {
+      if (current.some((scenario) => scenario.id === currentAreaScenario.id)) return current;
+      if (current.length >= 3) return current;
+      return [...current, currentAreaScenario];
+    });
+    showToast("تمت إضافة السيناريو للمقارنة");
+  }, [currentAreaScenario, showToast]);
+
+  const handleRemoveAreaScenario = useCallback((scenarioId) => {
+    setAreaScenarios((current) => current.filter((scenario) => scenario.id !== scenarioId));
+  }, []);
 
   const handleUpdateAreaSectionItem = useCallback((itemId, field, value) => {
     if (!selectedAreaSection || !areaParams) return;
@@ -1174,13 +1615,12 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     { id: "history", label: "المحفوظة" },
   ];
 
-  if (!country || showCountryModal) {
+  if (!country) {
     return (
       <CountryModal
         current={country}
         onConfirm={(c) => {
           setCountry(c);
-          setShowCountryModal(false);
         }}
       />
     );
@@ -1190,7 +1630,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     <div className="min-h-screen w-full bg-[#F7F3EC] overflow-x-hidden" dir="rtl" style={{ fontFamily: AR }}>
       <div className="mx-auto w-full max-w-[720px] p-3 sm:p-4 pb-12">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between">
           <button onClick={() => handleModeChange("selection")} className="flex items-center gap-3 text-right">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0d2545] text-[#d4a843] shadow-lg">
               <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
@@ -1203,12 +1643,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             </div>
           </button>
 
-          <button type="button" onClick={() => setShowCountryModal(true)}
-            className="flex min-h-[44px] items-center gap-3 rounded-2xl border-2 border-[#E2D8C4] bg-white px-3 py-1 shadow-sm transition hover:border-[#d4a843]">
-            <Flag code={country} mini />
-            <span className="text-[13px] font-bold text-[#0d2545]">{COUNTRIES[country]?.name}</span>
-            <span className="text-[10px] text-[#9A8A6A]">▼</span>
-          </button>
+
         </div>
 
         {/* --- MAIN CONTENT SWITCHER --- */}
@@ -1265,6 +1700,10 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             country={country}
             params={areaParams}
             results={effectiveAreaResults}
+            scenarios={areaScenarios}
+            currentScenario={currentAreaScenario}
+            onAddScenario={handleAddAreaScenario}
+            onRemoveScenario={handleRemoveAreaScenario}
             onBack={() => setMode("area")}
             onExport={handleExport}
             onSave={() => {
@@ -1325,6 +1764,8 @@ function HistoryScreen({ savedAnalyses, onView }) {
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <HistoryInsightGraphic savedAnalyses={savedAnalyses} />
+
       <div className="px-2">
         <h3 className="text-[15px] font-bold text-[#082555]" style={{ fontFamily: AR }}>السجل الأخير ({savedAnalyses.length})</h3>
       </div>
@@ -1368,6 +1809,18 @@ function HistoryScreen({ savedAnalyses, onView }) {
                   {fmtNum(item.finalUnitPrice || item.results.unitPrice)}
                 </div>
               </div>
+            </div>
+
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#F7F3EC]">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{
+                  width: `${item.mode === "area" ? 100 : Math.max(25, Math.min(100, ((item.results?.profitAmt || item.results?.finalTotal || 1) / Math.max(item.projectTotal || item.results?.finalTotal || item.results?.total || 1, 1)) * 100))}%`,
+                  background: item.mode === "area"
+                    ? "linear-gradient(90deg,#6FCF97 0%,#C9A84C 100%)"
+                    : "linear-gradient(90deg,#E07B2A 0%,#C9A84C 100%)",
+                }}
+              />
             </div>
           </button>
         ))}

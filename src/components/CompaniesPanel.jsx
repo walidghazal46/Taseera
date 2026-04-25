@@ -119,46 +119,11 @@ function TabBar({ tabs, active, onSelect }) {
 
 function StatBadge({ label, value }) {
   return (
-    <div className="flex-1 rounded-2xl border-2 border-[#E2D8C4] bg-white px-2.5 py-3 text-center shadow-sm">
+    <div className="flex-1 rounded-2xl border-2 border-[#E2D8C4] bg-white px-2.5 py-[0.56rem] text-center shadow-sm">
       <p className="text-[16px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{value}</p>
       <p className="mt-0.5 text-[10px] font-bold text-[#9A8A6A] uppercase tracking-wider" style={{ fontFamily: AR }}>
         {label}
       </p>
-    </div>
-  );
-}
-
-function CountrySelector({ options, activeCountry, onSelect, copy }) {
-  return (
-    <div className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-3 shadow-sm">
-      <div className="mb-2 flex items-center justify-between">
-        <p className="text-[11px] font-bold text-[#082555] uppercase tracking-wider" style={{ fontFamily: AR }}>
-          {copy.countryFilter}
-        </p>
-        <span className="text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
-          {copy.chooseCountry}
-        </span>
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        {options.map((option) => {
-          const active = option.value === activeCountry;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => onSelect(option.value)}
-              className={`min-h-[42px] rounded-xl border-2 px-2 py-2 text-[12px] font-bold transition-all ${
-                active
-                  ? "border-[#C9A84C] bg-[#C9A84C] text-[#082555] shadow-md"
-                  : "border-[#E2D8C4] bg-[#F7F3EC] text-[#5A4E38] hover:border-[#C9A84C]"
-              }`}
-              style={{ fontFamily: AR }}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }
@@ -245,7 +210,7 @@ function CompanyCard({ company, selected, onSelect, onShowDetails, copy }) {
 function CompanyDetailView({ company, onBack, copy }) {
   if (!company) return null;
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Header card */}
       <div className="relative overflow-hidden rounded-2xl bg-[#082555] p-6 shadow-xl">
         <div className="absolute inset-0 bg-gradient-to-br from-[#C9A84C]/20 to-transparent pointer-events-none" />
@@ -458,17 +423,11 @@ export default function CompaniesPanel({
     <div className="space-y-4">
       {/* Nav tabs */}
       {activeSection !== "details" ? (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           <TabBar tabs={tabs} active={activeSection} onSelect={(id) => nav.navigate({ section: id, detailCompanyId: null })} />
 
           {activeSection === "directory" && (
-            <div className="space-y-3">
-              <CountrySelector
-                options={countryOptions}
-                activeCountry={activeCountry}
-                onSelect={setActiveCountry}
-                copy={copy}
-              />
+            <div className="space-y-2.5">
               {/* Search */}
               <div className="relative">
                 <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#9A8A6A]" />
@@ -481,7 +440,7 @@ export default function CompaniesPanel({
                 />
               </div>
               {/* Stats */}
-              <div className="flex gap-3">
+              <div className="flex gap-2.5">
                 <StatBadge label={copy.totalCompanies} value={summary.total} />
                 <StatBadge label={copy.contractors} value={summary.contractors} />
                 <StatBadge label={copy.consultants} value={summary.consultants} />
@@ -508,8 +467,8 @@ export default function CompaniesPanel({
 
       {/* Directory */}
       {activeSection === "directory" && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between rounded-2xl border-2 border-[#E2D8C4] bg-white px-4 py-3 shadow-sm">
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between rounded-2xl border-2 border-[#E2D8C4] bg-white px-4 py-2.5 shadow-sm">
             <span className="text-[12px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
               {copy.currentShowing} <strong className="text-[#082555]">{pagedCompanies.length}</strong> {copy.outOf} <strong className="text-[#082555]">{filteredCompanies.length}</strong>
             </span>
@@ -528,7 +487,7 @@ export default function CompaniesPanel({
           ))}
 
           {/* Pagination */}
-          <div className="flex items-center gap-3 pt-2">
+          <div className="flex items-center gap-3 pt-1">
             <button type="button" onClick={() => setDirectoryPage((p) => Math.max(1, p - 1))}
               disabled={directoryPage === 1}
               className={`flex-1 min-h-[48px] rounded-2xl py-2 text-[13px] font-bold transition shadow-sm ${

@@ -125,7 +125,7 @@ function getSystemText(language = "ar") {
         contactBody: "Hello, I have a question about the application.",
         contactOpened: "Opened contact via email.",
         supportSubject: (appName) => `Technical support - ${appName}`,
-        supportBody: "Hello, I need technical help inside the app.",
+        supportBody: "Technical support for Taseera app regarding:",
         supportOpened: "Opened technical support via email.",
         appStatus: "Application Status",
         platform: "Platform",
@@ -166,7 +166,7 @@ function getSystemText(language = "ar") {
         contactBody: "مرحبًا، لدي استفسار بخصوص التطبيق.",
         contactOpened: "تم فتح وسيلة التواصل عبر البريد الإلكتروني.",
         supportSubject: (appName) => `دعم فني - ${appName}`,
-        supportBody: "مرحبًا، أحتاج مساعدة فنية داخل التطبيق.",
+        supportBody: "الدعم الفني تطبيق تسعيرة في :",
         supportOpened: "تم فتح الدعم الفني عبر البريد الإلكتروني.",
         appStatus: "حالة التطبيق",
         platform: "المنصة",
@@ -234,6 +234,12 @@ export default function App() {
   const [routeStack, setRouteStack] = useState([
     createRoute(authMode, authMode ? activePage : "companies"),
   ]);
+  const [pageResetVersion, setPageResetVersion] = useState({
+    companies: 0,
+    pricing: 0,
+    suppliers: 0,
+    settings: 0,
+  });
   const [showExitPrompt, setShowExitPrompt] = useState(false);
   const [companies, setCompanies] = usePersistentState(
     `${APP_STORAGE_PREFIX}.companies`,
@@ -477,6 +483,16 @@ export default function App() {
         return current;
       }
 
+      if (route.kind === "app") {
+        if (route.page === "companies") {
+          return [route];
+        }
+
+        if (lastRoute?.kind === "app") {
+          return [lastRoute, route];
+        }
+      }
+
       return [...current, route];
     });
 
@@ -485,12 +501,18 @@ export default function App() {
 
   const handleNavigate = useCallback(
     (page) => {
+      setPageResetVersion((current) => ({
+        ...current,
+        [page]: (current[page] || 0) + 1,
+      }));
+
+      setShowExitPrompt(false);
+
       if (page === activePage) {
         return;
       }
 
       setActivePage(page);
-      setShowExitPrompt(false);
       pushRoute(createRoute(authMode, page));
     },
     [activePage, authMode, pushRoute, setActivePage]
@@ -956,10 +978,10 @@ export default function App() {
   };
 
   const renderedPage = {
-    companies: <CompaniesPage {...pageProps} />,
-    pricing: <PricingPage {...pageProps} />,
-    suppliers: <SuppliersPage {...pageProps} />,
-    settings: <SettingsPage {...pageProps} />,
+    companies: <CompaniesPage key={`companies-${pageResetVersion.companies}`} {...pageProps} />,
+    pricing: <PricingPage key={`pricing-${pageResetVersion.pricing}`} {...pageProps} />,
+    suppliers: <SuppliersPage key={`suppliers-${pageResetVersion.suppliers}`} {...pageProps} />,
+    settings: <SettingsPage key={`settings-${pageResetVersion.settings}`} {...pageProps} />,
   }[activePage];
 
   return (

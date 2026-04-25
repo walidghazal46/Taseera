@@ -1,6 +1,23 @@
 import importedPricingWorkbook from "./importedPricingWorkbook.json";
 import { createImportedPricingItems } from "./pricingImport";
 
+// Price multipliers relative to SAR baseline
+// Based on MARKET_RATES in csiData.js (concrete ratio: sa=550, eg=4500, ae=600)
+const COUNTRY_PRICE_FACTORS = {
+  sa: 1,
+  eg: 8.5,   // EGP ≈ 8.5x SAR for construction materials/labor
+  ae: 1.08,  // AED ≈ 1.08x SAR
+};
+
+// Returns resourcesDatabase with prices adjusted for the given country code
+export function getResourcesByCountry(countryCode = "sa") {
+  const factor = COUNTRY_PRICE_FACTORS[countryCode] || 1;
+  return resourcesDatabase.map((r) => ({
+    ...r,
+    marketPrice: Math.round(r.marketPrice * factor),
+  }));
+}
+
 export const sampleSettings = {
   country: "السعودية",
   city: "الرياض",
