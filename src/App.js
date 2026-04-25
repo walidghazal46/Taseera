@@ -241,6 +241,7 @@ export default function App() {
     settings: 0,
   });
   const [showExitPrompt, setShowExitPrompt] = useState(false);
+  const [exitFromCompanies, setExitFromCompanies] = useState(false);
   const [companies, setCompanies] = usePersistentState(
     `${APP_STORAGE_PREFIX}.companies`,
     sampleCompanies
@@ -444,9 +445,15 @@ export default function App() {
       return true;
     }
 
-    setShowExitPrompt(true);
+    // Only show exit prompt on Android, when on companies page
+    if (bridge.isAndroid) {
+      // If no authMode → we're on the login screen → pressing Yes will close the app
+      // If authMode → we're on the companies page → pressing Yes will go to login
+      setExitFromCompanies(!!authMode);
+      setShowExitPrompt(true);
+    }
     return false;
-  }, [activePage, authMode, setActivePage, setAuthMode]);
+  }, [activePage, authMode, bridge.isAndroid, setActivePage, setAuthMode]);
 
   const handleTopLevelBack = useCallback(() => {
     const handled = performBackNavigation();
@@ -577,14 +584,21 @@ export default function App() {
 
   const confirmExit = useCallback(() => {
     setShowExitPrompt(false);
-    pageBackHandlerRef.current = () => false;
-    setAuthMode(null);
-    setAuthSession(null);
-    setActivePage("companies");
-    setAuthScreenMode("login");
-    setRouteStack([createRoute(null)]);
-    window.history.pushState({ source: "taseera-guard" }, "");
-  }, [setActivePage, setAuthMode, setAuthSession]);
+    if (exitFromCompanies) {
+      // From companies page → go to login
+      setExitFromCompanies(false);
+      pageBackHandlerRef.current = () => false;
+      setAuthMode(null);
+      setAuthSession(null);
+      setActivePage("companies");
+      setAuthScreenMode("login");
+      setRouteStack([createRoute(null)]);
+      window.history.pushState({ source: "taseera-guard" }, "");
+    } else {
+      // From login screen → exit the app
+      bridge.exitApp();
+    }
+  }, [bridge, exitFromCompanies, setActivePage, setAuthMode, setAuthSession]);
 
   const selectedCompany = useMemo(
     () => companies.find((companyItem) => companyItem.id === selectedCompanyId) || null,
@@ -1001,7 +1015,7 @@ export default function App() {
               setSettings((current) => ({ ...current, language }))
             }
           />
-          {showExitPrompt ? (
+          {bridge.isAndroid && showExitPrompt ? (
             <Modal
               title={settings.language === "en" ? "Confirm Exit" : "تأكيد الخروج"}
               onClose={() => setShowExitPrompt(false)}
@@ -1049,7 +1063,7 @@ export default function App() {
           >
             {renderedPage}
           </AppShell>
-          {showExitPrompt ? (
+          {bridge.isAndroid && showExitPrompt ? (
             <Modal
               title={settings.language === "en" ? "Confirm Exit" : "تأكيد الخروج"}
               onClose={() => setShowExitPrompt(false)}
