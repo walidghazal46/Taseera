@@ -610,6 +610,7 @@ export default function SettingsPanel({
     initialEntry: { section: "account" },
     registerBackHandler: navigationBridge?.registerBackHandler,
     pushHistoryEntry: navigationBridge?.pushHistoryEntry,
+    onEntryChange: navigationBridge?.onEntryChange,
   });
   const activeView = nav.currentEntry.section;
 

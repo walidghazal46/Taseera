@@ -130,6 +130,7 @@ export default function SuppliersPanel({
     initialEntry: { section: "directory" },
     registerBackHandler: navigationBridge?.registerBackHandler,
     pushHistoryEntry: navigationBridge?.pushHistoryEntry,
+    onEntryChange: navigationBridge?.onEntryChange,
   });
   const activeSection = nav.currentEntry.section;
 

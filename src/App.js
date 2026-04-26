@@ -240,6 +240,7 @@ export default function App() {
     suppliers: 0,
     settings: 0,
   });
+  const [scrollResetVersion, setScrollResetVersion] = useState(0);
   const [showExitPrompt, setShowExitPrompt] = useState(false);
   const [exitFromCompanies, setExitFromCompanies] = useState(false);
   const [companies, setCompanies] = usePersistentState(
@@ -413,6 +414,10 @@ export default function App() {
     window.history.pushState({ source: "taseera-guard" }, "");
   }, []);
 
+  const notifySubpageNavigation = useCallback(() => {
+    setScrollResetVersion((current) => current + 1);
+  }, []);
+
   const performBackNavigation = useCallback(() => {
     if (pageBackHandlerRef.current?.()) {
       setShowExitPrompt(false);
@@ -454,13 +459,6 @@ export default function App() {
     }
     return false;
   }, [activePage, authMode, bridge.isAndroid, setActivePage, setAuthMode]);
-
-  const handleTopLevelBack = useCallback(() => {
-    const handled = performBackNavigation();
-    if (handled) {
-      pushHistoryEntry();
-    }
-  }, [performBackNavigation, pushHistoryEntry]);
 
   useEffect(() => {
     window.history.replaceState({ source: "taseera-root" }, "");
@@ -516,6 +514,8 @@ export default function App() {
       setShowExitPrompt(false);
 
       if (page === activePage) {
+        setRouteStack([createRoute(authMode, page)]);
+        setScrollResetVersion((current) => current + 1);
         return;
       }
 
@@ -582,23 +582,51 @@ export default function App() {
     );
   }, [setActivePage, setAuthMode, setAuthSession, settings.language, showStatus]);
 
+  const openLoginScreen = useCallback(() => {
+    setShowExitPrompt(false);
+    setExitFromCompanies(false);
+    pageBackHandlerRef.current = () => false;
+    setAuthMode(null);
+    setAuthSession(null);
+    setActivePage("companies");
+    setAuthScreenMode("login");
+    setRouteStack([createRoute(null)]);
+    window.history.pushState({ source: "taseera-guard" }, "");
+  }, [setActivePage, setAuthMode, setAuthSession]);
+
   const confirmExit = useCallback(() => {
     setShowExitPrompt(false);
     if (exitFromCompanies) {
       // From companies page → go to login
-      setExitFromCompanies(false);
-      pageBackHandlerRef.current = () => false;
-      setAuthMode(null);
-      setAuthSession(null);
-      setActivePage("companies");
-      setAuthScreenMode("login");
-      setRouteStack([createRoute(null)]);
-      window.history.pushState({ source: "taseera-guard" }, "");
+      openLoginScreen();
     } else {
       // From login screen → exit the app
       bridge.exitApp();
     }
-  }, [bridge, exitFromCompanies, setActivePage, setAuthMode, setAuthSession]);
+  }, [bridge, exitFromCompanies, openLoginScreen]);
+
+  const handleTopLevelBack = useCallback(() => {
+    if (!bridge.isAndroid) {
+      const isCompaniesRoot =
+        activePage === "companies" && routeStackRef.current.length <= 1;
+
+      if (isCompaniesRoot) {
+        openLoginScreen();
+        return;
+      }
+
+      const handled = performBackNavigation();
+      if (handled) {
+        pushHistoryEntry();
+      }
+      return;
+    }
+
+    const handled = performBackNavigation();
+    if (handled) {
+      pushHistoryEntry();
+    }
+  }, [activePage, bridge.isAndroid, openLoginScreen, performBackNavigation, pushHistoryEntry]);
 
   const selectedCompany = useMemo(
     () => companies.find((companyItem) => companyItem.id === selectedCompanyId) || null,
@@ -942,6 +970,14 @@ export default function App() {
       showStatus,
     ]
   );
+  const navigationBridge = useMemo(
+    () => ({
+      registerBackHandler: registerPageBackHandler,
+      pushHistoryEntry,
+      onEntryChange: notifySubpageNavigation,
+    }),
+    [notifySubpageNavigation, pushHistoryEntry, registerPageBackHandler]
+  );
 
   const pageProps = {
     authMode,
@@ -965,10 +1001,7 @@ export default function App() {
     savedAnalyses,
     rfqRequests,
     systemBridge: bridge,
-    navigationBridge: {
-      registerBackHandler: registerPageBackHandler,
-      pushHistoryEntry,
-    },
+    navigationBridge,
     selectedPricingItemId,
     selectedCompanyId,
     selectedProjectId,
@@ -1054,6 +1087,7 @@ export default function App() {
             onNavigate={handleNavigate}
             onBack={handleTopLevelBack}
             canGoBack={routeStack.length > 1 || activePage !== "companies"}
+            scrollResetVersion={scrollResetVersion}
             selectedCompany={selectedCompany}
             selectedProject={selectedProject}
             authMode={authMode}

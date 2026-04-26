@@ -31,7 +31,7 @@ export default function PricingPage(props) {
   const countryCode = COUNTRY_NAME_TO_CODE[selectedCountry] || "sa";
 
   return (
-    <div className="grid min-h-full gap-2.5">
+    <div className="grid gap-2.5">
       <PageHeader
         eyebrow={text.pages.pricing.eyebrow}
         title=""

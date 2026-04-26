@@ -28,7 +28,6 @@ import java.io.OutputStream;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -154,7 +153,11 @@ public class MainActivity extends AppCompatActivity {
                     webView.goBack();
                     return;
                 }
-                showExitDialog();
+                // Let React handle the back press (shows custom exit dialog)
+                webView.evaluateJavascript(
+                    "window.dispatchEvent(new PopStateEvent('popstate', {state: {source: 'android-back'}}))",
+                    null
+                );
             }
         });
 
@@ -163,15 +166,6 @@ public class MainActivity extends AppCompatActivity {
         } else {
             webView.loadUrl(START_URL);
         }
-    }
-
-    private void showExitDialog() {
-        new AlertDialog.Builder(this)
-            .setTitle("الخروج من التطبيق")
-            .setMessage("هل تريد الخروج من التطبيق؟")
-            .setNegativeButton("إلغاء", (dialog, which) -> dialog.dismiss())
-            .setPositiveButton("خروج", (dialog, which) -> finishAffinity())
-            .show();
     }
 
     private void openIntentSafely(Intent intent) {

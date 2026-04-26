@@ -1,21 +1,23 @@
 import importedPricingWorkbook from "./importedPricingWorkbook.json";
 import { createImportedPricingItems } from "./pricingImport";
 
-// Price multipliers relative to SAR baseline
-// Based on MARKET_RATES in csiData.js (concrete ratio: sa=550, eg=4500, ae=600)
-const COUNTRY_PRICE_FACTORS = {
-  sa: 1,
-  eg: 8.5,   // EGP ≈ 8.5x SAR for construction materials/labor
-  ae: 1.08,  // AED ≈ 1.08x SAR
+// عوامل السعر حسب الفئة نسبةً إلى السعر السعودي (SAR baseline)
+// مواد: مرتبطة بسعر الصرف مع الدولار | عمالة: محلية منخفضة | معدات: مرتفعة بسبب الوقود والاستيراد
+const COUNTRY_FACTORS = {
+  sa: { material: 1,    labor: 1,    equipment: 1    },
+  eg: { material: 13.0, labor: 2.6,  equipment: 18.0 }, // USD/EGP ~50 → مواد 13x، عمالة محلية رخيصة 2.6x
+  ae: { material: 1.05, labor: 1.28, equipment: 1.10 }, // AED قريب من SAR مع هامش بسيط
 };
 
 // Returns resourcesDatabase with prices adjusted for the given country code
 export function getResourcesByCountry(countryCode = "sa") {
-  const factor = COUNTRY_PRICE_FACTORS[countryCode] || 1;
-  return resourcesDatabase.map((r) => ({
-    ...r,
-    marketPrice: Math.round(r.marketPrice * factor),
-  }));
+  const factors = COUNTRY_FACTORS[countryCode] || COUNTRY_FACTORS.sa;
+  return resourcesDatabase.map((r) => {
+    const f = r.category === "labor" ? factors.labor
+            : r.category === "equipment" ? factors.equipment
+            : factors.material;
+    return { ...r, marketPrice: Math.round(r.marketPrice * f) };
+  });
 }
 
 export const sampleSettings = {
@@ -35,25 +37,26 @@ export const sampleSettings = {
 };
 
 export const resourcesDatabase = [
-  { id: "mat-steel-16", name: "حديد تسليح 16 مم", category: "material", unit: "طن", marketPrice: 3500, icon: "🔩" },
-  { id: "mat-readymix", name: "خرسانة جاهزة مقاومة", category: "material", unit: "م3", marketPrice: 320, icon: "🏗️" },
-  { id: "mat-block", name: "بلوك أسمنتي", category: "material", unit: "م2", marketPrice: 38, icon: "🧱" },
-  { id: "mat-plaster", name: "مواد لياسة", category: "material", unit: "م2", marketPrice: 12, icon: "🪣" },
-  { id: "mat-paint", name: "دهان داخلي فاخر", category: "material", unit: "م2", marketPrice: 18, icon: "🎨" },
-  { id: "mat-cable", name: "كابلات وأسلاك نحاس", category: "material", unit: "نقطة", marketPrice: 34, icon: "⚡" },
-  { id: "mat-lighting", name: "مستلزمات إنارة", category: "material", unit: "نقطة", marketPrice: 22, icon: "💡" },
-  { id: "mat-ppr", name: "مواسير PPR", category: "material", unit: "م ط", marketPrice: 18, icon: "🚿" },
-  { id: "mat-duct", name: "دكت تكييف مجلفن", category: "material", unit: "م2", marketPrice: 42, icon: "❄️" },
-  { id: "mat-backfill", name: "مواد ردم وبحص", category: "material", unit: "م3", marketPrice: 28, icon: "🪨" },
-  { id: "mat-structural-metal", name: "قطاعات معدنية إنشائية", category: "material", unit: "طن", marketPrice: 4200, icon: "🏗️" },
-  { id: "mat-waterproof", name: "مواد عزل مائي", category: "material", unit: "م2", marketPrice: 38, icon: "🧴" },
-  { id: "mat-joinery", name: "مواد أبواب وزجاج", category: "material", unit: "وحدة", marketPrice: 260, icon: "🚪" },
-  { id: "mat-gypsum", name: "ألواح جبس وإكسسوارات", category: "material", unit: "م2", marketPrice: 34, icon: "🪟" },
-  { id: "mat-tiles", name: "بلاط وتشطيبات أرضيات", category: "material", unit: "م2", marketPrice: 55, icon: "▫️" },
-  { id: "mat-finish", name: "مواد تشطيبات عامة", category: "material", unit: "م2", marketPrice: 24, icon: "🧱" },
-  { id: "mat-switchgear", name: "لوحات وإكسسوارات كهربائية", category: "material", unit: "نقطة", marketPrice: 48, icon: "🔌" },
-  { id: "mat-pump-mech", name: "معدات ومضخات ميكانيكية", category: "material", unit: "وحدة", marketPrice: 320, icon: "⚙️" },
-  { id: "mat-mech-accessory", name: "ملحقات ميكانيكية", category: "material", unit: "م ط", marketPrice: 24, icon: "🔧" },
+  { id: "mat-steel-16", name: "حديد تسليح 16 مم", category: "material", unit: "طن", marketPrice: 2800, icon: "🔩" },       // SA 2025: ~2600-3000 SAR/طن
+  { id: "mat-readymix-c20", name: "خرسانة جاهزة C20/C25", category: "material", unit: "م3", marketPrice: 200, icon: "🏗️" },    // SA 2025: ~185-215 SAR/م³ (عادية/فرشة)
+  { id: "mat-readymix", name: "خرسانة جاهزة مقاومة", category: "material", unit: "م3", marketPrice: 275, icon: "🏗️" },     // SA 2025: ~250-290 SAR/م³
+  { id: "mat-block", name: "بلوك أسمنتي", category: "material", unit: "م2", marketPrice: 30, icon: "🧱" },               // SA 2025: ~27-33 SAR/م²
+  { id: "mat-plaster", name: "مواد لياسة", category: "material", unit: "م2", marketPrice: 10, icon: "🪣" },              // SA 2025: ~8-12 SAR/م²
+  { id: "mat-paint", name: "دهان داخلي فاخر", category: "material", unit: "م2", marketPrice: 15, icon: "🎨" },          // SA 2025: ~12-18 SAR/م²
+  { id: "mat-cable", name: "كابلات وأسلاك نحاس", category: "material", unit: "نقطة", marketPrice: 30, icon: "⚡" },      // SA 2025: ~25-36 SAR/نقطة
+  { id: "mat-lighting", name: "مستلزمات إنارة", category: "material", unit: "نقطة", marketPrice: 20, icon: "💡" },       // SA 2025: ~18-25 SAR/نقطة
+  { id: "mat-ppr", name: "مواسير PPR", category: "material", unit: "م ط", marketPrice: 16, icon: "🚿" },                // SA 2025: ~14-20 SAR/م.ط
+  { id: "mat-duct", name: "دكت تكييف مجلفن", category: "material", unit: "م2", marketPrice: 38, icon: "❄️" },           // SA 2025: ~34-44 SAR/م²
+  { id: "mat-backfill", name: "مواد ردم وبحص", category: "material", unit: "م3", marketPrice: 20, icon: "🪨" },         // SA 2025: ~18-24 SAR/م³
+  { id: "mat-structural-metal", name: "قطاعات معدنية إنشائية", category: "material", unit: "طن", marketPrice: 3500, icon: "🏗️" }, // SA 2025: ~3300-3700 SAR/طن
+  { id: "mat-waterproof", name: "مواد عزل مائي", category: "material", unit: "م2", marketPrice: 30, icon: "🧴" },       // SA 2025: ~26-35 SAR/م²
+  { id: "mat-joinery", name: "مواد أبواب وزجاج", category: "material", unit: "وحدة", marketPrice: 220, icon: "🚪" },   // SA 2025: ~190-260 SAR/وحدة
+  { id: "mat-gypsum", name: "ألواح جبس وإكسسوارات", category: "material", unit: "م2", marketPrice: 30, icon: "🪟" },   // SA 2025: ~26-35 SAR/م²
+  { id: "mat-tiles", name: "بلاط وتشطيبات أرضيات", category: "material", unit: "م2", marketPrice: 45, icon: "▫️" },    // SA 2025: ~40-55 SAR/م² (قياسي)
+  { id: "mat-finish", name: "مواد تشطيبات عامة", category: "material", unit: "م2", marketPrice: 20, icon: "🧱" },      // SA 2025: ~18-24 SAR/م²
+  { id: "mat-switchgear", name: "لوحات وإكسسوارات كهربائية", category: "material", unit: "نقطة", marketPrice: 42, icon: "🔌" }, // SA 2025: ~38-48 SAR/نقطة
+  { id: "mat-pump-mech", name: "معدات ومضخات ميكانيكية", category: "material", unit: "وحدة", marketPrice: 280, icon: "⚙️" },   // SA 2025: ~250-320 SAR/وحدة
+  { id: "mat-mech-accessory", name: "ملحقات ميكانيكية", category: "material", unit: "م ط", marketPrice: 20, icon: "🔧" },      // SA 2025: ~18-24 SAR/م.ط
   { id: "lab-carpenter", name: "نجار مسلح", category: "labor", unit: "يومية", marketPrice: 220, icon: "👷" },
   { id: "lab-steelfixer", name: "حداد مسلح", category: "labor", unit: "يومية", marketPrice: 230, icon: "👷" },
   { id: "lab-blockworker", name: "عامل مباني", category: "labor", unit: "يومية", marketPrice: 180, icon: "👷" },
@@ -866,6 +869,76 @@ const aeCompanySeeds = [
   { id: 221, name: "النبودة للمقاولات", headquarters: ["دبي"], specialization: "طرق ومطارات وبنية تحتية", keyProjects: ["طرق دبي", "مطارات", "مرافق"] },
 ];
 
+const egAdditionalCompanySeeds = [
+  { id: 119, name: "إتش دي بي", headquarters: ["القاهرة الجديدة", "الشيخ زايد"], specialization: "تطوير عقاري", keyProjects: ["تلال إيست", "تلال سول", "كلوب هيلز ريزيدنس"] },
+  { id: 120, name: "أركو", headquarters: ["القاهرة"], specialization: "تطوير عقاري وسياحي", keyProjects: ["لاجونا باي", "سيتي ستارز الساحل", "لافونتين"] },
+  { id: 121, name: "إن ديفلوبمنتس", headquarters: ["القاهرة الجديدة", "العاصمة الإدارية"], specialization: "تطوير عقاري", keyProjects: ["جولدن جيت", "أعمال العاصمة", "مشروعات حضرية"] },
+  { id: 122, name: "آي جي آي العقارية", headquarters: ["القاهرة"], specialization: "تطوير عقاري سكني", keyProjects: ["أشجار سيتي", "جاردينيا بارك", "ويست جيت"] },
+  { id: 123, name: "أب وايد للتطوير", headquarters: ["القاهرة الجديدة", "العاصمة الإدارية"], specialization: "تطوير إداري وتجاري", keyProjects: ["إيت بيزنس هب", "سينكو", "جرانوي"] },
+  { id: 124, name: "أجنا للتطوير", headquarters: ["العين السخنة", "القاهرة"], specialization: "تطوير عقاري وساحلي", keyProjects: ["كارنيليا", "عين باي", "وجهات ساحلية"] },
+  { id: 125, name: "أرابيلا", headquarters: ["القاهرة الجديدة"], specialization: "تطوير عقاري", keyProjects: ["أرابيلا بارك", "أرابيلا بلازا", "أرابيلا ريزيدنس"] },
+  { id: 126, name: "أوربن لينز", headquarters: ["العاصمة الإدارية", "القاهرة الجديدة"], specialization: "تطوير إداري وتجاري", keyProjects: ["ليفلز بيزنس تاور", "ييللو ريزيدنس", "إيست لين"] },
+  { id: 127, name: "أركان بالم", headquarters: ["الشيخ زايد", "6 أكتوبر"], specialization: "تطوير تجاري وسكني", keyProjects: ["205", "أركان بلازا", "كلوب سايد"] },
+  { id: 128, name: "إس تي إم للتطوير", headquarters: ["العاصمة الإدارية", "القاهرة الجديدة"], specialization: "تطوير عقاري", keyProjects: ["أفنترا", "وحدات إدارية", "تجاري"] },
+  { id: 129, name: "أكام الراجحي", headquarters: ["القاهرة"], specialization: "تطوير عقاري", keyProjects: ["سيناريو", "دوس", "مشروعات العاصمة"] },
+  { id: 130, name: "الأماكن للتطوير", headquarters: ["القاهرة الجديدة", "العاصمة الإدارية"], specialization: "تطوير عقاري", keyProjects: ["مجتمع متكامل", "وحدات إدارية", "مشروعات القاهرة الجديدة"] },
+  { id: 131, name: "إنما للتطوير", headquarters: ["القاهرة"], specialization: "تطوير عقاري", keyProjects: ["سكني", "إداري", "تجاري"] },
+  { id: 132, name: "الدولية للتطوير", headquarters: ["العاصمة الإدارية", "القاهرة"], specialization: "تطوير عقاري واستثماري", keyProjects: ["مبنى أعمال", "مشروعات خدمات", "وحدات استثمارية"] },
+  { id: 133, name: "الديار القطرية", headquarters: ["القاهرة الجديدة", "العاصمة الإدارية"], specialization: "تطوير عقاري متكامل", keyProjects: ["سيتي جيت", "سانت ريجيس", "سكني فاخر"] },
+  { id: 134, name: "العطار للتطوير", headquarters: ["القاهرة"], specialization: "تطوير عقاري وتجاري", keyProjects: ["بارك لين", "ليفال", "ذا بافيليون"] },
+  { id: 135, name: "القمزي للتطوير", headquarters: ["القاهرة"], specialization: "تطوير عقاري وسكني", keyProjects: ["إيستوور", "سيان", "سكني إداري"] },
+  { id: 136, name: "إيل كازار", headquarters: ["القاهرة"], specialization: "تطوير عقاري فاخر", keyProjects: ["ذا كريست", "جو هليوبوليس", "كريك تاون"] },
+  { id: 137, name: "نايل للتطوير", headquarters: ["العاصمة الإدارية", "القاهرة الجديدة"], specialization: "تطوير أبراج ومشروعات إدارية", keyProjects: ["نايل بيزنس سيتي", "31 نورث", "تايكون تاور"] },
+  { id: 138, name: "إم سكويرد", headquarters: ["القاهرة الجديدة", "مستقبل سيتي"], specialization: "تطوير عقاري سكني", keyProjects: ["تريو", "41 بيزنس ديستريكت", "سكني فاخر"] },
+  { id: 139, name: "إمكان مصر", headquarters: ["القاهرة الجديدة", "رأس الحكمة"], specialization: "تطوير عقاري وساحلي", keyProjects: ["البروج", "وجهات ساحلية", "مجتمع سكني"] },
+  { id: 140, name: "إنرشيا مصر", headquarters: ["القاهرة"], specialization: "تطوير عقاري وساحلي", keyProjects: ["جيفيرا", "سوليا", "ويست هيلز"] },
+  { id: 141, name: "أورا ديفلوبرز", headquarters: ["القاهرة"], specialization: "تطوير عقاري متكامل", keyProjects: ["زد الشيخ زايد", "زد إيست", "سولانا"] },
+  { id: 142, name: "باراجون للتطوير", headquarters: ["العاصمة الإدارية"], specialization: "تطوير إداري وتجاري", keyProjects: ["باراجون 1", "باراجون 2", "باراجون بيزنس تاور"] },
+  { id: 143, name: "بي آر إي", headquarters: ["القاهرة"], specialization: "تطوير عقاري وتجاري", keyProjects: ["إيفير", "آيون", "مشروعات حضرية"] },
+  { id: 144, name: "بيبول آند بليسز", headquarters: ["القاهرة", "الساحل الشمالي"], specialization: "تطوير ساحلي وسكني", keyProjects: ["ذا ميد", "هيلز أوف وان", "مشروعات ساحلية"] },
+  { id: 145, name: "تي بي كي للتطوير", headquarters: ["القاهرة"], specialization: "تطوير عقاري وتجاري", keyProjects: ["كي واي", "بيزنس هب", "سكني إداري"] },
+  { id: 146, name: "ريدي جروب", headquarters: ["القاهرة الجديدة", "القاهرة"], specialization: "تطوير عقاري وسكني", keyProjects: ["أزار", "سكني شرق القاهرة", "مجتمع متكامل"] },
+  { id: 147, name: "ستارلايت للتطوير", headquarters: ["القاهرة"], specialization: "تطوير عقاري وساحلي", keyProjects: ["كيان", "كاتاميا ريزيدنس", "منتجع ساحلي"] },
+  { id: 148, name: "مراكز", headquarters: ["6 أكتوبر", "رأس الحكمة"], specialization: "تطوير تجاري وسكني", keyProjects: ["مول العرب", "ديستريكت 5", "راملا"] },
+  { id: 149, name: "مودون مصر", headquarters: ["رأس الحكمة", "القاهرة"], specialization: "تطوير عقاري وساحلي", keyProjects: ["مشروعات رأس الحكمة", "منتجعات ساحلية", "سكني فاخر"] },
+  { id: 150, name: "مباني إدريس", headquarters: ["الشيخ زايد", "6 أكتوبر"], specialization: "تطوير عقاري سكني", keyProjects: ["جرين 5", "سنترال أفينيو", "ذا بلوك"] },
+];
+
+const aeAdditionalCompanySeeds = [
+  { id: 222, name: "دبي العقارية", headquarters: ["دبي"], specialization: "تطوير عقاري متكامل", keyProjects: ["جميرا بيتش ريزيدنس", "مدن", "الخليج التجاري"] },
+  { id: 223, name: "سيليكت جروب", headquarters: ["دبي"], specialization: "تطوير أبراج سكنية", keyProjects: ["مارينا جيت", "سيفن سيتي", "بينينسولا"] },
+  { id: 224, name: "تايجر جروب", headquarters: ["دبي", "الشارقة"], specialization: "تطوير عقاري وأبراج", keyProjects: ["تايجر سكاي", "نيفين", "فلل الشارقة"] },
+  { id: 225, name: "ماج لايف ستايل", headquarters: ["دبي"], specialization: "تطوير عقاري سكني", keyProjects: ["ماج سيتي", "كيتوورا", "سكني فاخر"] },
+  { id: 226, name: "دبي هولدينج", headquarters: ["دبي"], specialization: "تطوير حضري ومجتمعات", keyProjects: ["جميرا سنترال", "دبي هاربور", "تلال الغاف"] },
+  { id: 227, name: "ديار العقارية", headquarters: ["دبي"], specialization: "تطوير عقاري وإدارة مجتمعات", keyProjects: ["ميدتاون", "تريا", "روزاليا"] },
+  { id: 228, name: "دانوب العقارية", headquarters: ["دبي"], specialization: "تطوير عقاري سكني", keyProjects: ["إليتز", "أوشنز", "بيوت عصرية"] },
+  { id: 229, name: "وصل العقارية", headquarters: ["دبي"], specialization: "تطوير وإدارة عقارات", keyProjects: ["بارك غيت", "وصل1", "وصل جيت"] },
+  { id: 230, name: "سمانا للتطوير", headquarters: ["دبي"], specialization: "تطوير عقاري سكني", keyProjects: ["سمانا سكاي", "سمانا جولف", "سمانا بارك"] },
+  { id: 231, name: "كايان جروب", headquarters: ["دبي"], specialization: "تطوير أبراج ومشروعات ساحلية", keyProjects: ["كايان تاور", "لاجونز", "واجهة بحرية"] },
+  { id: 232, name: "دبي الجنوب", headquarters: ["دبي"], specialization: "تطوير عمراني ولوجستي", keyProjects: ["إكسبو فيليج", "المدينة السكنية", "الحي اللوجستي"] },
+  { id: 233, name: "بريسكوت العقارية", headquarters: ["دبي"], specialization: "تطوير عقاري متوسط وفاخر", keyProjects: ["ليغاسي", "سيرين", "سكني حضري"] },
+  { id: 234, name: "فينشيتور", headquarters: ["دبي"], specialization: "تطوير عقاري سكني", keyProjects: ["بوليڤارد", "دولتشي فيتا", "فولاري"] },
+  { id: 235, name: "نشاما", headquarters: ["دبي"], specialization: "تطوير مجتمعات سكنية", keyProjects: ["تاون سكوير", "نشامة بارك", "مجتمع حضري"] },
+  { id: 236, name: "ذا فيرست جروب", headquarters: ["دبي"], specialization: "ضيافة وتطوير عقاري", keyProjects: ["سيلا", "ذا ون", "فنادق وأبراج فندقية"] },
+  { id: 237, name: "يونيون العقارية", headquarters: ["دبي"], specialization: "تطوير عقاري وتجاري", keyProjects: ["موتور سيتي", "أبتاون مردف", "إندكس"] },
+  { id: 238, name: "دبي للاستثمارات العقارية", headquarters: ["دبي"], specialization: "تطوير مجمعات سكنية", keyProjects: ["جرين كوميونيتي", "دبي إنفستمنت بارك", "مشروعات لوجستية"] },
+  { id: 239, name: "ريبورتاج العقارية", headquarters: ["أبوظبي", "دبي"], specialization: "تطوير سكني", keyProjects: ["ديفا", "بيرلا", "ريفلكشن"] },
+  { id: 240, name: "بلوم هولدينج", headquarters: ["أبوظبي"], specialization: "تطوير مجتمعات وتعليم وضيافة", keyProjects: ["بلوم ليفينج", "بلوم جاردنز", "بلوم مارينا"] },
+  { id: 241, name: "إمكان العقارية", headquarters: ["أبوظبي"], specialization: "تطوير مجتمعات وتصميم حضري", keyProjects: ["الجرْف", "بكسل", "ندرة"] },
+  { id: 242, name: "سفن تايدز", headquarters: ["دبي"], specialization: "تطوير عقاري وضيافة", keyProjects: ["أنانتارا", "سيفن بالم", "فندقي سكني"] },
+  { id: 243, name: "ماجد الفطيم العقارية", headquarters: ["دبي"], specialization: "تطوير مجتمعات وتجاري", keyProjects: ["تلال الغاف", "مول الإمارات", "غاف وودز"] },
+  { id: 244, name: "مرابا العقارية", headquarters: ["دبي"], specialization: "تطوير عقاري فاخر", keyProjects: ["مرابا فيفو", "ذا لاند ريزيدنس", "سكني فاخر"] },
+  { id: 245, name: "ليف للتطوير", headquarters: ["دبي"], specialization: "تطوير أبراج سكنية", keyProjects: ["ليف مارينا", "ليف لوكس", "واجهة بحرية"] },
+  { id: 246, name: "سويد آند سويد", headquarters: ["دبي"], specialization: "تطوير تجاري وسكني", keyProjects: ["ذا لينكس", "أبراج أعمال", "مكاتب"] },
+  { id: 247, name: "امتياز للتطوير", headquarters: ["دبي"], specialization: "تطوير عقاري فاخر", keyProjects: ["كوف", "ويفز", "صن ست إيه سي"] },
+  { id: 248, name: "أرادا", headquarters: ["الشارقة", "دبي"], specialization: "تطوير مجتمعات متكاملة", keyProjects: ["الجادة", "مسار", "نسمة"] },
+  { id: 249, name: "راك العقارية", headquarters: ["رأس الخيمة"], specialization: "تطوير عقاري ومجتمعات", keyProjects: ["ميناء العرب", "جزيرة الحياة", "راك سنترال"] },
+  { id: 250, name: "مدن العقارية", headquarters: ["أبوظبي"], specialization: "تطوير حضري ووجهات كبرى", keyProjects: ["جزيرة الحديريات", "نودرا", "وجهات ساحلية"] },
+];
+
+const expandedEgCompanySeeds = [...egCompanySeeds, ...egAdditionalCompanySeeds];
+const expandedAeCompanySeeds = [...aeCompanySeeds, ...aeAdditionalCompanySeeds];
+
 const companyWebsiteMap = {
   "مجموعة بن لادن السعودية": "https://www.sbg.com.sa/ar",
   "شركة نسما وشركاهم": "https://www.nesmapartners.com/ar",
@@ -884,6 +957,16 @@ const companyWebsiteMap = {
   سوديك: "https://www.sodic.com/",
   "حسن علام القابضة": "https://www.hassanallam.com/",
   "حسن علام للتطوير": "https://www.hassanallamproperties.com/",
+  "إتش دي بي": "https://www.hdp.com.eg/",
+  "أب وايد للتطوير": "https://upwyde.com/",
+  "إيل كازار": "https://ilcazar.com/",
+  "أورا ديفلوبرز": "https://www.oradevelopers.com/",
+  "تي بي كي للتطوير": "https://tbkdevelopments.com/",
+  "مراكز": "https://marakezegypt.com/",
+  "مدينة مصر": "https://madinetmasr.com/",
+  "ريدي جروب": "https://reedygroup.com/",
+  "ستارلايت للتطوير": "https://www.starlightdevelopments.com/",
+  "ذا ووترواي": "https://waterway.eg/",
   "إعمار العقارية": "https://properties.emaar.com/",
   "إعمار للتطوير": "https://www.emaar.com/",
   "الدار العقارية": "https://www.aldar.com/",
@@ -892,6 +975,15 @@ const companyWebsiteMap = {
   "عزيزي للتطوير": "https://www.azizidevelopments.com/",
   نخيل: "https://www.nakheel.com/",
   مراس: "https://www.meraas.com/",
+  "سيليكت جروب": "https://www.select-group.ae/",
+  "تايجر جروب": "https://www.tigergroup.ae/",
+  "وصل العقارية": "https://www.wasl.ae/",
+  "سمانا للتطوير": "https://www.samanadevelopers.com/",
+  نشاما: "https://nshama.ae/",
+  "بريسكوت العقارية": "https://prescott.ae/",
+  "دبي الجنوب": "https://www.dubaisouth.ae/",
+  "ليف للتطوير": "https://www.livuae.com/",
+  "امتياز للتطوير": "https://www.imtiaz.ae/",
   "خنصهب للهندسة المدنية": "https://www.khansaheb.ae/",
   "أليك للهندسة والمقاولات": "https://www.alec.ae/",
   "ASGC للمقاولات": "https://www.asgcgroup.com/",
@@ -977,6 +1069,6 @@ function mapCompanySeeds(entries, country) {
 
 export const sampleCompanies = [
   ...mapCompanySeeds(saCompanySeeds, "السعودية"),
-  ...mapCompanySeeds(egCompanySeeds, "مصر"),
-  ...mapCompanySeeds(aeCompanySeeds, "الإمارات"),
+  ...mapCompanySeeds(expandedEgCompanySeeds, "مصر"),
+  ...mapCompanySeeds(expandedAeCompanySeeds, "الإمارات"),
 ];

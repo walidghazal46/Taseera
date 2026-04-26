@@ -704,11 +704,11 @@ function AreaScenarioCompare({ scenarios, currentScenario, currency, onAddCurren
 }
 
 function AreaPricingForm({ country, onCalculate }) {
-  const [area, setArea] = useState(500);
-  const [floors, setFloors] = useState(2);
-  const [finish, setFinish] = useState("medium");
+  const [area, setArea] = useState(100);
+  const [floors, setFloors] = useState(1);
+  const [finish, setFinish] = useState("economic");
   const [type, setType] = useState("residential");
-  const [scope, setScope] = useState("full");
+  const [scope, setScope] = useState("structural");
 
   return (
     <div className="space-y-6 pb-8 animate-in fade-in slide-in-from-right-4 duration-500">
@@ -1061,7 +1061,7 @@ function AreaSectionDetailView({ country, params, draft, overallResults, onBack,
 
 // --- Main Pricing Workspace Component ---
 
-export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry }) {
+export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings }) {
   // initialCountry comes from the CountryPicker on PricingPage; always override persisted value
   const [country, setCountry] = useState(initialCountry || "sa");
   const [mode, setMode] = useState("selection"); // selection, items, area, area-results
@@ -1075,16 +1075,20 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   const [selectedAreaSection, setSelectedAreaSection] = useState(null);
   const [addModalType, setAddModalType] = useState(null);
 
+  // === سعر بنفسك ===
+  const [selfPriceItem, setSelfPriceItem] = useState(null);
+  const [selfPriceResources, setSelfPriceResources] = useState({ مواد: [], عمالة: [], معدات: [] });
+  const [selfPriceQty, setSelfPriceQty] = useState(1);
+  const [selfPriceOverhead, setSelfPriceOverhead] = useState(12);
+  const [selfPriceProfit, setSelfPriceProfit] = useState(15);
+
   const { msg: toastMsg, visible: toastVisible, show: showToast } = useToast();
 
   // Analysis Parameters (Moved up for persistence and export)
   const [qty, setQty] = useState(1);
-  const [overhead, setOverhead] = useState(6);
+  const [overhead, setOverhead] = useState(12);
   const [profit, setProfit] = useState(15);
   const [factor, setFactor] = useState(1.03);
-  const [adminPct, setAdminPct] = useState(2.5);
-  const [transPct, setTransPct] = useState(2);
-  const [riskPct, setRiskPct] = useState(1.5);
   const [analysisBaseline, setAnalysisBaseline] = useState(null);
 
   const buildAnalysisSnapshot = useCallback((itemValue, resourcesValue, paramsValue) => ({
@@ -1095,9 +1099,6 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
       factor: paramsValue.factor,
       overhead: paramsValue.overhead,
       profit: paramsValue.profit,
-      adminPct: paramsValue.adminPct,
-      transPct: paramsValue.transPct,
-      riskPct: paramsValue.riskPct,
     },
   }), []);
 
@@ -1107,18 +1108,15 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     setResources(JSON.parse(JSON.stringify(snapshot.resources || { مواد: [], عمالة: [], معدات: [] })));
     setQty(snapshot.params?.qty ?? 1);
     setFactor(snapshot.params?.factor ?? 1.03);
-    setOverhead(snapshot.params?.overhead ?? 6);
+    setOverhead(snapshot.params?.overhead ?? 12);
     setProfit(snapshot.params?.profit ?? 15);
-    setAdminPct(snapshot.params?.adminPct ?? 2.5);
-    setTransPct(snapshot.params?.transPct ?? 2);
-    setRiskPct(snapshot.params?.riskPct ?? 1.5);
   }, []);
 
   const currentAnalysisSignature = useMemo(() => JSON.stringify(
     buildAnalysisSnapshot(selectedItem, resources, {
-      qty, factor, overhead, profit, adminPct, transPct, riskPct,
+      qty, factor, overhead, profit,
     })
-  ), [buildAnalysisSnapshot, selectedItem, resources, qty, factor, overhead, profit, adminPct, transPct, riskPct]);
+  ), [buildAnalysisSnapshot, selectedItem, resources, qty, factor, overhead, profit]);
 
   const baselineAnalysisSignature = useMemo(
     () => (analysisBaseline ? JSON.stringify(analysisBaseline) : null),
@@ -1381,11 +1379,8 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
       });
 
       const direct = matT + labT + eqpT;
-      const adminAmt = (direct * adminPct) / 100;
-      const transAmt = (direct * transPct) / 100;
-      const riskAmt = (direct * riskPct) / 100;
-      const indirect = adminAmt + transAmt + riskAmt;
-      const withOverhead = (direct + indirect) * (1 + Number(overhead) / 100);
+      const indirect = (direct * Number(overhead)) / 100;
+      const withOverhead = direct + indirect;
       const profitAmt = withOverhead * (Number(profit) / 100);
       const finalTotal = withOverhead + profitAmt;
       const unitPrice = q > 0 ? finalTotal / q : finalTotal;
@@ -1475,23 +1470,57 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
         </html>
       `;
 
-      const printWindow = window.open("", "_blank", "width=1024,height=768");
-      if (!printWindow) {
-        showToast("تعذر فتح نافذة الطباعة. تأكد من السماح بالنوافذ المنبثقة.");
+      const printFrame = document.createElement("iframe");
+      printFrame.style.position = "fixed";
+      printFrame.style.right = "0";
+      printFrame.style.bottom = "0";
+      printFrame.style.width = "0";
+      printFrame.style.height = "0";
+      printFrame.style.border = "0";
+      printFrame.setAttribute("aria-hidden", "true");
+      document.body.appendChild(printFrame);
+
+      const frameWindow = printFrame.contentWindow;
+      const frameDocument = printFrame.contentDocument || frameWindow?.document;
+
+      if (!frameWindow || !frameDocument) {
+        printFrame.remove();
+        showToast("تعذر تجهيز الطباعة في هذا المتصفح.");
         return;
       }
 
-      printWindow.document.open();
-      printWindow.document.write(html);
-      printWindow.document.close();
-      printWindow.focus();
+      frameDocument.open();
+      frameDocument.write(html);
+      frameDocument.close();
+
       setTimeout(() => {
-        printWindow.print();
+        frameWindow.focus();
+        frameWindow.print();
+        setTimeout(() => {
+          printFrame.remove();
+        }, 1000);
       }, 300);
 
       showToast("تم تجهيز ملف PDF/الطباعة بالقيم الحالية");
     }
-  }, [mode, country, areaParams, areaResults, effectiveAreaResults, selectedItem, resources, qty, overhead, profit, factor, adminPct, transPct, riskPct, showToast]);
+  }, [mode, country, areaParams, areaResults, effectiveAreaResults, selectedItem, resources, qty, overhead, profit, factor, showToast]);
+
+  function handleSelfPrice(item, div) {
+    const full = {
+      ...item,
+      divAr: div.ar,
+      divEn: div.en,
+      unit: item.unit || div.unit,
+      market: country ? COUNTRIES[country].rates[div.rateKey] || 0 : 0,
+    };
+    const defaults = getDefaultResources(item, div, COUNTRIES[country]?.rates || {}, country);
+    setSelfPriceItem(full);
+    setSelfPriceResources(JSON.parse(JSON.stringify(defaults)));
+    setSelfPriceQty(1);
+    setSelfPriceOverhead(12);
+    setSelfPriceProfit(15);
+    setMode("self-price");
+  }
 
   function handleSelectItem(item, div) {
     const full = {
@@ -1501,15 +1530,12 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
       unit: item.unit || div.unit,
       market: country ? COUNTRIES[country].rates[div.rateKey] || 0 : 0,
     };
-    const defaultResources = getDefaultResources(item, div, COUNTRIES[country]?.rates || {});
+    const defaultResources = getDefaultResources(item, div, COUNTRIES[country]?.rates || {}, country);
     const snapshot = buildAnalysisSnapshot(full, defaultResources, {
       qty: 1,
       factor: 1.03,
-      overhead: 6,
+      overhead: 12,
       profit: 15,
-      adminPct: 2.5,
-      transPct: 2,
-      riskPct: 1.5,
     });
     applyAnalysisSnapshot(snapshot);
     setAnalysisBaseline(snapshot);
@@ -1529,11 +1555,8 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
       const snapshot = buildAnalysisSnapshot(item, analysis.resources, {
         qty: analysis.params.qty,
         factor: analysis.params.factor,
-        overhead: analysis.params.overhead,
+        overhead: analysis.params.overhead ?? 12,
         profit: analysis.params.profit,
-        adminPct: analysis.params.adminPct,
-        transPct: analysis.params.transPct,
-        riskPct: analysis.params.riskPct,
       });
       applyAnalysisSnapshot(snapshot);
       setAnalysisBaseline(snapshot);
@@ -1606,7 +1629,11 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     return false;
   }, [mode, tab, confirmDiscardAnalysisChanges]);
 
-  useEffect(() => navigationBridge?.registerBackHandler?.(handleWorkspaceBack), [handleWorkspaceBack, navigationBridge]);
+  useEffect(() => navigationBridge?.registerBackHandler?.(handleWorkspaceBack), [handleWorkspaceBack, navigationBridge?.registerBackHandler]);
+
+  useEffect(() => {
+    navigationBridge?.onEntryChange?.({ mode, tab });
+  }, [mode, tab, navigationBridge?.onEntryChange]);
 
   const tabs = [
     { id: "csi", label: "البنود" },
@@ -1627,8 +1654,8 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#F7F3EC] overflow-x-hidden" dir="rtl" style={{ fontFamily: AR }}>
-      <div className="mx-auto w-full max-w-[720px] p-3 sm:p-4 pb-12">
+    <div className="w-full bg-[#F7F3EC] overflow-x-hidden" dir="rtl" style={{ fontFamily: AR }}>
+      <div className="mx-auto w-full max-w-[720px] p-3 sm:p-4 pb-4">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <button onClick={() => handleModeChange("selection")} className="flex items-center gap-3 text-right">
@@ -1661,7 +1688,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 </button>
               ))}
             </div>
-            {tab === "csi" && <CSIScreen country={country} onSelectItem={handleSelectItem} />}
+            {tab === "csi" && <CSIScreen country={country} onSelectItem={handleSelectItem} onSelfPrice={handleSelfPrice} />}
             {tab === "history" && (
               <HistoryScreen
                 savedAnalyses={savedAnalyses}
@@ -1684,12 +1711,11 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 overhead={overhead} setOverhead={setOverhead}
                 profit={profit} setProfit={setProfit}
                 factor={factor} setFactor={setFactor}
-                adminPct={adminPct} setAdminPct={setAdminPct}
-                transPct={transPct} setTransPct={setTransPct}
-                riskPct={riskPct} setRiskPct={setRiskPct}
+                settings={settings}
+
               />
             )}
-            {tab === "market" && <MarketScreen country={country} onSelectItem={handleSelectItem} />}
+            {tab === "market" && <MarketScreen country={country} onSelectItem={handleSelectItem} onSelfPrice={handleSelfPrice} />}
           </div>
         )}
 
@@ -1720,6 +1746,30 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
           />
         )}
 
+        {mode === "self-price" && selfPriceItem && (
+          <SelfPricingScreen
+            item={selfPriceItem}
+            resources={selfPriceResources}
+            setResources={setSelfPriceResources}
+            qty={selfPriceQty} setQty={setSelfPriceQty}
+            overhead={selfPriceOverhead} setOverhead={setSelfPriceOverhead}
+            profit={selfPriceProfit} setProfit={setSelfPriceProfit}
+            country={country}
+            onBack={() => { setMode("items"); setTab("csi"); }}
+            onSave={(result) => {
+              onSaveAnalysis?.({
+                itemName: selfPriceItem.ar,
+                itemNum: selfPriceItem.num,
+                resources: selfPriceResources,
+                params: { qty: selfPriceQty, overhead: selfPriceOverhead, profit: selfPriceProfit, unit: selfPriceItem.unit, market: selfPriceItem.market, divAr: selfPriceItem.divAr },
+                result,
+                mode: 'item',
+              });
+              showToast("تم حفظ تحليل السعر بنجاح ✔️");
+            }}
+          />
+        )}
+
         {mode === "area-section-detail" && (
           <AreaSectionDetailView
             country={country}
@@ -1747,7 +1797,218 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   );
 }
 
+
 // Sub-components (Moved from previous implementation or newly added)
+
+// ===== سعر بنفسك Screen =====
+function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhead, setOverhead, profit, setProfit, country, onBack, onSave }) {
+  const sym = COUNTRIES[country]?.sym || "ر.س";
+  const fmt = (n) => Number(n).toLocaleString("ar-EG", { maximumFractionDigits: 0 });
+
+  // حساب مجموع كل مجموعة
+  const sumGroup = (grp) =>
+    (resources[grp] || []).reduce((s, r) => s + (Number(r.qty) || 0) * (Number(r.rate) || 0), 0);
+
+  const matTotal  = sumGroup("مواد");
+  const labTotal  = sumGroup("عمالة");
+  const eqpTotal  = sumGroup("معدات");
+  const direct    = (matTotal + labTotal + eqpTotal) * (Number(qty) || 1);
+  const indirect  = direct * (Number(overhead) || 0) / 100;
+  const profitAmt = (direct + indirect) * (Number(profit) || 0) / 100;
+  const total     = direct + indirect + profitAmt;
+  const unitPrice = (Number(qty) || 1) > 0 ? total / (Number(qty) || 1) : 0;
+
+  const updateRow = (grp, idx, field, val) => {
+    setResources(prev => {
+      const next = { ...prev, [grp]: prev[grp].map((r, i) => i === idx ? { ...r, [field]: val } : r) };
+      return next;
+    });
+  };
+
+  const removeRow = (grp, idx) => {
+    setResources(prev => ({ ...prev, [grp]: prev[grp].filter((_, i) => i !== idx) }));
+  };
+
+  const addRow = (grp) => {
+    const badge = grp === "مواد" ? "mat" : grp === "عمالة" ? "lab" : "eqp";
+    setResources(prev => ({
+      ...prev,
+      [grp]: [...prev[grp], { name: "بند جديد", qty: 1, unit: "بند", rate: 0, badge, icon: "📦" }]
+    }));
+  };
+
+  const BADGE_COLORS = { mat: "bg-blue-100 text-blue-700", lab: "bg-green-100 text-green-700", eqp: "bg-orange-100 text-orange-700" };
+  const GROUP_HEADERS = [
+    { key: "مواد",   label: "المواد",   emoji: "🧱", color: "bg-blue-50 border-blue-200",   btn: "bg-blue-600"   },
+    { key: "عمالة", label: "العمالة",  emoji: "👷", color: "bg-green-50 border-green-200",  btn: "bg-green-600"  },
+    { key: "معدات", label: "المعدات",  emoji: "🚜", color: "bg-orange-50 border-orange-200",btn: "bg-orange-600" },
+  ];
+
+  return (
+    <div className="animate-in fade-in slide-in-from-right-4 duration-400" dir="rtl" style={{ fontFamily: AR }}>
+      {/* Header */}
+      <div className="mb-4 rounded-2xl bg-[#082555] p-4 text-right shadow-xl">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="rounded-lg bg-[#C9A84C] px-2.5 py-0.5 text-[11px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{item.num}</span>
+              <span className="text-[11px] text-[#9A8A6A]">{item.divAr}</span>
+            </div>
+            <h2 className="text-[15px] font-bold text-white leading-snug">{item.ar}</h2>
+            <p className="mt-1 text-[12px] text-[#9A8A6A]">الوحدة: <span className="text-[#C9A84C] font-bold">{item.unit}</span>  ·  سعر السوق: <span className="text-[#C9A84C] font-bold">{fmt(item.market)} {sym}</span></p>
+          </div>
+          <button onClick={onBack} className="shrink-0 rounded-xl bg-[#0d2f5e] px-3 py-2 text-[12px] text-[#9A8A6A] hover:text-white transition">← رجوع</button>
+        </div>
+      </div>
+
+      {/* Qty */}
+      <div className="mb-4 rounded-xl bg-white border border-[#E2D8C4] p-3 flex items-center gap-3">
+        <span className="text-[13px] font-bold text-[#082555]">الكمية</span>
+        <input type="number" min="0.01" step="0.01"
+          value={qty} onChange={e => setQty(e.target.value)}
+          className="w-24 rounded-lg border border-[#E2D8C4] px-3 py-1.5 text-center text-[14px] font-bold text-[#082555] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+        />
+        <span className="text-[13px] text-[#9A8A6A]">{item.unit}</span>
+      </div>
+
+      {/* Resource Groups */}
+      {GROUP_HEADERS.map(({ key, label, emoji, color, btn }) => (
+        <div key={key} className={`mb-4 rounded-xl border-2 ${color} overflow-hidden`}>
+          <div className="flex items-center justify-between px-4 py-2.5 bg-white bg-opacity-60">
+            <span className="text-[14px] font-bold text-[#082555]">{emoji} {label}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[13px] font-bold text-[#082555]">{fmt(sumGroup(key))} {sym}</span>
+              <button onClick={() => addRow(key)}
+                className={`rounded-lg ${btn} px-2.5 py-1 text-[11px] font-bold text-white hover:opacity-80 transition`}>
+                + إضافة
+              </button>
+            </div>
+          </div>
+          <div className="divide-y divide-[#E2D8C4]">
+            {(resources[key] || []).map((row, idx) => (
+              <div key={idx} className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-gray-50 transition">
+                <span className="text-[15px] shrink-0">{row.icon || "📦"}</span>
+                <input
+                  value={row.name}
+                  onChange={e => updateRow(key, idx, "name", e.target.value)}
+                  className="flex-1 min-w-0 rounded-lg border border-transparent px-2 py-1 text-[12px] text-[#082555] focus:border-[#C9A84C] focus:outline-none bg-transparent"
+                />
+                <input type="number" min="0" step="0.01"
+                  value={row.qty}
+                  onChange={e => updateRow(key, idx, "qty", e.target.value)}
+                  className="w-16 rounded-lg border border-[#E2D8C4] px-2 py-1 text-center text-[12px] font-bold text-[#082555] focus:outline-none focus:ring-1 focus:ring-[#C9A84C]"
+                />
+                <span className="text-[10px] text-[#9A8A6A] min-w-[24px] text-center">{row.unit || ""}</span>
+                <span className="text-[10px] text-[#9A8A6A]">×</span>
+                <input type="number" min="0" step="1"
+                  value={row.rate}
+                  onChange={e => updateRow(key, idx, "rate", e.target.value)}
+                  className="w-20 rounded-lg border border-[#E2D8C4] px-2 py-1 text-center text-[12px] font-bold text-[#082555] focus:outline-none focus:ring-1 focus:ring-[#C9A84C]"
+                />
+                <span className="text-[10px] text-[#9A8A6A] shrink-0">{sym}</span>
+                <span className="min-w-[52px] text-left text-[11px] font-bold text-[#082555]">{fmt((Number(row.qty)||0)*(Number(row.rate)||0))}</span>
+                <button onClick={() => removeRow(key, idx)} className="shrink-0 text-red-400 hover:text-red-600 transition text-[14px] leading-none">✕</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {/* Overhead & Profit */}
+      <div className="mb-4 grid grid-cols-2 gap-3">
+        <div className="rounded-xl bg-white border border-[#E2D8C4] p-3 text-center">
+          <p className="mb-1.5 text-[11px] text-[#9A8A6A]">المصاريف العامة %</p>
+          <input type="number" min="0" max="50"
+            value={overhead} onChange={e => setOverhead(e.target.value)}
+            className="w-full rounded-lg border border-[#E2D8C4] px-2 py-1.5 text-center text-[16px] font-bold text-[#082555] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+          />
+        </div>
+        <div className="rounded-xl bg-white border border-[#E2D8C4] p-3 text-center">
+          <p className="mb-1.5 text-[11px] text-[#9A8A6A]">هامش الربح %</p>
+          <input type="number" min="0" max="100"
+            value={profit} onChange={e => setProfit(e.target.value)}
+            className="w-full rounded-lg border border-[#E2D8C4] px-2 py-1.5 text-center text-[16px] font-bold text-[#082555] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
+          />
+        </div>
+      </div>
+
+      {/* Summary Card */}
+      <div className="mb-4 rounded-2xl bg-[#082555] p-4 shadow-xl">
+        <h3 className="mb-3 text-[13px] font-bold text-[#C9A84C]">ملخص التكلفة (للكمية {qty} {item.unit})</h3>
+        <div className="space-y-1.5">
+          {[
+            { label: "مواد",         val: matTotal * (Number(qty)||1), color: "text-blue-300"   },
+            { label: "عمالة",        val: labTotal * (Number(qty)||1), color: "text-green-300"  },
+            { label: "معدات",        val: eqpTotal * (Number(qty)||1), color: "text-orange-300" },
+            { label: "تكلفة مباشرة",val: direct,   color: "text-white font-bold", sep: true },
+            { label: `مصاريف عامة ${overhead}%`, val: indirect,  color: "text-[#E2D8C4]" },
+            { label: `ربح ${profit}%`,            val: profitAmt, color: "text-[#E2D8C4]" },
+          ].map(({ label, val, color, sep }, i) => (
+            <div key={i}>
+              {sep && <div className="my-2 border-t border-[#1e3a6e]" />}
+              <div className="flex justify-between">
+                <span className={`text-[12px] ${color || "text-[#9A8A6A]"}`}>{label}</span>
+                <span className={`text-[12px] ${color || "text-[#9A8A6A]"}`} style={{ fontFamily: MONO }}>{fmt(val)} {sym}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 rounded-xl bg-[#C9A84C] p-3 flex justify-between items-center">
+          <div>
+            <p className="text-[10px] font-bold text-[#082555] opacity-70">سعر الوحدة</p>
+            <p className="text-[22px] font-bold text-[#082555] leading-tight" style={{ fontFamily: MONO }}>{fmt(unitPrice)} <span className="text-[13px]">{sym}</span></p>
+          </div>
+          <div className="text-left">
+            <p className="text-[10px] font-bold text-[#082555] opacity-70">الإجمالي</p>
+            <p className="text-[18px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{fmt(total)} {sym}</p>
+          </div>
+        </div>
+        {item.market > 0 && (
+          <p className={`mt-2 text-center text-[11px] font-bold ${unitPrice <= item.market ? "text-green-400" : "text-red-400"}`}>
+            {unitPrice <= item.market
+              ? `✓ سعرك أقل من السوق بـ ${fmt(item.market - unitPrice)} ${sym}`
+              : `⚠ سعرك أعلى من السوق بـ ${fmt(unitPrice - item.market)} ${sym}`}
+          </p>
+        )}
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3 pb-6">
+        <button
+          onClick={() => onSave({ unitPrice, total, direct, indirect, profitAmt })}
+          className="flex-1 rounded-xl bg-[#082555] py-3 text-[13px] font-bold text-[#C9A84C] shadow-lg hover:bg-[#0d2f5e] transition active:scale-[0.98]">
+          💾 حفظ في الحساب
+        </button>
+        <button
+          onClick={() => {
+            const w = window.open("", "_blank");
+            const currency = sym;
+            w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title>تحليل سعر — ${item.ar}</title>
+<style>
+  body{font-family:Arial,sans-serif;padding:24px;color:#082555;direction:rtl}
+  h1{font-size:16px;margin-bottom:4px}
+  .sub{color:#888;font-size:12px;margin-bottom:16px}
+  table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:12px}
+  th{background:#082555;color:#C9A84C;padding:6px 8px;text-align:right}
+  td{padding:5px 8px;border-bottom:1px solid #eee}
+  .total{background:#C9A84C;color:#082555;font-weight:bold;padding:10px 12px;border-radius:8px;display:flex;justify-content:space-between;margin-top:8px;font-size:14px}
+  @media print{button{display:none}}
+</style></head><body>
+<h1>${item.num} — ${item.ar}</h1>
+<p class="sub">${item.divAr} · الوحدة: ${item.unit} · سعر السوق: ${fmt(item.market)} ${currency}</p>
+${GROUP_HEADERS.map(g => `<h3 style="margin-bottom:4px">${g.emoji} ${g.label}</h3><table><tr><th>البند</th><th>الكمية</th><th>الوحدة</th><th>السعر</th><th>الإجمالي</th></tr>${(resources[g.key]||[]).map(r=>`<tr><td>${r.icon||''} ${r.name}</td><td>${r.qty}</td><td>${r.unit||''}</td><td>${fmt(r.rate)} ${currency}</td><td>${fmt((r.qty||0)*(r.rate||0))} ${currency}</td></tr>`).join('')}</table>`).join('')}
+<div class="total"><span>سعر الوحدة النهائي (شامل هامش ${profit}%)</span><span>${fmt(unitPrice)} ${currency}</span></div>
+<button onclick="window.print()" style="margin-top:16px;padding:8px 20px;background:#082555;color:#C9A84C;border:none;border-radius:8px;cursor:pointer;font-size:13px">🖨️ طباعة</button>
+</body></html>`);
+            w.document.close();
+          }}
+          className="flex-1 rounded-xl bg-white border-2 border-[#082555] py-3 text-[13px] font-bold text-[#082555] hover:bg-[#F5EDD8] transition active:scale-[0.98]">
+          🖨️ طباعة
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function HistoryScreen({ savedAnalyses, onView }) {
   if (!savedAnalyses || savedAnalyses.length === 0) {
@@ -1829,7 +2090,7 @@ function HistoryScreen({ savedAnalyses, onView }) {
   );
 }
 
-function CSIScreen({ country, onSelectItem }) {
+function CSIScreen({ country, onSelectItem, onSelfPrice }) {
   const [search, setSearch] = useState("");
   const [openDiv, setOpenDiv] = useState(null);
   const c = COUNTRIES[country] || COUNTRIES.sa;
@@ -1886,6 +2147,11 @@ function CSIScreen({ country, onSelectItem }) {
                       <span className="text-[11px] font-bold text-[#C9A84C] min-w-[70px]" style={{ fontFamily: MONO }}>{item.num}</span>
                       <span className="flex-1 text-[14px] font-bold text-[#082555]" style={{ fontFamily: AR }}>{item.ar}</span>
                       <span className="rounded-lg bg-[#F7F3EC] px-2.5 py-1 text-[10px] font-bold text-[#9A8A6A]">{item.unit}</span>
+                      <button type="button" onClick={() => onSelfPrice(item, div)}
+                        className="min-h-[40px] rounded-xl border-2 border-[#082555] bg-white px-4 py-1 text-[12px] font-bold text-[#082555] transition hover:bg-[#F5EDD8] active:scale-[0.95]"
+                        style={{ fontFamily: AR }}>
+                        💡 سعر بنفسك
+                      </button>
                       <button type="button" onClick={() => onSelectItem(item, div)}
                         className="min-h-[40px] rounded-xl bg-[#C9A84C] px-5 py-1 text-[13px] font-bold text-[#082555] transition hover:bg-[#E8C97A] active:scale-[0.95]"
                         style={{ fontFamily: AR }}>
@@ -2030,11 +2296,12 @@ function AnalysisScreen({
   authMode,
   country, selectedItem, resources, setResources, onOpenAddModal, onSave, onRfq, onExport, toast,
   qty, setQty, overhead, setOverhead, profit, setProfit, factor, setFactor,
-  adminPct, setAdminPct, transPct, setTransPct, riskPct, setRiskPct
+  settings,
 }) {
   const c = COUNTRIES[country] || COUNTRIES.sa;
   const sym = c.currency;
   const mkt = selectedItem ? selectedItem.market : 0;
+  const taxPct = Number(settings?.taxPercent) || 15;
   const isAuthenticated = authMode && authMode !== "guest";
 
   const calc = useMemo(() => {
@@ -2046,16 +2313,15 @@ function AnalysisScreen({
     (resources["عمالة"] || []).forEach((r) => (labT += r.qty * r.rate * q * f));
     (resources["معدات"] || []).forEach((r) => (eqpT += r.qty * r.rate * q * f));
     const direct = matT + labT + eqpT;
-    const adminAmt = (direct * adminPct) / 100;
-    const transAmt = (direct * transPct) / 100;
-    const riskAmt = (direct * riskPct) / 100;
-    const indirect = adminAmt + transAmt + riskAmt;
-    const withOverhead = (direct + indirect) * (1 + Number(overhead) / 100);
+    const indirect = (direct * Number(overhead)) / 100;
+    const withOverhead = direct + indirect;
     const profitAmt = withOverhead * (Number(profit) / 100);
     const finalTotal = withOverhead + profitAmt;
+    const taxAmt = finalTotal * (taxPct / 100);
+    const totalWithTax = finalTotal + taxAmt;
     const unitPrice = q > 0 ? finalTotal / q : finalTotal;
-    return { matT, labT, eqpT, direct, adminAmt, transAmt, riskAmt, indirect, withOverhead, profitAmt, finalTotal, unitPrice };
-  }, [resources, qty, factor, overhead, profit, adminPct, transPct, riskPct, selectedItem]);
+    return { matT, labT, eqpT, direct, indirect, withOverhead, profitAmt, finalTotal, taxAmt, totalWithTax, unitPrice };
+  }, [resources, qty, factor, overhead, profit, selectedItem, taxPct]);
 
   const marketStatus = useMemo(() => {
     if (!mkt) return { status: 'no_mkt', label: '—', color: '#9A8A6A', bg: 'rgba(154,138,106,0.1)' };
@@ -2171,7 +2437,7 @@ function AnalysisScreen({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: "الكمية", val: qty, setter: setQty, unit: selectedItem.unit, step: "0.1" },
-          { label: "Overhead", val: overhead, setter: setOverhead, unit: "%", step: "0.1" },
+          { label: "مصاريف غير مباشرة", val: overhead, setter: setOverhead, unit: "%", step: "0.1" },
           { label: "Profit", val: profit, setter: setProfit, unit: "%", step: "0.1" },
           { label: "Factor", val: factor, setter: setFactor, unit: "F", step: "0.01" },
         ].map(({ label, val, setter, unit: u, step }) => (
@@ -2305,6 +2571,58 @@ function AnalysisScreen({
         </div>
       )}
 
+      {calc && (
+        <div className="rounded-[28px] border-2 border-[#E2D8C4] bg-white p-4 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <div className="text-[11px] font-bold text-[#9A8A6A] uppercase tracking-[0.2em]">ملخص إجمالي البند</div>
+              <div className="mt-1 text-[15px] font-bold text-[#082555]" style={{ fontFamily: AR }}>تجميع البنود مع المصاريف والربح في بطاقة واحدة</div>
+            </div>
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#082555] text-[#C9A84C] shadow-lg">
+              <PricingIcon className="h-6 w-6" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              {
+                label: "مجموع البنود المباشرة", value: calc.direct, tone: "text-[#082555]",
+                hint: `مواد ${fmtNum(calc.matT)} + عمالة ${fmtNum(calc.labT)} + معدات ${fmtNum(calc.eqpT)} ${sym}`,
+              },
+              {
+                label: "المصاريف غير المباشرة", value: calc.indirect, tone: "text-[#9A8A6A]",
+                hint: `${overhead}% × ${fmtNum(calc.direct)} ${sym}`,
+              },
+              {
+                label: `هامش الربح ${profit}%`, value: calc.profitAmt, tone: "text-[#6FCF97]",
+                hint: `${profit}% × ${fmtNum(calc.withOverhead)} ${sym}`,
+              },
+              {
+                label: `ضريبة القيمة المضافة ${taxPct}%`, value: calc.taxAmt, tone: "text-[#E07B2A]",
+                hint: `${taxPct}% × ${fmtNum(calc.finalTotal)} ${sym}`,
+              },
+              {
+                label: "إجمالي البند قبل الضريبة", value: calc.finalTotal, tone: "text-[#082555]",
+                hint: `${fmtNum(calc.withOverhead)} + ربح ${fmtNum(calc.profitAmt)} ${sym}`,
+              },
+              {
+                label: "إجمالي البند بعد الضريبة", value: calc.totalWithTax, tone: "text-[#C9A84C]",
+                hint: `${fmtNum(calc.finalTotal)} + ضريبة ${fmtNum(calc.taxAmt)} ${sym}`,
+              },
+            ].map((item) => (
+              <div key={item.label} className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
+                <div className="mb-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>{item.label}</div>
+                <div className={`text-[20px] font-bold ${item.tone}`} style={{ fontFamily: MONO }}>{fmtNum(item.value)}</div>
+                <div className="mt-1 text-[10px] font-bold text-[#C9A84C]">{sym}</div>
+                {item.hint ? (
+                  <div className="mt-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>{item.hint}</div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <MarketComparisonCard
         myPrice={calc?.unitPrice || 0}
         mkt={mkt}
@@ -2362,7 +2680,7 @@ function AnalysisScreen({
   );
 }
 
-function MarketScreen({ country, onSelectItem }) {
+function MarketScreen({ country, onSelectItem, onSelfPrice }) {
   const c = country ? COUNTRIES[country] : COUNTRIES["sa"];
   const divs = CSI_DIVISIONS.filter((d) => c.rates[d.rateKey] > 0);
   return (
@@ -2377,10 +2695,9 @@ function MarketScreen({ country, onSelectItem }) {
           const changeVal = parseFloat(((Math.sin(d.num.charCodeAt(0)) * 3)).toFixed(1));
           const up = changeVal >= 0;
           return (
-            <button key={d.num} type="button"
-              onClick={() => { if (d.items[0]) onSelectItem(d.items[0], d); }}
-              className="w-full flex min-h-[80px] items-center gap-4 rounded-3xl border-2 border-[#E2D8C4] bg-white p-4 shadow-sm text-right transition-all hover:border-[#C9A84C] hover:shadow-md active:scale-[0.98]">
-              <div className="flex-1 min-w-0">
+            <div key={d.num}
+              className="w-full flex min-h-[80px] items-center gap-4 rounded-3xl border-2 border-[#E2D8C4] bg-white p-4 shadow-sm text-right transition-all hover:border-[#C9A84C] hover:shadow-md">
+              <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { if (d.items[0]) onSelectItem(d.items[0], d); }}>
                 <div className="text-[11px] font-bold text-[#C9A84C] uppercase tracking-widest" style={{ fontFamily: MONO }}>{d.num} · {d.en}</div>
                 <div className="text-[16px] font-bold text-[#082555] mt-1.5 truncate" style={{ fontFamily: AR }}>{d.ar}</div>
                 <div className="text-[11px] font-bold text-[#9A8A6A] mt-1.5 flex items-center gap-2">
@@ -2389,11 +2706,25 @@ function MarketScreen({ country, onSelectItem }) {
                   <span className={up ? "text-emerald-600" : "text-amber-600"}>{up ? "↑" : "↓"} {Math.abs(changeVal)}% Trend</span>
                 </div>
               </div>
-              <div className="text-left shrink-0">
-                <div className="text-[20px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{price.toLocaleString()}</div>
-                <div className="text-[10px] font-bold text-[#9A8A6A] uppercase tracking-wider">{c.currency}</div>
+              <div className="flex flex-col items-end gap-2 shrink-0">
+                <div className="text-left">
+                  <div className="text-[20px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{price.toLocaleString()}</div>
+                  <div className="text-[10px] font-bold text-[#9A8A6A] uppercase tracking-wider">{c.currency}</div>
+                </div>
+                <div className="flex gap-2">
+                  <button type="button"
+                    onClick={() => { if (d.items[0]) onSelfPrice(d.items[0], d); }}
+                    className="rounded-xl border-2 border-[#082555] bg-white px-3 py-1.5 text-[11px] font-bold text-[#082555] hover:bg-[#F5EDD8] transition active:scale-[0.95]">
+                    💡 سعر بنفسك
+                  </button>
+                  <button type="button"
+                    onClick={() => { if (d.items[0]) onSelectItem(d.items[0], d); }}
+                    className="rounded-xl bg-[#C9A84C] px-3 py-1.5 text-[11px] font-bold text-[#082555] hover:bg-[#E8C97A] transition active:scale-[0.95]">
+                    اختر
+                  </button>
+                </div>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>

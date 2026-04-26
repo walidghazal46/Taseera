@@ -4,6 +4,7 @@ export default function useBackStack({
   initialEntry,
   registerBackHandler,
   pushHistoryEntry,
+  onEntryChange,
 }) {
   const stackRef = useRef([initialEntry]);
   const [currentEntry, setCurrentEntry] = useState(initialEntry);
@@ -17,17 +18,19 @@ export default function useBackStack({
 
       stackRef.current = [...stackRef.current, nextEntry];
       setCurrentEntry(nextEntry);
+      onEntryChange?.(nextEntry);
       pushHistoryEntry?.();
     },
-    [pushHistoryEntry]
+    [onEntryChange, pushHistoryEntry]
   );
 
   const reset = useCallback(
     (nextEntry = initialEntry) => {
       stackRef.current = [nextEntry];
       setCurrentEntry(nextEntry);
+      onEntryChange?.(nextEntry);
     },
-    [initialEntry]
+    [initialEntry, onEntryChange]
   );
 
   const goBack = useCallback(() => {
@@ -36,9 +39,11 @@ export default function useBackStack({
     }
 
     stackRef.current = stackRef.current.slice(0, -1);
-    setCurrentEntry(stackRef.current[stackRef.current.length - 1]);
+    const previousEntry = stackRef.current[stackRef.current.length - 1];
+    setCurrentEntry(previousEntry);
+    onEntryChange?.(previousEntry);
     return true;
-  }, []);
+  }, [onEntryChange]);
 
   useEffect(() => registerBackHandler?.(goBack), [goBack, registerBackHandler]);
 

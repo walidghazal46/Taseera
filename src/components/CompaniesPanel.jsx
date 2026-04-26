@@ -344,6 +344,7 @@ export default function CompaniesPanel({
     initialEntry: { section: "directory", detailCompanyId: null },
     registerBackHandler: navigationBridge?.registerBackHandler,
     pushHistoryEntry: navigationBridge?.pushHistoryEntry,
+    onEntryChange: navigationBridge?.onEntryChange,
   });
   const activeSection = nav.currentEntry.section;
   const detailCompanyId = nav.currentEntry.detailCompanyId;

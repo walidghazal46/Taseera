@@ -21,6 +21,7 @@ export default function AppShell({
   onNavigate,
   onBack,
   canGoBack = false,
+  scrollResetVersion = 0,
   children,
   navText,
   language = "ar",
@@ -37,6 +38,10 @@ export default function AppShell({
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0, behavior: "auto" });
   }, [activePage]);
+
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, behavior: "auto" });
+  }, [scrollResetVersion]);
 
   return (
     <div
@@ -91,9 +96,9 @@ export default function AppShell({
       <main
         ref={mainRef}
         className="flex-1 overflow-y-auto overflow-x-hidden bg-[#F7F3EC]"
-        style={{ paddingBottom: "5.6rem" }}
+        style={{ paddingBottom: "calc(12rem + env(safe-area-inset-bottom))" }}
       >
-        <div className="mx-auto w-full max-w-2xl px-4 py-6">
+        <div className="mx-auto w-full max-w-2xl px-4 py-6 pb-16">
           {children}
         </div>
       </main>
