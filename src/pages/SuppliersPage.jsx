@@ -8,8 +8,21 @@ export default function SuppliersPage(props) {
   const text = getAppText(props.settings?.language);
   const [selectedCountry, setSelectedCountry] = useState(null);
 
+  const handleSelectCountry = (country) => {
+    props.onUpdateSetting?.("country", country);
+    setSelectedCountry(country);
+  };
+
   if (!selectedCountry) {
-    return <CountryPicker language={props.settings?.language} onSelect={setSelectedCountry} />;
+    return (
+      <CountryPicker
+        language={props.settings?.language}
+        onSelect={handleSelectCountry}
+        sessionMeta={props.sessionMeta}
+        authMode={props.authMode}
+        section="suppliers"
+      />
+    );
   }
 
   return (

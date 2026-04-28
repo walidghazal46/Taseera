@@ -324,6 +324,7 @@ export default function App() {
     setAuthMode(mode);
     setAuthSession({
       mode,
+      uid: payload.uid || null,
       userName: payload.userName || settings.userName,
       userEmail: payload.userEmail || settings.userEmail,
       lastLoginAt: new Date().toLocaleString("en-GB"),
@@ -441,12 +442,30 @@ export default function App() {
     else if (id === "rate") bridge.rateApp();
   }, [bridge, openDialog, savedAnalyses.length, settings.appName, settings.appVersion, settings.language, systemText]);
 
+  const handleOpenSubscription = useCallback(() => {
+    setActivePage("settings");
+    setSettings((current) => ({ ...current, settingsPanelSection: "subscription" }));
+    setRouteStack([createRoute(authMode, "settings")]);
+  }, [authMode, setActivePage, setRouteStack, setSettings]);
+
+  const handleOpenAdSettings = useCallback(() => {
+    setActivePage("settings");
+    setSettings((current) => ({
+      ...current,
+      settingsPanelSection: "account",
+      adminDashboardTab: "settings",
+    }));
+    setRouteStack([createRoute(authMode, "settings")]);
+  }, [authMode, setActivePage, setRouteStack, setSettings]);
+
   const navigationBridge = useMemo(() => ({ registerBackHandler: registerPageBackHandler, pushHistoryEntry, onEntryChange: notifySubpageNavigation }), [notifySubpageNavigation, pushHistoryEntry, registerPageBackHandler]);
 
   const pageProps = {
     authMode, companies, suppliers, settings, pricingCatalog, importedPricingSource, savedAnalyses, rfqRequests, systemBridge: bridge, navigationBridge,
     selectedPricingItemId, selectedCompanyId, selectedProjectId, company: selectedCompany, project: selectedProject,
-    onSelectPricingItem: setSelectedPricingItemId, onSelectCompany: selectCompany, onSelectProject: selectProject, onAddCompany: addCompany, onAddProject: addProject, onAddSupplier: addSupplier, onUpdateSetting: updateSetting, onLogout: handleLogout, onShowStatus: showStatus, onSaveAnalysis: handleSaveAnalysis, onCreateRfq: handleCreateRfq, onContactSupplier: handleContactSupplier, onSettingsAction: handleSettingsAction, onOpenAuthScreen: openAuthScreen, sessionMeta: authSession
+    onSelectPricingItem: setSelectedPricingItemId, onSelectCompany: selectCompany, onSelectProject: selectProject, onAddCompany: addCompany, onAddProject: addProject, onAddSupplier: addSupplier, onUpdateSetting: updateSetting, onLogout: handleLogout, onShowStatus: showStatus, onSaveAnalysis: handleSaveAnalysis, onCreateRfq: handleCreateRfq, onContactSupplier: handleContactSupplier, onSettingsAction: handleSettingsAction, onOpenAuthScreen: openAuthScreen, sessionMeta: authSession,
+    onOpenSubscription: handleOpenSubscription,
+    onOpenAdSettings: handleOpenAdSettings,
   };
 
   const renderedPage = {

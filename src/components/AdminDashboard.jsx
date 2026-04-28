@@ -1,0 +1,1355 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Modal from "./Modal";
+import { ADMIN_PERMISSIONS, DEFAULT_LIMITED_PERMISSIONS } from "../constants/admin";
+import {
+  approvePaymentRequest,
+  deleteUserByAdmin,
+  getDashboardStats,
+  hasPermission,
+  listAdminLogs,
+  listAdmins,
+  listPaymentRequests,
+  listUsersPage,
+  searchUsersGlobal,
+  rejectPaymentRequest,
+  removeAdmin,
+  seedAdminUsersByEmail,
+  setUserSuspended,
+  updateUserByAdmin,
+  upsertLimitedAdmin,
+} from "../services/adminApi";
+import {
+  AD_SLOT_IDS,
+  DEFAULT_AD_BANNER,
+  DEFAULT_PAYMENT_SETTINGS,
+  listenAdBanner,
+  listenPaymentSettings,
+  saveAdBanner,
+  savePaymentSettings,
+} from "../services/subscriptionApi";
+
+const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
+
+const MENU = [
+  { id: "dashboard", labelAr: "Dashboard", labelEn: "Dashboard" },
+  { id: "users", labelAr: "Users", labelEn: "Users" },
+  { id: "pending", labelAr: "Pending Approvals", labelEn: "Pending Approvals" },
+  { id: "payments", labelAr: "Payments", labelEn: "Payments" },
+  { id: "admins", labelAr: "Admins", labelEn: "Admins" },
+  { id: "logs", labelAr: "Logs", labelEn: "Logs" },
+  { id: "settings", labelAr: "Settings", labelEn: "Settings" },
+];
+
+function fmtDate(value) {
+  if (!value) return "-";
+  const date = typeof value?.toDate === "function" ? value.toDate() : new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString("en-GB");
+}
+
+function StatCard({ label, value, tone = "blue" }) {
+  const tones = {
+    blue: "border-[#dbeafe] bg-[#eff6ff] text-[#1e3a8a]",
+    green: "border-[#dcfce7] bg-[#f0fdf4] text-[#166534]",
+    amber: "border-[#fde68a] bg-[#fffbeb] text-[#92400e]",
+    red: "border-[#fecaca] bg-[#fef2f2] text-[#991b1b]",
+  };
+
+  return (
+    <div className={`rounded-2xl border p-3 ${tones[tone] || tones.blue}`}>
+      <div className="text-[10px] font-bold uppercase tracking-[0.14em]">{label}</div>
+      <div className="mt-2 text-[22px] font-extrabold" style={{ fontFamily: "'IBM Plex Sans Arabic',sans-serif" }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function PermissionTag({ active }) {
+  return (
+    <span className={`rounded-lg px-2 py-1 text-[10px] font-bold ${active ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
+      {active ? "Yes" : "No"}
+    </span>
+  );
+}
+
+function DonutChart({ items, title }) {
+  const total = items.reduce((sum, i) => sum + i.value, 0) || 1;
+  const radius = 34;
+  const stroke = 12;
+  const normalizedRadius = radius - stroke / 2;
+  const circumference = normalizedRadius * 2 * Math.PI;
+
+  let offsetAcc = 0;
+
+  return (
+    <div className="rounded-2xl border border-[#e2e8f0] bg-white p-4">
+      <p className="mb-3 text-[12px] font-bold text-[#0f172a]">{title}</p>
+      <div className="flex items-center gap-4">
+        <div className="relative h-[84px] w-[84px]">
+          <svg className="h-[84px] w-[84px] -rotate-90" viewBox="0 0 84 84">
+            <circle cx="42" cy="42" r={normalizedRadius} stroke="#e2e8f0" strokeWidth={stroke} fill="transparent" />
+            {items.map((item) => {
+              const segment = (item.value / total) * circumference;
+              const dashOffset = circumference - offsetAcc;
+              offsetAcc += segment;
+              return (
+                <circle
+                  key={item.label}
+                  cx="42"
+                  cy="42"
+                  r={normalizedRadius}
+                  stroke={item.hex}
+                  strokeWidth={stroke}
+                  fill="transparent"
+                  strokeDasharray={`${segment} ${circumference - segment}`}
+                  strokeDashoffset={dashOffset}
+                  strokeLinecap="round"
+                />
+              );
+            })}
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-slate-600">{total}</div>
+        </div>
+        <div className="space-y-1">
+          {items.map((item) => (
+            <div key={item.label} className="flex items-center gap-2 text-[11px]">
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.hex }} />
+              <span className="font-semibold text-slate-700">{item.label}</span>
+              <span className="text-slate-500">{item.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TrendChart({ today, week, month }) {
+  const points = [today, week, month];
+  const max = Math.max(...points, 1);
+  const width = 280;
+  const height = 90;
+  const step = width / (points.length - 1);
+  const coords = points
+    .map((val, idx) => {
+      const x = idx * step;
+      const y = height - (val / max) * (height - 10) - 5;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  return (
+    <div className="rounded-2xl border border-[#e2e8f0] bg-white p-4">
+      <p className="mb-2 text-[12px] font-bold text-[#0f172a]">New Users Trend</p>
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-[100px] w-full">
+        <polyline fill="none" stroke="#cbd5e1" strokeWidth="1" points={`0,${height - 5} ${width},${height - 5}`} />
+        <polyline fill="none" stroke="#2563eb" strokeWidth="3" points={coords} />
+        {points.map((val, idx) => {
+          const x = idx * step;
+          const y = height - (val / max) * (height - 10) - 5;
+          return <circle key={`${val}-${idx}`} cx={x} cy={y} r="4" fill="#1d4ed8" />;
+        })}
+      </svg>
+      <div className="mt-2 grid grid-cols-3 text-center text-[10px] font-bold text-slate-500">
+        <span>Today ({today})</span>
+        <span>Week ({week})</span>
+        <span>Month ({month})</span>
+      </div>
+    </div>
+  );
+}
+
+export default function AdminDashboard({ language = "ar", adminProfile, onToast, initialTab = "dashboard" }) {
+  const isEn = language === "en";
+  const t = useMemo(
+    () => ({
+      title: isEn ? "Admin Dashboard" : "Admin Dashboard",
+      unauthorized: isEn ? "Access denied. You are not an admin." : "لا يمكن الوصول: لا تملك صلاحيات الأدمن.",
+      loading: isEn ? "Loading admin data..." : "جاري تحميل بيانات الأدمن...",
+      users: isEn ? "Users" : "المستخدمون",
+      email: isEn ? "Email" : "الإيميل",
+      phone: isEn ? "Phone" : "الهاتف",
+      status: isEn ? "Status" : "الحالة",
+      subscription: isEn ? "Subscription" : "الاشتراك",
+      paid: isEn ? "Paid" : "مدفوع",
+      createdAt: isEn ? "Created" : "تاريخ التسجيل",
+      actions: isEn ? "Actions" : "الإجراءات",
+      searchPlaceholder: isEn ? "Search by name / email / phone" : "بحث بالاسم / الإيميل / الهاتف",
+      all: isEn ? "All" : "الكل",
+      active: isEn ? "Approved" : "مقبول",
+      pending: isEn ? "Pending" : "معلق",
+      rejected: isEn ? "Rejected" : "مرفوض",
+      suspended: isEn ? "Suspended" : "موقوف",
+      unpaid: isEn ? "Unpaid" : "غير مدفوع",
+      paidOnly: isEn ? "Paid" : "مدفوع",
+      save: isEn ? "Save" : "حفظ",
+      cancel: isEn ? "Cancel" : "إلغاء",
+      edit: isEn ? "Edit" : "تعديل",
+      suspend: isEn ? "Suspend" : "تعطيل",
+      activate: isEn ? "Activate" : "تفعيل",
+      remove: isEn ? "Delete" : "حذف",
+      approve: isEn ? "Approve" : "Approve",
+      reject: isEn ? "Reject" : "Reject",
+      addAdmin: isEn ? "Add Limited Admin" : "إضافة Admin Limited",
+      permissions: isEn ? "Permissions" : "الصلاحيات",
+      noData: isEn ? "No data" : "لا توجد بيانات",
+      loadMore: isEn ? "Load more" : "تحميل المزيد",
+      refresh: isEn ? "Refresh" : "تحديث",
+    }),
+    [isEn]
+  );
+
+  const [activeTab, setActiveTab] = useState(initialTab || "dashboard");
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  const [users, setUsers] = useState([]);
+  const [usersCursor, setUsersCursor] = useState(null);
+  const [usersHasMore, setUsersHasMore] = useState(false);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [queryText, setQueryText] = useState("");
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [paidFilter, setPaidFilter] = useState("all");
+  const [editingUserId, setEditingUserId] = useState(null);
+  const [editDraft, setEditDraft] = useState({});
+
+  const [payments, setPayments] = useState([]);
+  const [paymentsLoading, setPaymentsLoading] = useState(false);
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState("all");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState("all");
+  const [paymentDateFrom, setPaymentDateFrom] = useState("");
+  const [paymentDateTo, setPaymentDateTo] = useState("");
+  const [paymentSearchText, setPaymentSearchText] = useState("");
+  const [receiptPreview, setReceiptPreview] = useState(null);
+
+  const [admins, setAdmins] = useState([]);
+  const [adminsLoading, setAdminsLoading] = useState(false);
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPermissions, setAdminPermissions] = useState(DEFAULT_LIMITED_PERMISSIONS);
+
+  const [logs, setLogs] = useState([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+
+  const [paymentSettingsDraft, setPaymentSettingsDraft] = useState(DEFAULT_PAYMENT_SETTINGS);
+  const [analysisTopAdDraft, setAnalysisTopAdDraft] = useState(DEFAULT_AD_BANNER);
+  const [analysisBottomAdDraft, setAnalysisBottomAdDraft] = useState(DEFAULT_AD_BANNER);
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  const [confirmDeleteUser, setConfirmDeleteUser] = useState(null);
+  const [confirmRemoveAdmin, setConfirmRemoveAdmin] = useState(null);
+  const [pendingRejectRequest, setPendingRejectRequest] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+
+  useEffect(() => {
+    const hasMenuTab = MENU.some((tab) => tab.id === initialTab);
+    if (hasMenuTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  const canViewUsers = hasPermission(adminProfile, "viewUsers");
+  const canEditUsers = hasPermission(adminProfile, "editUsers");
+  const canSuspendUsers = hasPermission(adminProfile, "suspendUsers");
+  const canDeleteUsers = hasPermission(adminProfile, "deleteUsers");
+  const canApprovePayments = hasPermission(adminProfile, "approvePayments");
+  const canViewPayments = hasPermission(adminProfile, "viewPayments");
+  const canManageAdmins = adminProfile?.adminType === "super";
+  const canViewLogs = hasPermission(adminProfile, "viewLogs");
+  const canManageRuntimeSettings = hasPermission(adminProfile, "approvePayments");
+
+  const isSearchingAllUsers = queryText.trim().length >= 2;
+
+  const filteredUsers = useMemo(() => users, [users]);
+  const filteredPayments = useMemo(() => {
+    const queryTextLower = paymentSearchText.trim().toLowerCase();
+    const fromDate = paymentDateFrom ? new Date(`${paymentDateFrom}T00:00:00`) : null;
+    const toDate = paymentDateTo ? new Date(`${paymentDateTo}T23:59:59`) : null;
+
+    return payments.filter((row) => {
+      const statusOk = paymentStatusFilter === "all" || row.requestStatus === paymentStatusFilter;
+      const methodOk = paymentMethodFilter === "all" || row.paymentMethod === paymentMethodFilter;
+      const rowDateValue = typeof row.createdAt?.toDate === "function" ? row.createdAt.toDate() : row.createdAt ? new Date(row.createdAt) : null;
+      const fromOk = !fromDate || (rowDateValue && rowDateValue >= fromDate);
+      const toOk = !toDate || (rowDateValue && rowDateValue <= toDate);
+      const searchOk = !queryTextLower || [
+        row.userName,
+        row.email,
+        row.orderId,
+        row.userSerial,
+        row.paymentReference,
+      ]
+        .map((value) => String(value || "").toLowerCase())
+        .some((value) => value.includes(queryTextLower));
+
+      return statusOk && methodOk && fromOk && toOk && searchOk;
+    });
+  }, [paymentDateFrom, paymentDateTo, paymentMethodFilter, paymentSearchText, paymentStatusFilter, payments]);
+
+  const paymentMethodOptions = useMemo(() => {
+    const methods = new Set(payments.map((row) => row.paymentMethod).filter(Boolean));
+    return Array.from(methods);
+  }, [payments]);
+
+  const exportPaymentsCsv = useCallback(() => {
+    const rows = filteredPayments;
+    if (!rows.length) {
+      onToast?.("No rows to export", "warning");
+      return;
+    }
+
+    const escapeCell = (value) => {
+      const normalized = String(value ?? "").replace(/"/g, '""');
+      return `"${normalized}"`;
+    };
+
+    const header = [
+      "orderId",
+      "userSerial",
+      "userName",
+      "email",
+      "paymentMethod",
+      "amount",
+      "currency",
+      "requestStatus",
+      "paymentStatus",
+      "adminNote",
+      "rejectionReason",
+      "paymentReference",
+      "receiptUrl",
+      "createdAt",
+    ];
+
+    const body = rows.map((row) => [
+      row.orderId,
+      row.userSerial,
+      row.userName,
+      row.email,
+      row.paymentMethod,
+      row.amount,
+      row.currency,
+      row.requestStatus,
+      row.paymentStatus,
+      row.adminNote,
+      row.rejectionReason,
+      row.paymentReference,
+      row.receiptUrl,
+      fmtDate(row.createdAt),
+    ]);
+
+    const csv = [header, ...body]
+      .map((line) => line.map((cell) => escapeCell(cell)).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.setAttribute("download", `payment-requests-${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+    onToast?.("CSV exported", "success");
+  }, [filteredPayments, onToast]);
+
+  const loadStats = useCallback(async () => {
+    setStatsLoading(true);
+    try {
+      const stats = await getDashboardStats();
+      setDashboardStats(stats);
+    } catch (error) {
+      onToast?.(error.message || "Failed to load stats", "warning");
+    } finally {
+      setStatsLoading(false);
+    }
+  }, [onToast]);
+
+  const loadUsers = useCallback(
+    async (reset = false) => {
+      if (!canViewUsers) return;
+      setUsersLoading(true);
+      try {
+        const page = await listUsersPage({
+          pageSize: 12,
+          cursor: reset ? null : usersCursor,
+          status: statusFilter,
+          paid: paidFilter,
+        });
+
+        setUsers((current) => (reset ? page.rows : [...current, ...page.rows]));
+        setUsersCursor(page.lastDoc);
+        setUsersHasMore(page.hasMore);
+      } catch (error) {
+        onToast?.(error.message || "Failed to load users", "warning");
+      } finally {
+        setUsersLoading(false);
+      }
+    },
+    [canViewUsers, onToast, paidFilter, statusFilter, usersCursor]
+  );
+
+  const loadPayments = useCallback(async () => {
+    if (!canViewPayments && !canApprovePayments) return;
+    setPaymentsLoading(true);
+    try {
+      const data = await listPaymentRequests({ pageSize: 30 });
+      setPayments(data);
+    } catch (error) {
+      onToast?.(error.message || "Failed to load payments", "warning");
+    } finally {
+      setPaymentsLoading(false);
+    }
+  }, [canApprovePayments, canViewPayments, onToast]);
+
+  const loadAdmins = useCallback(async () => {
+    if (!canManageAdmins) return;
+    setAdminsLoading(true);
+    try {
+      const data = await listAdmins();
+      setAdmins(data);
+    } catch (error) {
+      onToast?.(error.message || "Failed to load admins", "warning");
+    } finally {
+      setAdminsLoading(false);
+    }
+  }, [canManageAdmins, onToast]);
+
+  const loadLogs = useCallback(async () => {
+    if (!canViewLogs) return;
+    setLogsLoading(true);
+    try {
+      const data = await listAdminLogs({ pageSize: 50 });
+      setLogs(data);
+    } catch (error) {
+      onToast?.(error.message || "Failed to load logs", "warning");
+    } finally {
+      setLogsLoading(false);
+    }
+  }, [canViewLogs, onToast]);
+
+  useEffect(() => {
+    if (!adminProfile?.canAccessAdmin) return;
+    loadStats();
+  }, [adminProfile?.canAccessAdmin, loadStats]);
+
+  useEffect(() => {
+    if (!adminProfile?.canAccessAdmin) return;
+    if (activeTab === "users") loadUsers(true);
+    if (activeTab === "pending") loadPayments();
+    if (activeTab === "payments") loadPayments();
+    if (activeTab === "admins") loadAdmins();
+    if (activeTab === "logs") loadLogs();
+  }, [activeTab, adminProfile?.canAccessAdmin, loadAdmins, loadLogs, loadPayments, loadUsers]);
+
+  useEffect(() => {
+    if (activeTab === "users") {
+      setUsersCursor(null);
+      loadUsers(true);
+    }
+  }, [activeTab, statusFilter, paidFilter, loadUsers]);
+
+  useEffect(() => {
+    if (activeTab !== "users" || !canViewUsers) return;
+    const q = queryText.trim();
+    if (q.length < 2) {
+      setSearchLoading(false);
+      return;
+    }
+
+    let active = true;
+    setSearchLoading(true);
+    const timer = setTimeout(async () => {
+      try {
+        const rows = await searchUsersGlobal(q, 40);
+        if (active) {
+          setUsers(rows);
+          setUsersHasMore(false);
+          setUsersCursor(null);
+        }
+      } catch (error) {
+        if (active) onToast?.(error.message || "Search failed", "warning");
+      } finally {
+        if (active) setSearchLoading(false);
+      }
+    }, 250);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [activeTab, canViewUsers, onToast, queryText]);
+
+  useEffect(() => {
+    if (activeTab !== "settings") return undefined;
+
+    const unSubPayment = listenPaymentSettings((data) => {
+      setPaymentSettingsDraft(data || DEFAULT_PAYMENT_SETTINGS);
+    });
+    const unSubTopAd = listenAdBanner(
+      (data) => {
+        setAnalysisTopAdDraft(data || DEFAULT_AD_BANNER);
+      },
+      AD_SLOT_IDS.analysisPreResult
+    );
+
+    const unSubBottomAd = listenAdBanner(
+      (data) => {
+        setAnalysisBottomAdDraft(data || DEFAULT_AD_BANNER);
+      },
+      AD_SLOT_IDS.analysisPostResult
+    );
+
+    return () => {
+      unSubPayment?.();
+      unSubTopAd?.();
+      unSubBottomAd?.();
+    };
+  }, [activeTab]);
+
+  if (!adminProfile?.canAccessAdmin) {
+    return (
+      <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-[13px] font-bold text-rose-700" style={{ fontFamily: AR }}>
+        {t.unauthorized}
+      </div>
+    );
+  }
+
+  const summaryBars = dashboardStats
+    ? [
+        { label: "Total", value: dashboardStats.totalUsers, color: "bg-blue-500" },
+        { label: "Active", value: dashboardStats.activeUsers, color: "bg-emerald-500" },
+        { label: "Suspended", value: dashboardStats.suspendedUsers, color: "bg-amber-500" },
+        { label: "Paid", value: dashboardStats.paidUsers, color: "bg-indigo-500" },
+        { label: "Pending", value: dashboardStats.pendingRequests, color: "bg-rose-500" },
+      ]
+    : [];
+
+  const maxBar = Math.max(...summaryBars.map((i) => i.value), 1);
+
+  return (
+    <div className="space-y-4" style={{ fontFamily: AR }}>
+      <div className="overflow-hidden rounded-3xl border border-[#c7d2fe] bg-white shadow-sm">
+        <div className="border-b border-[#e2e8f0] bg-gradient-to-r from-[#082555] to-[#163a6b] px-4 py-4 text-white">
+          <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-white/70">Secure Control Center</p>
+          <h2 className="mt-1 text-[20px] font-extrabold">{t.title}</h2>
+          <p className="mt-1 text-[11px] text-white/70">{adminProfile.email} • {adminProfile.adminType === "super" ? "Super Admin" : "Admin Limited"}</p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-0 md:grid-cols-[220px_minmax(0,1fr)]">
+          <aside className="border-b border-[#e2e8f0] bg-[#f8fafc] p-3 md:border-b-0 md:border-r">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-1">
+              {MENU.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setActiveTab(item.id)}
+                  className={`rounded-xl border px-3 py-2 text-left text-[11px] font-bold transition ${
+                    activeTab === item.id
+                      ? "border-[#1d4ed8] bg-[#dbeafe] text-[#1e3a8a]"
+                      : "border-[#dbe2ea] bg-white text-slate-600 hover:border-[#93c5fd]"
+                  }`}
+                >
+                  {isEn ? item.labelEn : item.labelAr}
+                </button>
+              ))}
+            </div>
+          </aside>
+
+          <section className="min-w-0 p-3 sm:p-4">
+            {activeTab === "dashboard" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[15px] font-extrabold text-[#082555]">Overview</h3>
+                  <button type="button" onClick={loadStats} className="rounded-lg border border-[#dbe2ea] bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600">
+                    {t.refresh}
+                  </button>
+                </div>
+
+                {statsLoading ? (
+                  <p className="text-[12px] font-bold text-slate-500">{t.loading}</p>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      <StatCard label="Total Users" value={dashboardStats?.totalUsers || 0} tone="blue" />
+                      <StatCard label="Active" value={dashboardStats?.activeUsers || 0} tone="green" />
+                      <StatCard label="Suspended" value={dashboardStats?.suspendedUsers || 0} tone="amber" />
+                      <StatCard label="Paid" value={dashboardStats?.paidUsers || 0} tone="blue" />
+                      <StatCard label="Pending Requests" value={dashboardStats?.pendingRequests || 0} tone="red" />
+                      <StatCard label="New (Today / Week / Month)" value={`${dashboardStats?.newToday || 0} / ${dashboardStats?.newWeek || 0} / ${dashboardStats?.newMonth || 0}`} tone="green" />
+                    </div>
+
+                    <div className="rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                      <p className="mb-3 text-[12px] font-bold text-[#0f172a]">Users Distribution Chart</p>
+                      <div className="space-y-2">
+                        {summaryBars.map((bar) => (
+                          <div key={bar.label} className="grid grid-cols-[72px_minmax(0,1fr)_34px] items-center gap-2">
+                            <span className="text-[10px] font-bold text-slate-600">{bar.label}</span>
+                            <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+                              <div className={`h-full ${bar.color}`} style={{ width: `${Math.max(4, (bar.value / maxBar) * 100)}%` }} />
+                            </div>
+                            <span className="text-[10px] font-bold text-slate-700">{bar.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                      <DonutChart
+                        title="Users Status Mix"
+                        items={[
+                          { label: "Active", value: dashboardStats?.activeUsers || 0, hex: "#10b981" },
+                          { label: "Suspended", value: dashboardStats?.suspendedUsers || 0, hex: "#f59e0b" },
+                          { label: "Pending", value: dashboardStats?.pendingRequests || 0, hex: "#ef4444" },
+                        ]}
+                      />
+                      <TrendChart
+                        today={dashboardStats?.newToday || 0}
+                        week={dashboardStats?.newWeek || 0}
+                        month={dashboardStats?.newMonth || 0}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {activeTab === "users" && (
+              <div className="space-y-3">
+                {!canViewUsers ? (
+                  <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-[12px] font-bold text-amber-700">No permission: viewUsers</p>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      <input
+                        value={queryText}
+                        onChange={(e) => setQueryText(e.target.value)}
+                        placeholder={t.searchPlaceholder}
+                        className="w-full rounded-xl border border-[#dbe2ea] px-3 py-2 text-[12px] outline-none focus:border-[#60a5fa]"
+                      />
+                      <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="rounded-xl border border-[#dbe2ea] px-3 py-2 text-[12px]">
+                        <option value="all">{t.all}</option>
+                        <option value="approved">{t.active}</option>
+                        <option value="pending">{t.pending}</option>
+                        <option value="rejected">{t.rejected}</option>
+                        <option value="suspended">{t.suspended}</option>
+                      </select>
+                      <select value={paidFilter} onChange={(e) => setPaidFilter(e.target.value)} className="rounded-xl border border-[#dbe2ea] px-3 py-2 text-[12px]">
+                        <option value="all">{t.all}</option>
+                        <option value="paid">{t.paidOnly}</option>
+                        <option value="unpaid">{t.unpaid}</option>
+                      </select>
+                    </div>
+
+                    {(searchLoading || isSearchingAllUsers) && (
+                      <p className="text-[11px] font-bold text-slate-500">
+                        {searchLoading ? "Searching all users..." : "Global search mode enabled"}
+                      </p>
+                    )}
+
+                    <div className="overflow-x-auto rounded-2xl border border-[#e2e8f0]">
+                      <table className="min-w-[980px] w-full text-left">
+                        <thead className="bg-[#f8fafc] text-[11px] font-bold text-slate-600">
+                          <tr>
+                            <th className="px-3 py-2">Name</th>
+                            <th className="px-3 py-2">{t.email}</th>
+                            <th className="px-3 py-2">{t.phone}</th>
+                            <th className="px-3 py-2">{t.status}</th>
+                            <th className="px-3 py-2">{t.subscription}</th>
+                            <th className="px-3 py-2">{t.paid}</th>
+                            <th className="px-3 py-2">{t.createdAt}</th>
+                            <th className="px-3 py-2">{t.actions}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredUsers.map((row) => {
+                            const isEditing = editingUserId === row.id;
+                            const isSuperTarget = String(row.email || "").toLowerCase() === "walidghazal46@gmail.com";
+                            return (
+                              <tr key={row.id} className="border-t border-[#eef2f7] text-[12px] text-slate-700">
+                                <td className="px-3 py-2">
+                                  {isEditing ? (
+                                    <input className="w-full rounded border px-2 py-1" value={editDraft.name || ""} onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))} />
+                                  ) : (
+                                    row.name || "-"
+                                  )}
+                                </td>
+                                <td className="px-3 py-2">{row.email || "-"}</td>
+                                <td className="px-3 py-2">
+                                  {isEditing ? (
+                                    <input className="w-full rounded border px-2 py-1" value={editDraft.phone || ""} onChange={(e) => setEditDraft((d) => ({ ...d, phone: e.target.value }))} />
+                                  ) : (
+                                    row.phone || "-"
+                                  )}
+                                </td>
+                                <td className="px-3 py-2">{row.status || "pending"}</td>
+                                <td className="px-3 py-2">{row.subscriptionType || "free"}</td>
+                                <td className="px-3 py-2">{row.isPaid ? "Yes" : "No"}</td>
+                                <td className="px-3 py-2">{fmtDate(row.createdAt)}</td>
+                                <td className="px-3 py-2">
+                                  <div className="flex flex-wrap gap-1">
+                                    {canEditUsers && !isEditing && !isSuperTarget && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingUserId(row.id);
+                                          setEditDraft({ name: row.name || "", phone: row.phone || "" });
+                                        }}
+                                        className="rounded bg-blue-50 px-2 py-1 text-[10px] font-bold text-blue-700"
+                                      >
+                                        {t.edit}
+                                      </button>
+                                    )}
+                                    {canEditUsers && isEditing && !isSuperTarget && (
+                                      <>
+                                        <button
+                                          type="button"
+                                          onClick={async () => {
+                                            try {
+                                              await updateUserByAdmin(adminProfile, row.id, { name: editDraft.name || "", phone: editDraft.phone || "" });
+                                              onToast?.("User updated", "success");
+                                              setEditingUserId(null);
+                                              loadUsers(true);
+                                            } catch (error) {
+                                              onToast?.(error.message, "warning");
+                                            }
+                                          }}
+                                          className="rounded bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700"
+                                        >
+                                          {t.save}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => setEditingUserId(null)}
+                                          className="rounded bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600"
+                                        >
+                                          {t.cancel}
+                                        </button>
+                                      </>
+                                    )}
+                                    {canSuspendUsers && !isSuperTarget && (
+                                      <button
+                                        type="button"
+                                        onClick={async () => {
+                                          try {
+                                            await setUserSuspended(adminProfile, row.id, row.status !== "suspended");
+                                            onToast?.("User status updated", "success");
+                                            loadUsers(true);
+                                          } catch (error) {
+                                            onToast?.(error.message, "warning");
+                                          }
+                                        }}
+                                        className="rounded bg-amber-50 px-2 py-1 text-[10px] font-bold text-amber-700"
+                                      >
+                                        {row.status === "suspended" ? t.activate : t.suspend}
+                                      </button>
+                                    )}
+                                    {canDeleteUsers && !isSuperTarget && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setConfirmDeleteUser({ id: row.id, name: row.name || row.email || "User" })}
+                                        className="rounded bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-700"
+                                      >
+                                        {t.remove}
+                                      </button>
+                                    )}
+                                    {isSuperTarget && (
+                                      <span className="rounded bg-indigo-50 px-2 py-1 text-[10px] font-bold text-indigo-700">Super Admin Protected</span>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {usersHasMore && (
+                      <button
+                        type="button"
+                        onClick={() => loadUsers(false)}
+                        disabled={usersLoading}
+                        className="rounded-xl border border-[#dbe2ea] bg-white px-3 py-2 text-[12px] font-bold text-slate-600"
+                      >
+                        {usersLoading ? "..." : t.loadMore}
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {activeTab === "pending" && (
+              <div className="space-y-3">
+                {!(canViewPayments || canApprovePayments) ? (
+                  <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-[12px] font-bold text-amber-700">No permission: viewPayments / approvePayments</p>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                      <input
+                        value={paymentSearchText}
+                        onChange={(event) => setPaymentSearchText(event.target.value)}
+                        placeholder="Search order / serial / email"
+                        className="rounded-xl border border-[#dbe2ea] px-3 py-2 text-[12px]"
+                      />
+                      <select value={paymentMethodFilter} onChange={(event) => setPaymentMethodFilter(event.target.value)} className="rounded-xl border border-[#dbe2ea] px-3 py-2 text-[12px]">
+                        <option value="all">All methods</option>
+                        {paymentMethodOptions.map((method) => (
+                          <option key={method} value={method}>{method}</option>
+                        ))}
+                      </select>
+                      <input type="date" value={paymentDateFrom} onChange={(event) => setPaymentDateFrom(event.target.value)} className="rounded-xl border border-[#dbe2ea] px-3 py-2 text-[12px]" />
+                      <input type="date" value={paymentDateTo} onChange={(event) => setPaymentDateTo(event.target.value)} className="rounded-xl border border-[#dbe2ea] px-3 py-2 text-[12px]" />
+                      <button type="button" onClick={exportPaymentsCsv} className="rounded-xl bg-[#082555] px-3 py-2 text-[12px] font-bold text-white">Export CSV</button>
+                    </div>
+
+                    {(paymentsLoading ? [] : filteredPayments.filter((p) => p.requestStatus === "pending_review")).map((request) => (
+                    <div key={request.id} className="rounded-2xl border border-[#e2e8f0] bg-white p-3">
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        <div className="text-[12px] font-bold text-[#082555]">{request.userName || "-"}</div>
+                        <div className="text-[11px] text-slate-500">{request.email || "-"}</div>
+                        <div className="text-[11px] text-slate-600">Amount: {request.amount || 0}</div>
+                        <div className="text-[11px] text-slate-600">Method: {request.paymentMethod || "-"}</div>
+                        <div className="text-[11px] text-slate-600">Order: {request.orderId || "-"}</div>
+                        <div className="text-[11px] text-slate-600">Serial: {request.userSerial || "-"}</div>
+                        <div className="text-[11px] text-slate-600 sm:col-span-2">
+                          Receipt: {request.receiptUrl ? (
+                            <button
+                              type="button"
+                              onClick={() => setReceiptPreview({
+                                title: request.orderId || "Receipt",
+                                url: request.receiptUrl,
+                                isPdf: String(request.receiptUrl).toLowerCase().includes(".pdf"),
+                              })}
+                              className="font-bold text-[#1d4ed8] underline"
+                            >
+                              Preview receipt
+                            </button>
+                          ) : "-"}
+                        </div>
+                      </div>
+
+                      {canApprovePayments && (
+                        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await approvePaymentRequest(adminProfile, request.id);
+                                onToast?.("Payment approved", "success");
+                                loadPayments();
+                                loadStats();
+                              } catch (error) {
+                                onToast?.(error.message, "warning");
+                              }
+                            }}
+                            className="rounded-xl bg-emerald-600 px-3 py-2 text-[12px] font-bold text-white"
+                          >
+                            {t.approve}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPendingRejectRequest(request);
+                              setRejectReason("");
+                            }}
+                            className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-[12px] font-bold text-rose-700"
+                          >
+                            {t.reject}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  </>
+                )}
+                {!paymentsLoading && filteredPayments.filter((p) => p.requestStatus === "pending_review").length === 0 && (
+                  <p className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-3 text-[12px] font-bold text-slate-500">{t.noData}</p>
+                )}
+              </div>
+            )}
+
+            {activeTab === "payments" && (
+              <div className="space-y-2">
+                {!canViewPayments ? (
+                  <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-[12px] font-bold text-amber-700">No permission: viewPayments</p>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-6">
+                      <input
+                        value={paymentSearchText}
+                        onChange={(event) => setPaymentSearchText(event.target.value)}
+                        placeholder="Search order / serial / email"
+                        className="rounded-xl border border-[#dbe2ea] px-3 py-2 text-[12px] lg:col-span-2"
+                      />
+                      <select value={paymentStatusFilter} onChange={(event) => setPaymentStatusFilter(event.target.value)} className="rounded-xl border border-[#dbe2ea] px-3 py-2 text-[12px]">
+                        <option value="all">All statuses</option>
+                        <option value="pending_review">pending_review</option>
+                        <option value="approved">approved</option>
+                        <option value="rejected">rejected</option>
+                      </select>
+                      <select value={paymentMethodFilter} onChange={(event) => setPaymentMethodFilter(event.target.value)} className="rounded-xl border border-[#dbe2ea] px-3 py-2 text-[12px]">
+                        <option value="all">All methods</option>
+                        {paymentMethodOptions.map((method) => (
+                          <option key={method} value={method}>{method}</option>
+                        ))}
+                      </select>
+                      <input type="date" value={paymentDateFrom} onChange={(event) => setPaymentDateFrom(event.target.value)} className="rounded-xl border border-[#dbe2ea] px-3 py-2 text-[12px]" />
+                      <input type="date" value={paymentDateTo} onChange={(event) => setPaymentDateTo(event.target.value)} className="rounded-xl border border-[#dbe2ea] px-3 py-2 text-[12px]" />
+                    </div>
+                    <div className="flex items-center justify-between rounded-xl border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2">
+                      <p className="text-[11px] font-bold text-slate-600">Filtered requests: {filteredPayments.length}</p>
+                      <button type="button" onClick={exportPaymentsCsv} className="rounded-lg bg-[#082555] px-3 py-1.5 text-[11px] font-bold text-white">Export CSV</button>
+                    </div>
+
+                    {filteredPayments.map((request) => (
+                    <div key={request.id} className="rounded-2xl border border-[#e2e8f0] bg-white p-3 text-[12px]">
+                      <div className="font-bold text-[#082555]">{request.userName || "-"}</div>
+                      <div className="mt-1 text-slate-500">{request.email || "-"}</div>
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-600 sm:grid-cols-4">
+                        <div>Amount: {request.amount || 0}</div>
+                        <div>Method: {request.paymentMethod || "-"}</div>
+                        <div>Status: {request.requestStatus || "-"}</div>
+                        <div>Payment: {request.paymentStatus || "-"}</div>
+                        <div>Order: {request.orderId || "-"}</div>
+                        <div>Serial: {request.userSerial || "-"}</div>
+                        <div>Admin note: {request.rejectionReason || request.adminNote || "-"}</div>
+                        <div>
+                          Receipt: {request.receiptUrl ? (
+                            <button
+                              type="button"
+                              onClick={() => setReceiptPreview({
+                                title: request.orderId || "Receipt",
+                                url: request.receiptUrl,
+                                isPdf: String(request.receiptUrl).toLowerCase().includes(".pdf"),
+                              })}
+                              className="font-bold text-[#1d4ed8] underline"
+                            >
+                              Preview
+                            </button>
+                          ) : "-"}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  </>
+                )}
+                {!paymentsLoading && filteredPayments.length === 0 && <p className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-3 text-[12px] font-bold text-slate-500">{t.noData}</p>}
+              </div>
+            )}
+
+            {activeTab === "admins" && (
+              <div className="space-y-3">
+                {!canManageAdmins ? (
+                  <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-[12px] font-bold text-amber-700">No permission: manageAdmins</p>
+                ) : (
+                  <>
+                    <div className="rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                      <p className="mb-2 text-[12px] font-bold text-[#082555]">{t.addAdmin}</p>
+                      <div className="grid grid-cols-1 gap-2">
+                        <input
+                          value={adminEmail}
+                          onChange={(e) => setAdminEmail(e.target.value)}
+                          placeholder="admin@example.com"
+                          className="w-full rounded-xl border border-[#dbe2ea] bg-white px-3 py-2 text-[12px]"
+                        />
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          {ADMIN_PERMISSIONS.map((key) => (
+                            <label key={key} className="flex items-center justify-between rounded-lg border border-[#dbe2ea] bg-white px-2 py-1.5 text-[11px]">
+                              <span>{key}</span>
+                              <input
+                                type="checkbox"
+                                checked={adminPermissions[key] === true}
+                                onChange={(e) => setAdminPermissions((current) => ({ ...current, [key]: e.target.checked }))}
+                              />
+                            </label>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!adminEmail.trim()) return;
+                            try {
+                              await seedAdminUsersByEmail(adminProfile, adminEmail.trim().toLowerCase(), adminPermissions);
+                              onToast?.("Admin added", "success");
+                              setAdminEmail("");
+                              setAdminPermissions(DEFAULT_LIMITED_PERMISSIONS);
+                              loadAdmins();
+                            } catch (error) {
+                              onToast?.(error.message, "warning");
+                            }
+                          }}
+                          className="rounded-xl bg-[#082555] px-3 py-2 text-[12px] font-bold text-white"
+                        >
+                          {t.save}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      {adminsLoading ? <p className="text-[12px] text-slate-500">Loading...</p> : null}
+                      {admins.map((row) => (
+                        <div key={row.id} className="rounded-2xl border border-[#e2e8f0] bg-white p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <p className="text-[12px] font-bold text-[#082555]">{row.email}</p>
+                              <p className="text-[10px] text-slate-500">{row.adminType || "limited"}</p>
+                            </div>
+                            {row.adminType !== "super" && (
+                              <button
+                                type="button"
+                                onClick={() => setConfirmRemoveAdmin({ id: row.id, email: row.email })}
+                                className="rounded bg-rose-50 px-2 py-1 text-[11px] font-bold text-rose-700"
+                              >
+                                {t.remove}
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                            {ADMIN_PERMISSIONS.map((perm) => (
+                              <div key={perm} className="flex items-center justify-between rounded border border-[#e2e8f0] px-2 py-1 text-[10px]">
+                                <span>{perm}</span>
+                                <PermissionTag active={row.adminType === "super" ? true : row.permissions?.[perm] === true} />
+                              </div>
+                            ))}
+                          </div>
+
+                          {row.adminType !== "super" && (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                try {
+                                  await upsertLimitedAdmin(adminProfile, { targetUid: row.id, permissions: row.permissions || DEFAULT_LIMITED_PERMISSIONS });
+                                  onToast?.("Admin permissions synced", "success");
+                                  loadAdmins();
+                                } catch (error) {
+                                  onToast?.(error.message, "warning");
+                                }
+                              }}
+                              className="mt-2 rounded border border-[#dbe2ea] bg-white px-2 py-1 text-[10px] font-bold text-slate-600"
+                            >
+                              Sync permissions
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {activeTab === "logs" && (
+              <div className="space-y-2">
+                {!canViewLogs ? (
+                  <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-[12px] font-bold text-amber-700">No permission: viewLogs</p>
+                ) : (
+                  logs.map((log) => (
+                    <div key={log.id} className="rounded-2xl border border-[#e2e8f0] bg-white p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-[11px] font-bold text-[#082555]">{log.actionType}</p>
+                        <p className="text-[10px] text-slate-500">{fmtDate(log.createdAt)}</p>
+                      </div>
+                      <p className="mt-1 text-[10px] text-slate-500">{log.adminEmail} → {log.targetCollection}/{log.targetUserId || "-"}</p>
+                    </div>
+                  ))
+                )}
+                {logsLoading ? <p className="text-[12px] text-slate-500">Loading...</p> : null}
+                {!logsLoading && logs.length === 0 && <p className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-3 text-[12px] font-bold text-slate-500">{t.noData}</p>}
+              </div>
+            )}
+
+            {activeTab === "settings" && (
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                  <p className="text-[12px] font-bold text-[#082555]">Security checklist</p>
+                  <ul className="mt-2 list-disc space-y-1 pr-4 text-[11px] text-slate-600">
+                    <li>All sensitive writes are logged to adminLogs.</li>
+                    <li>UI actions are permission-gated by role and permissions map.</li>
+                    <li>Firestore Rules must be deployed to enforce backend security.</li>
+                    <li>Use pagination and indexed filters for large data sets.</li>
+                  </ul>
+                </div>
+
+                <div className="rounded-2xl border border-[#e2e8f0] bg-white p-3">
+                  <p className="text-[12px] font-bold text-[#082555]">Payment Settings</p>
+                  {!canManageRuntimeSettings ? (
+                    <p className="mt-2 text-[11px] text-amber-700">No permission: approvePayments</p>
+                  ) : (
+                    <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Enabled</span>
+                        <select
+                          value={paymentSettingsDraft.enabled ? "yes" : "no"}
+                          onChange={(e) => setPaymentSettingsDraft((curr) => ({ ...curr, enabled: e.target.value === "yes" }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        >
+                          <option value="yes">Yes</option>
+                          <option value="no">No</option>
+                        </select>
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Base Amount (SAR)</span>
+                        <input
+                          type="number"
+                          value={paymentSettingsDraft.baseAmountSar || 100}
+                          onChange={(e) => setPaymentSettingsDraft((curr) => ({ ...curr, baseAmountSar: Number(e.target.value) || 100 }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                      <label className="text-[11px] sm:col-span-2">
+                        <span className="mb-1 block font-bold text-slate-600">Note</span>
+                        <input
+                          value={paymentSettingsDraft.note || ""}
+                          onChange={(e) => setPaymentSettingsDraft((curr) => ({ ...curr, note: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-2xl border border-[#e2e8f0] bg-white p-3">
+                  <p className="text-[12px] font-bold text-[#082555]">Analysis Banner (Before Result Card)</p>
+                  {!canManageRuntimeSettings ? (
+                    <p className="mt-2 text-[11px] text-amber-700">No permission: approvePayments</p>
+                  ) : (
+                    <div className="mt-3 grid grid-cols-1 gap-2">
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Enabled</span>
+                        <select
+                          value={analysisTopAdDraft.enabled ? "yes" : "no"}
+                          onChange={(e) => setAnalysisTopAdDraft((curr) => ({ ...curr, enabled: e.target.value === "yes" }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        >
+                          <option value="yes">Yes</option>
+                          <option value="no">No</option>
+                        </select>
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Banner Title</span>
+                        <input
+                          value={analysisTopAdDraft.title || ""}
+                          onChange={(e) => setAnalysisTopAdDraft((curr) => ({ ...curr, title: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Image URL</span>
+                        <input
+                          value={analysisTopAdDraft.imageUrl || ""}
+                          onChange={(e) => setAnalysisTopAdDraft((curr) => ({ ...curr, imageUrl: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Target URL</span>
+                        <input
+                          value={analysisTopAdDraft.targetUrl || ""}
+                          onChange={(e) => setAnalysisTopAdDraft((curr) => ({ ...curr, targetUrl: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-2xl border border-[#e2e8f0] bg-white p-3">
+                  <p className="text-[12px] font-bold text-[#082555]">Analysis Banner (After Result Card)</p>
+                  {!canManageRuntimeSettings ? (
+                    <p className="mt-2 text-[11px] text-amber-700">No permission: approvePayments</p>
+                  ) : (
+                    <div className="mt-3 grid grid-cols-1 gap-2">
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Enabled</span>
+                        <select
+                          value={analysisBottomAdDraft.enabled ? "yes" : "no"}
+                          onChange={(e) => setAnalysisBottomAdDraft((curr) => ({ ...curr, enabled: e.target.value === "yes" }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        >
+                          <option value="yes">Yes</option>
+                          <option value="no">No</option>
+                        </select>
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Banner Title</span>
+                        <input
+                          value={analysisBottomAdDraft.title || ""}
+                          onChange={(e) => setAnalysisBottomAdDraft((curr) => ({ ...curr, title: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Image URL</span>
+                        <input
+                          value={analysisBottomAdDraft.imageUrl || ""}
+                          onChange={(e) => setAnalysisBottomAdDraft((curr) => ({ ...curr, imageUrl: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Target URL</span>
+                        <input
+                          value={analysisBottomAdDraft.targetUrl || ""}
+                          onChange={(e) => setAnalysisBottomAdDraft((curr) => ({ ...curr, targetUrl: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                    </div>
+                  )}
+
+                  {canManageRuntimeSettings && (
+                    <button
+                      type="button"
+                      disabled={savingSettings}
+                      onClick={async () => {
+                        setSavingSettings(true);
+                        try {
+                          await savePaymentSettings(adminProfile, paymentSettingsDraft);
+                          await saveAdBanner(adminProfile, analysisTopAdDraft, AD_SLOT_IDS.analysisPreResult);
+                          await saveAdBanner(adminProfile, analysisBottomAdDraft, AD_SLOT_IDS.analysisPostResult);
+                          onToast?.("Settings updated", "success");
+                        } catch (error) {
+                          onToast?.(error.message || "Failed to save settings", "warning");
+                        } finally {
+                          setSavingSettings(false);
+                        }
+                      }}
+                      className="mt-3 rounded-xl bg-[#082555] px-3 py-2 text-[12px] font-bold text-white disabled:opacity-60"
+                    >
+                      {savingSettings ? "..." : "Save payment + ad settings"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+
+      {receiptPreview && (
+        <Modal title={`Receipt Preview • ${receiptPreview.title || ""}`} onClose={() => setReceiptPreview(null)}>
+          <div className="space-y-3">
+            {receiptPreview.isPdf ? (
+              <iframe
+                src={receiptPreview.url}
+                title="receipt-preview"
+                className="h-[60vh] w-full rounded-xl border border-[#e2e8f0] bg-white"
+              />
+            ) : (
+              <img src={receiptPreview.url} alt="receipt" className="w-full rounded-xl border border-[#e2e8f0] bg-white" />
+            )}
+            <a href={receiptPreview.url} target="_blank" rel="noreferrer" className="block text-center text-[12px] font-bold text-[#1d4ed8] underline">
+              Open in new tab
+            </a>
+          </div>
+        </Modal>
+      )}
+
+      {confirmDeleteUser && (
+        <Modal title="Confirm Delete" onClose={() => setConfirmDeleteUser(null)}>
+          <div className="space-y-3 text-[12px]">
+            <p className="font-bold text-slate-700">Delete user {confirmDeleteUser.name} permanently?</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="flex-1 rounded-xl bg-rose-600 px-3 py-2 font-bold text-white"
+                onClick={async () => {
+                  try {
+                    await deleteUserByAdmin(adminProfile, confirmDeleteUser.id);
+                    onToast?.("User deleted", "success");
+                    setConfirmDeleteUser(null);
+                    loadUsers(true);
+                  } catch (error) {
+                    onToast?.(error.message, "warning");
+                  }
+                }}
+              >
+                Delete
+              </button>
+              <button type="button" className="flex-1 rounded-xl border border-slate-300 px-3 py-2 font-bold" onClick={() => setConfirmDeleteUser(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {confirmRemoveAdmin && (
+        <Modal title="Remove Admin" onClose={() => setConfirmRemoveAdmin(null)}>
+          <div className="space-y-3 text-[12px]">
+            <p className="font-bold text-slate-700">Remove admin access from {confirmRemoveAdmin.email}?</p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="flex-1 rounded-xl bg-rose-600 px-3 py-2 font-bold text-white"
+                onClick={async () => {
+                  try {
+                    await removeAdmin(adminProfile, confirmRemoveAdmin.id);
+                    onToast?.("Admin removed", "success");
+                    setConfirmRemoveAdmin(null);
+                    loadAdmins();
+                  } catch (error) {
+                    onToast?.(error.message, "warning");
+                  }
+                }}
+              >
+                Remove
+              </button>
+              <button type="button" className="flex-1 rounded-xl border border-slate-300 px-3 py-2 font-bold" onClick={() => setConfirmRemoveAdmin(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {pendingRejectRequest && (
+        <Modal title="Reject Payment Request" onClose={() => setPendingRejectRequest(null)}>
+          <div className="space-y-3 text-[12px]">
+            <p className="font-bold text-slate-700">Provide rejection reason for {pendingRejectRequest.userName || pendingRejectRequest.email}.</p>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="min-h-[96px] w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:border-rose-400"
+              placeholder="Reason"
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="flex-1 rounded-xl bg-rose-600 px-3 py-2 font-bold text-white"
+                onClick={async () => {
+                  try {
+                    await rejectPaymentRequest(adminProfile, pendingRejectRequest.id, rejectReason.trim() || "No reason provided");
+                    onToast?.("Payment rejected", "success");
+                    setPendingRejectRequest(null);
+                    setRejectReason("");
+                    loadPayments();
+                    loadStats();
+                  } catch (error) {
+                    onToast?.(error.message, "warning");
+                  }
+                }}
+              >
+                Reject
+              </button>
+              <button
+                type="button"
+                className="flex-1 rounded-xl border border-slate-300 px-3 py-2 font-bold"
+                onClick={() => {
+                  setPendingRejectRequest(null);
+                  setRejectReason("");
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}

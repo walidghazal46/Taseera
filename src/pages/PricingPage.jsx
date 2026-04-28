@@ -24,6 +24,9 @@ export default function PricingPage(props) {
         subtitleAr="اختر الدولة لتحديد أسعار ومعايير التسعير المناسبة"
         subtitleEn="Choose a country to apply the correct pricing standards"
         onSelect={handleSelectCountry}
+        sessionMeta={props.sessionMeta}
+        authMode={props.authMode}
+        section="pricing"
       />
     );
   }

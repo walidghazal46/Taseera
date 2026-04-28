@@ -34,6 +34,7 @@ export const sampleSettings = {
   userEmail: "walidghazal46@gmail.com",
   appName: "Taseera",
   appVersion: "2",
+  settingsPanelSection: "account",
 };
 
 export const resourcesDatabase = [

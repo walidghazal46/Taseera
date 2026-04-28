@@ -242,7 +242,7 @@ function CompanyDetailView({ company, onBack, copy }) {
       </div>
 
       {/* Info grid */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-4 shadow-sm">
           <p className="text-[10px] font-bold text-[#9A8A6A] mb-2 uppercase tracking-wider">{copy.headquarters}</p>
           <p className="text-[13px] font-bold text-[#082555]" style={{ fontFamily: AR }}>
@@ -441,7 +441,7 @@ export default function CompaniesPanel({
                 />
               </div>
               {/* Stats */}
-              <div className="flex gap-2.5">
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
                 <StatBadge label={copy.totalCompanies} value={summary.total} />
                 <StatBadge label={copy.contractors} value={summary.contractors} />
                 <StatBadge label={copy.consultants} value={summary.consultants} />
@@ -597,7 +597,7 @@ export default function CompaniesPanel({
               <FormField label={copy.specialization} value={companyForm.specialization}
                 onChange={(e) => setCompanyForm((c) => ({ ...c, specialization: e.target.value }))}
                 placeholder={copy.enterSpecialization} />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="block">
                   <span className="mb-2 block text-[12px] font-bold text-[#082555] mr-1" style={{ fontFamily: AR }}>
                     {copy.type}
@@ -642,7 +642,7 @@ export default function CompaniesPanel({
               <FormField label={copy.projectName} value={projectForm.name}
                 onChange={(e) => setProjectForm((c) => ({ ...c, name: e.target.value }))}
                 placeholder={copy.enterProjectName} />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <FormField label={copy.location} value={projectForm.location}
                   onChange={(e) => setProjectForm((c) => ({ ...c, location: e.target.value }))}
                   placeholder={settings?.language === "en" ? "Riyadh" : "الرياض"} />

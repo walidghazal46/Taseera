@@ -418,7 +418,7 @@ export default function SuppliersPanel({
               </div>
             ))}
 
-            <div className="grid grid-cols-3 gap-3 pt-2">
+            <div className="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-3">
               <button type="button" onClick={() => onContactSupplier?.(selectedSupplier, "phone")}
                 className="flex min-h-[72px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-[#E2D8C4] bg-white text-[11px] font-bold text-[#082555] transition hover:border-[#C9A84C] hover:bg-[#F5EDD8]"
                 style={{ fontFamily: AR }}>

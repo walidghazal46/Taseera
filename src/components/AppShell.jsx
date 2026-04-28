@@ -50,10 +50,10 @@ export default function AppShell({
     >
       {/* Top Brand Bar */}
       <div
-        className="shrink-0 flex items-center justify-between px-5 py-4 bg-[#082555] shadow-xl relative z-20"
+        className="relative z-20 flex shrink-0 items-center justify-between bg-[#082555] px-3 py-3 shadow-xl sm:px-5 sm:py-4"
         style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}
       >
-        <div className="flex items-center gap-3.5">
+        <div className="flex min-w-0 items-center gap-2.5 sm:gap-3.5">
           <button
             type="button"
             onClick={onBack}
@@ -70,7 +70,7 @@ export default function AppShell({
             <img
               src={taseeraLogo}
               alt="Taseera"
-              className="h-10 w-auto max-w-[160px] rounded-2xl object-contain"
+              className="h-9 w-auto max-w-[140px] rounded-2xl object-contain sm:h-10 sm:max-w-[160px]"
             />
           </div>
           <div className="hidden min-[430px]:block">
@@ -84,7 +84,7 @@ export default function AppShell({
         </div>
 
         {/* Active page indicator */}
-        <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
+        <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 min-[380px]:flex">
           <span className="h-2 w-2 rounded-full bg-[#C9A84C] animate-pulse" />
           <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest" style={{ fontFamily: AR }}>
             {localizedItems.find(i => i.id === activePage)?.label}
@@ -111,47 +111,46 @@ export default function AppShell({
           boxShadow: "0 -12px 40px rgba(0,0,0,0.3)",
         }}
       >
-        <div className="mx-auto flex w-full max-w-2xl items-stretch px-2">
+        <div className="mx-auto flex w-full max-w-2xl items-stretch px-1 sm:px-2">
           {localizedItems.map((item) => {
             const isActive = item.id === activePage;
             const Icon = item.icon;
-            const labelSize = isActive ? "11px" : "10px";
-            const iconSize = isActive ? 26.4 : 24;
+            const iconSize = isActive ? 22 : 20;
 
             return (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => onNavigate(item.id)}
-                className={`relative flex flex-1 flex-col items-center justify-center gap-2 px-1 pt-3 pb-1.5 transition-all duration-300 ${
+                className={`relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-0.5 pt-2 pb-1 transition-all duration-300 sm:gap-2 sm:px-1 sm:pt-3 sm:pb-1.5 ${
                   isActive ? "" : "opacity-40 hover:opacity-80"
                 }`}
               >
                 {/* Active indicator */}
                 {isActive && (
-                  <span className="absolute top-0 left-1/2 h-1 w-12 -translate-x-1/2 rounded-b-full bg-[#C9A84C] shadow-[0_4px_12px_rgba(201,168,76,0.6)]" />
+                  <span className="absolute top-0 left-1/2 h-1 w-8 -translate-x-1/2 rounded-b-full bg-[#C9A84C] shadow-[0_4px_12px_rgba(201,168,76,0.6)] sm:w-12" />
                 )}
 
                 {/* Icon container */}
                 <span
-                  className={`flex h-12 w-12 items-center justify-center rounded-2xl transition-all duration-300 ${
+                  className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-300 sm:h-12 sm:w-12 sm:rounded-2xl ${
                     isActive
                       ? "bg-[#C9A84C] text-[#082555] shadow-[0_8px_20px_rgba(201,168,76,0.4)]"
                       : "text-white/60"
                   }`}
-                  style={isActive ? { width: "52.8px", height: "52.8px" } : undefined}
+                  style={isActive ? { width: "44px", height: "44px" } : undefined}
                 >
                   <Icon style={{ width: `${iconSize}px`, height: `${iconSize}px` }} />
                 </span>
 
                 {/* Label */}
                 <span
-                  className={`text-center font-bold leading-none uppercase tracking-wider ${
+                  className={`text-center font-bold leading-none uppercase tracking-wide ${
                     isActive
                       ? "text-[#C9A84C]"
                       : "text-white/40"
                   }`}
-                  style={{ fontFamily: AR, fontSize: labelSize }}
+                  style={{ fontFamily: AR, fontSize: isActive ? "10px" : "9px" }}
                 >
                   {item.label}
                 </span>

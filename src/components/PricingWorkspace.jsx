@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from 'xlsx';
 import { SaveIcon, TagIcon, BuildingsIcon, PricingIcon, ChevronLeftIcon, ArrowRightIcon, ShareIcon, PrinterIcon, FileIcon } from "./icons";
-import { CSI_DIVISIONS, COUNTRIES, getDefaultResources, AREA_PRICING_BASE, CURRENCY_INFO } from "../data/csiData";
+import { CSI_DIVISIONS, COUNTRIES, getDefaultResources, AREA_PRICING_BASE } from "../data/csiData";
 import usePersistentState from "../hooks/usePersistentState";
+import useAdminSession from "../hooks/useAdminSession";
+import { AD_SLOT_IDS, incrementUsageCounter, listenAdBanner } from "../services/subscriptionApi";
+import { SUPER_ADMIN_EMAIL } from "../constants/admin";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
 const MONO = "'IBM Plex Mono',monospace";
@@ -112,7 +115,7 @@ function CountryModal({ onConfirm, current }) {
 }
 
 // --- Mode Selection Screen ---
-function ModeSelection({ onSelect }) {
+function ModeSelection({ onSelect, areaLocked = false, areaMessage = "", onOpenSubscription }) {
   return (
     <div className="flex flex-col gap-3 py-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="mb-1 px-2">
@@ -141,7 +144,8 @@ function ModeSelection({ onSelect }) {
         </div>
       </button>
 
-      <button onClick={() => onSelect("area")}
+      <button onClick={() => !areaLocked && onSelect("area")}
+        disabled={areaLocked}
         className="group relative overflow-hidden rounded-3xl bg-[#d4a843] p-6 text-right transition-all hover:shadow-2xl hover:shadow-[#d4a843]/20 active:scale-[0.98]">
         <div className="absolute top-0 left-0 w-2 h-full bg-[#0d2545]/20" />
         <div className="flex items-start gap-5">
@@ -157,6 +161,19 @@ function ModeSelection({ onSelect }) {
           <ChevronLeftIcon className="h-6 w-6 text-[#0d2545]/30 group-hover:text-[#0d2545] self-center transition-colors" />
         </div>
       </button>
+
+      {areaLocked && (
+        <div className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-4">
+          <p className="text-[12px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>{areaMessage}</p>
+          <button
+            type="button"
+            onClick={onOpenSubscription}
+            className="mt-3 w-full rounded-xl bg-[#082555] py-2.5 text-[12px] font-bold text-[#E8C97A]"
+          >
+            الاشتراك الآن
+          </button>
+        </div>
+      )}
 
       <div className="mt-4 rounded-2xl bg-white/5 border-2 border-dashed border-white/10 p-5 text-center">
          <p className="text-[12px] font-bold text-gray-500 leading-relaxed" style={{ fontFamily: AR }}>
@@ -360,7 +377,7 @@ function BuildingEstimatorGraphic({ country, area, floors, finish, type, scope }
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             {[
               { label: "الدور", value: `${fmtNum(numericArea)} م²` },
               { label: "الأدوار", value: fmtNum(numericFloors) },
@@ -395,7 +412,7 @@ function BuildingEstimatorGraphic({ country, area, floors, finish, type, scope }
             </div>
             <div className="relative w-[150px] rounded-t-[28px] border border-white/10 bg-[linear-gradient(180deg,#244b81_0%,#0c2241_100%)] px-4 pt-5 pb-4 shadow-[0_18px_50px_rgba(2,12,27,0.45)]">
               <div className="absolute inset-x-4 top-3 h-[1px] bg-white/10" />
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {windows.map((windowIndex) => (
                   <div
                     key={windowIndex}
@@ -443,7 +460,7 @@ function CostDistributionGraphic({ sections, total, currency }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {sections.map((section) => (
           <div key={section.id} className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] p-3">
             <div className="mb-2 flex items-center justify-between gap-3">
@@ -491,7 +508,7 @@ function SectionDetailGraphic({ draft, totalArea, overallShare, currency }) {
         </div>
       </div>
 
-      <div className="mb-5 grid grid-cols-3 gap-3">
+      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {[
           { label: "إجمالي التخصص", value: `${fmtNum(draft.sectionTotal)} ${currency}` },
           { label: "متوسط / م²", value: `${fmtNum(draft.unitPrice)} ${currency}` },
@@ -561,7 +578,7 @@ function HistoryInsightGraphic({ savedAnalyses }) {
           </div>
         </div>
 
-        <div className="mb-4 grid grid-cols-3 gap-3">
+        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
           {[
             { label: "الكل", value: savedAnalyses.length, color: "#E8C97A" },
             { label: "مباني", value: areaCount, color: "#6FCF97" },
@@ -656,7 +673,7 @@ function AreaScenarioCompare({ scenarios, currentScenario, currency, onAddCurren
                 </div>
               </div>
 
-              <div className="mb-3 grid grid-cols-2 gap-3">
+              <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-white/60 bg-white px-3 py-3">
                   <div className="text-[9px] font-bold text-[#9A8A6A] uppercase">Total</div>
                   <div className="mt-1 text-[16px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>
@@ -683,7 +700,7 @@ function AreaScenarioCompare({ scenarios, currentScenario, currency, onAddCurren
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="grid grid-cols-1 gap-2 text-center sm:grid-cols-3">
                 {[
                   { label: "المسطح", value: `${fmtNum(scenario.totalArea)} م²` },
                   { label: "الأدوار", value: fmtNum(scenario.floors) },
@@ -722,7 +739,7 @@ function AreaPricingForm({ country, onCalculate }) {
       />
 
       <div className="rounded-3xl bg-white border-2 border-[#E2D8C4] p-6 shadow-sm">
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <label className="text-[12px] font-bold text-[#082555] pr-1" style={{ fontFamily: AR }}>مساحة الدور (م²)</label>
             <input type="number" value={area} onChange={(e) => setArea(e.target.value)}
@@ -739,7 +756,7 @@ function AreaPricingForm({ country, onCalculate }) {
 
         <div className="space-y-3 mb-6">
           <label className="text-[12px] font-bold text-[#082555] pr-1" style={{ fontFamily: AR }}>نوع المبنى</label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {BUILDING_TYPES.map(t => (
               <button key={t.id} onClick={() => setType(t.id)}
                 className={`flex items-center gap-3 p-3 rounded-2xl border-2 transition-all ${type === t.id ? "border-[#C9A84C] bg-[#F5EDD8] font-bold" : "border-[#E2D8C4] bg-white text-[#9A8A6A]"}`}>
@@ -753,36 +770,35 @@ function AreaPricingForm({ country, onCalculate }) {
         <div className="space-y-3 mb-6">
           <label className="text-[12px] font-bold text-[#082555] pr-1" style={{ fontFamily: AR }}>نطاق الأعمال</label>
           <div className="flex flex-col gap-2">
-            {SCOPES.map(s => (
+            {SCOPES.map((s) => (
               <button key={s.id} onClick={() => setScope(s.id)}
-                className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${scope === s.id ? "border-[#C9A84C] bg-[#F5EDD8] font-bold" : "border-[#E2D8C4] bg-white text-[#9A8A6A]"}`}>
-                <div className={`h-10 w-10 rounded-xl flex items-center justify-center text-xl ${scope === s.id ? "bg-[#C9A84C] text-[#082555]" : "bg-[#F7F3EC]"}`}>
-                  {s.icon}
+                className={`flex items-center gap-4 rounded-2xl border-2 p-4 text-right transition-all ${scope === s.id ? "border-[#C9A84C] bg-[#F5EDD8] font-bold" : "border-[#E2D8C4] bg-white text-[#9A8A6A]"}`}>
+                <span className="text-2xl">{s.icon}</span>
+                <div className="flex-1">
+                  <div className="text-[14px] text-[#082555]" style={{ fontFamily: AR }}>{s.ar}</div>
+                  <div className="mt-0.5 text-[10px] text-[#9A8A6A]">{s.desc}</div>
                 </div>
-                <span className="text-[14px]" style={{ fontFamily: AR }}>{s.ar}</span>
-                <div className="flex-1 text-left">
-                   <div className={`h-5 w-5 rounded-full border-2 inline-flex items-center justify-center text-[10px] ${scope === s.id ? "border-[#C9A84C] bg-[#C9A84C] text-[#082555]" : "border-[#E2D8C4]"}`}>
-                     {scope === s.id && "✓"}
-                   </div>
+                <div className={`flex h-5 w-5 items-center justify-center rounded-full border-2 text-[10px] ${scope === s.id ? "border-[#C9A84C] bg-[#C9A84C] text-[#082555]" : "border-[#E2D8C4]"}`}>
+                  {scope === s.id ? "✓" : ""}
                 </div>
               </button>
             ))}
           </div>
         </div>
 
-        <div className="space-y-3 mb-8">
+        <div className="space-y-3 mb-6">
           <label className="text-[12px] font-bold text-[#082555] pr-1" style={{ fontFamily: AR }}>مستوى التشطيب</label>
           <div className="flex flex-col gap-2">
-            {FINISH_LEVELS.map(f => (
+            {FINISH_LEVELS.map((f) => (
               <button key={f.id} onClick={() => setFinish(f.id)}
-                className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${finish === f.id ? "border-[#C9A84C] bg-[#F5EDD8] font-bold" : "border-[#E2D8C4] bg-white text-[#9A8A6A]"}`}>
+                className={`flex items-center gap-4 rounded-2xl border-2 p-4 text-right transition-all ${finish === f.id ? "border-[#C9A84C] bg-[#F5EDD8] font-bold" : "border-[#E2D8C4] bg-white text-[#9A8A6A]"}`}>
                 <span className="text-2xl">{f.icon}</span>
-                <div className="text-right flex-1">
+                <div className="flex-1">
                   <div className="text-[14px] text-[#082555]" style={{ fontFamily: AR }}>{f.ar}</div>
-                  <div className="text-[10px] text-[#9A8A6A] mt-0.5">{f.desc}</div>
+                  <div className="mt-0.5 text-[10px] text-[#9A8A6A]">{f.desc}</div>
                 </div>
-                <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center text-[10px] ${finish === f.id ? "border-[#C9A84C] bg-[#C9A84C] text-[#082555]" : "border-[#E2D8C4]"}`}>
-                  {finish === f.id && "✓"}
+                <div className={`flex h-5 w-5 items-center justify-center rounded-full border-2 text-[10px] ${finish === f.id ? "border-[#C9A84C] bg-[#C9A84C] text-[#082555]" : "border-[#E2D8C4]"}`}>
+                  {finish === f.id ? "✓" : ""}
                 </div>
               </button>
             ))}
@@ -834,7 +850,7 @@ function AreaResultsView({ country, params, results, onBack, onExport, onSave, o
         </div>
         <div className="text-[14px] font-bold text-[#C9A84C]/80" style={{ fontFamily: AR }}>تكلفة تقديرية للمبنى بالكامل</div>
 
-        <div className="mt-8 pt-8 border-t border-white/10 grid grid-cols-2 gap-6">
+        <div className="mt-8 grid grid-cols-1 gap-4 border-t border-white/10 pt-8 sm:grid-cols-2 sm:gap-6">
            <div>
              <div className="text-[10px] text-[#9A8A6A] font-bold uppercase tracking-wider mb-1">Price Per m²</div>
              <div className="text-[20px] font-bold text-white" style={{ fontFamily: MONO }}>{fmtNum(results.unitPrice)} <span className="text-[12px] text-[#9A8A6A]">{c.currency}</span></div>
@@ -856,7 +872,7 @@ function AreaResultsView({ country, params, results, onBack, onExport, onSave, o
         <h3 className="text-[16px] font-bold text-[#082555] mb-6 flex items-center gap-2" style={{ fontFamily: AR }}>
           <div className="h-2 w-2 rounded-full bg-[#C9A84C]" /> ملخص المشروع
         </h3>
-        <div className="grid grid-cols-2 gap-y-5 gap-x-4">
+        <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
           {[
             { label: 'المساحة الكلية', val: `${params.area * params.floors} م²` },
             { label: 'عدد الأدوار', val: params.floors },
@@ -965,7 +981,7 @@ function AreaSectionDetailView({ country, params, draft, overallResults, onBack,
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { label: "إجمالي التخصص", value: `${fmtNum(draft.sectionTotal)} ${c.currency}` },
             { label: "سعر المتر", value: `${fmtNum(draft.unitPrice)} ${c.currency}` },
@@ -1006,7 +1022,7 @@ function AreaSectionDetailView({ country, params, draft, overallResults, onBack,
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div>
                   <div className="mb-2 text-[11px] font-bold text-[#9A8A6A]">الكمية التقريبية</div>
                   <input
@@ -1061,7 +1077,7 @@ function AreaSectionDetailView({ country, params, draft, overallResults, onBack,
 
 // --- Main Pricing Workspace Component ---
 
-export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings }) {
+export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings, sessionMeta, onOpenSubscription, onOpenAdSettings }) {
   // initialCountry comes from the CountryPicker on PricingPage; always override persisted value
   const [country, setCountry] = useState(initialCountry || "sa");
   const [mode, setMode] = useState("selection"); // selection, items, area, area-results
@@ -1083,6 +1099,15 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   const [selfPriceProfit, setSelfPriceProfit] = useState(15);
 
   const { msg: toastMsg, visible: toastVisible, show: showToast } = useToast();
+  const { profile: userProfile } = useAdminSession({
+    uid: sessionMeta?.uid,
+    email: settings?.userEmail,
+    displayName: settings?.userName,
+  });
+  const [guestItemOpenCount, setGuestItemOpenCount] = usePersistentState("taseera.v3.guestItemOpenCount", 0);
+  const [guestAreaTrialCount, setGuestAreaTrialCount] = usePersistentState("taseera.v3.guestAreaTrialCount", 0);
+  const [analysisTopAdBanner, setAnalysisTopAdBanner] = useState(null);
+  const [analysisBottomAdBanner, setAnalysisBottomAdBanner] = useState(null);
 
   // Analysis Parameters (Moved up for persistence and export)
   const [qty, setQty] = useState(1);
@@ -1090,6 +1115,29 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   const [profit, setProfit] = useState(15);
   const [factor, setFactor] = useState(1.03);
   const [analysisBaseline, setAnalysisBaseline] = useState(null);
+
+  useEffect(() => {
+    const unsubscribeTop = listenAdBanner((data) => setAnalysisTopAdBanner(data), AD_SLOT_IDS.analysisPreResult);
+    const unsubscribeBottom = listenAdBanner((data) => setAnalysisBottomAdBanner(data), AD_SLOT_IDS.analysisPostResult);
+    return () => {
+      unsubscribeTop?.();
+      unsubscribeBottom?.();
+    };
+  }, []);
+
+  const isGuest = authMode === "guest";
+  const isAdminUnlocked = !isGuest && (
+    userProfile?.canAccessAdmin === true ||
+    String(settings?.userEmail || "").toLowerCase() === SUPER_ADMIN_EMAIL
+  );
+  const isSubscribed = isAdminUnlocked || (!isGuest && userProfile?.isPaid === true);
+  const itemLimit = isSubscribed ? Number.POSITIVE_INFINITY : isGuest ? 2 : 4;
+  const areaLimit = isSubscribed ? Number.POSITIVE_INFINITY : isGuest ? 1 : 3;
+  const itemUsed = isGuest ? Number(guestItemOpenCount) || 0 : Number(userProfile?.itemAnalysisOpenCount) || 0;
+  const areaUsed = isGuest ? Number(guestAreaTrialCount) || 0 : Number(userProfile?.areaPricingTrialCount) || 0;
+  const itemLocked = !isSubscribed && itemUsed >= itemLimit;
+  const areaLocked = !isSubscribed && areaUsed >= areaLimit;
+  const itemRemaining = Number.isFinite(itemLimit) ? Math.max(0, itemLimit - itemUsed) : null;
 
   const buildAnalysisSnapshot = useCallback((itemValue, resourcesValue, paramsValue) => ({
     selectedItem: itemValue ? { ...itemValue } : null,
@@ -1505,7 +1553,69 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     }
   }, [mode, country, areaParams, areaResults, effectiveAreaResults, selectedItem, resources, qty, overhead, profit, factor, showToast]);
 
-  function handleSelfPrice(item, div) {
+  const openSubscriptionScreen = useCallback(() => {
+    onOpenSubscription?.();
+  }, [onOpenSubscription]);
+
+  const itemLockMessage = isGuest
+    ? "لقد وصلت للحد المجاني للبنود. يرجى تسجيل الدخول والاشتراك لفتح جميع البنود."
+    : "لقد وصلت للحد المجاني للبنود. اشترك الآن للوصول الكامل غير المحدود.";
+  const areaLockMessage = isGuest
+    ? "لقد استخدمت التجربة المجانية لتسعير مبني. يرجى تسجيل الدخول والاشتراك لإكمال الاستخدام."
+    : "لقد وصلت لحد التجربة المجانية لتسعير مبني. اشترك الآن للوصول الكامل.";
+
+  const consumeAccess = useCallback(async (scope) => {
+    if (isSubscribed) return true;
+
+    if (scope === "items") {
+      if (itemLocked) {
+        showToast(itemLockMessage);
+        return false;
+      }
+      if (isGuest) {
+        setGuestItemOpenCount((current) => (Number(current) || 0) + 1);
+        return true;
+      }
+      if (sessionMeta?.uid) {
+        try {
+          await incrementUsageCounter(sessionMeta.uid, "itemAnalysisOpenCount");
+        } catch (_error) {
+          showToast("تعذر تحديث العداد. حاول مرة أخرى.");
+          return false;
+        }
+      }
+      return true;
+    }
+
+    if (scope === "area") {
+      if (areaLocked) {
+        showToast(areaLockMessage);
+        return false;
+      }
+      if (isGuest) {
+        setGuestAreaTrialCount((current) => (Number(current) || 0) + 1);
+        return true;
+      }
+      if (sessionMeta?.uid) {
+        try {
+          await incrementUsageCounter(sessionMeta.uid, "areaPricingTrialCount");
+        } catch (_error) {
+          showToast("تعذر تحديث العداد. حاول مرة أخرى.");
+          return false;
+        }
+      }
+      return true;
+    }
+
+    return true;
+  }, [areaLockMessage, areaLocked, isGuest, isSubscribed, itemLockMessage, itemLocked, sessionMeta?.uid, setGuestAreaTrialCount, setGuestItemOpenCount, showToast]);
+
+  async function handleSelfPrice(item, div) {
+    const allowed = await consumeAccess("items");
+    if (!allowed) {
+      openSubscriptionScreen();
+      return;
+    }
     const full = {
       ...item,
       divAr: div.ar,
@@ -1522,7 +1632,12 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     setMode("self-price");
   }
 
-  function handleSelectItem(item, div) {
+  async function handleSelectItem(item, div) {
+    const allowed = await consumeAccess("items");
+    if (!allowed) {
+      openSubscriptionScreen();
+      return;
+    }
     const full = {
       ...item,
       divAr: div.ar,
@@ -1574,7 +1689,15 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     setAddModalType(null);
   }
 
-  function handleModeChange(nextMode) {
+  async function handleModeChange(nextMode) {
+    if (nextMode === "area") {
+      const allowed = await consumeAccess("area");
+      if (!allowed) {
+        openSubscriptionScreen();
+        return;
+      }
+    }
+
     if (mode === "items" && tab === "analysis") {
       const canLeave = confirmDiscardAnalysisChanges(() => setMode(nextMode));
       if (!canLeave) return;
@@ -1675,7 +1798,14 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
 
         {/* --- MAIN CONTENT SWITCHER --- */}
 
-        {mode === "selection" && <ModeSelection onSelect={setMode} />}
+        {mode === "selection" && (
+          <ModeSelection
+            onSelect={handleModeChange}
+            areaLocked={areaLocked}
+            areaMessage={areaLockMessage}
+            onOpenSubscription={openSubscriptionScreen}
+          />
+        )}
 
         {mode === "items" && (
           <div className="animate-in fade-in slide-in-from-left-4 duration-500">
@@ -1688,7 +1818,16 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 </button>
               ))}
             </div>
-            {tab === "csi" && <CSIScreen country={country} onSelectItem={handleSelectItem} onSelfPrice={handleSelfPrice} />}
+            {tab === "csi" && (
+              <CSIScreen
+                country={country}
+                onSelectItem={handleSelectItem}
+                onSelfPrice={handleSelfPrice}
+                itemLocked={itemLocked}
+                itemRemaining={itemRemaining}
+                onOpenSubscription={openSubscriptionScreen}
+              />
+            )}
             {tab === "history" && (
               <HistoryScreen
                 savedAnalyses={savedAnalyses}
@@ -1712,10 +1851,23 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 profit={profit} setProfit={setProfit}
                 factor={factor} setFactor={setFactor}
                 settings={settings}
+                topAdBanner={analysisTopAdBanner}
+                bottomAdBanner={analysisBottomAdBanner}
+                canManageAds={isAdminUnlocked}
+                onManageAds={onOpenAdSettings}
 
               />
             )}
-            {tab === "market" && <MarketScreen country={country} onSelectItem={handleSelectItem} onSelfPrice={handleSelfPrice} />}
+            {tab === "market" && (
+              <MarketScreen
+                country={country}
+                onSelectItem={handleSelectItem}
+                onSelfPrice={handleSelfPrice}
+                itemLocked={itemLocked}
+                itemRemaining={itemRemaining}
+                onOpenSubscription={openSubscriptionScreen}
+              />
+            )}
           </div>
         )}
 
@@ -1915,7 +2067,7 @@ function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhea
       ))}
 
       {/* Overhead & Profit */}
-      <div className="mb-4 grid grid-cols-2 gap-3">
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-xl bg-white border border-[#E2D8C4] p-3 text-center">
           <p className="mb-1.5 text-[11px] text-[#9A8A6A]">المصاريف العامة %</p>
           <input type="number" min="0" max="50"
@@ -2090,7 +2242,7 @@ function HistoryScreen({ savedAnalyses, onView }) {
   );
 }
 
-function CSIScreen({ country, onSelectItem, onSelfPrice }) {
+function CSIScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, itemRemaining = null, onOpenSubscription }) {
   const [search, setSearch] = useState("");
   const [openDiv, setOpenDiv] = useState(null);
   const c = COUNTRIES[country] || COUNTRIES.sa;
@@ -2107,6 +2259,25 @@ function CSIScreen({ country, onSelectItem, onSelfPrice }) {
   const isSearching = search.trim().length > 0;
   return (
     <div className="space-y-4">
+      {!itemLocked && Number.isFinite(itemRemaining) && (
+        <div className="rounded-2xl border border-[#d4a843]/30 bg-[#fff8e7] px-4 py-3 text-[12px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+          المتبقي لك في الخطة المجانية: {itemRemaining} بند
+        </div>
+      )}
+      {itemLocked && (
+        <div className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-4">
+          <p className="text-[12px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+            لقد وصلت للحد المجاني للبنود. يرجى تسجيل الدخول والاشتراك للوصول الكامل.
+          </p>
+          <button
+            type="button"
+            onClick={onOpenSubscription}
+            className="mt-3 w-full rounded-xl bg-[#082555] py-2.5 text-[12px] font-bold text-[#E8C97A]"
+          >
+            فتح صفحة الاشتراك
+          </button>
+        </div>
+      )}
       <div className="rounded-3xl bg-white border-2 border-[#E2D8C4] p-5 shadow-sm">
         <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
           placeholder="🔍  ابحث عن بند أو وصف..."
@@ -2143,19 +2314,21 @@ function CSIScreen({ country, onSelectItem, onSelfPrice }) {
               {isOpen && (
                 <div className="border-t-2 border-[#E2D8C4] bg-[#FAFAFA]">
                   {div.items.map((item) => (
-                    <div key={item.num} className="flex min-h-[64px] items-center gap-4 border-b border-[#E2D8C4] px-5 py-3 last:border-b-0 hover:bg-white transition-colors">
-                      <span className="text-[11px] font-bold text-[#C9A84C] min-w-[70px]" style={{ fontFamily: MONO }}>{item.num}</span>
-                      <span className="flex-1 text-[14px] font-bold text-[#082555]" style={{ fontFamily: AR }}>{item.ar}</span>
+                    <div key={item.num} className="flex min-h-[64px] flex-wrap items-start gap-2 border-b border-[#E2D8C4] px-3 py-3 last:border-b-0 transition-colors hover:bg-white sm:items-center sm:gap-4 sm:px-5">
+                      <span className="min-w-[58px] text-[11px] font-bold text-[#C9A84C]" style={{ fontFamily: MONO }}>{item.num}</span>
+                      <span className="w-full flex-1 text-[14px] font-bold text-[#082555] sm:w-auto" style={{ fontFamily: AR }}>{item.ar}</span>
                       <span className="rounded-lg bg-[#F7F3EC] px-2.5 py-1 text-[10px] font-bold text-[#9A8A6A]">{item.unit}</span>
                       <button type="button" onClick={() => onSelfPrice(item, div)}
-                        className="min-h-[40px] rounded-xl border-2 border-[#082555] bg-white px-4 py-1 text-[12px] font-bold text-[#082555] transition hover:bg-[#F5EDD8] active:scale-[0.95]"
+                        disabled={itemLocked}
+                        className="min-h-[40px] flex-1 rounded-xl border-2 border-[#082555] bg-white px-3 py-1 text-[12px] font-bold text-[#082555] transition hover:bg-[#F5EDD8] active:scale-[0.95] sm:flex-none sm:px-4"
                         style={{ fontFamily: AR }}>
-                        💡 سعر بنفسك
+                        {itemLocked ? "🔒 مقفول" : "💡 سعر بنفسك"}
                       </button>
                       <button type="button" onClick={() => onSelectItem(item, div)}
-                        className="min-h-[40px] rounded-xl bg-[#C9A84C] px-5 py-1 text-[13px] font-bold text-[#082555] transition hover:bg-[#E8C97A] active:scale-[0.95]"
+                        disabled={itemLocked}
+                        className="min-h-[40px] flex-1 rounded-xl bg-[#C9A84C] px-4 py-1 text-[13px] font-bold text-[#082555] transition hover:bg-[#E8C97A] active:scale-[0.95] sm:flex-none sm:px-5"
                         style={{ fontFamily: AR }}>
-                        اختر
+                        {itemLocked ? "🔒 مقفول" : "اختر"}
                       </button>
                     </div>
                   ))}
@@ -2236,7 +2409,7 @@ function MarketComparisonCard({ myPrice, mkt, status, sym }) {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-5">
+      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border-2 border-[#F7F3EC] bg-[#FAFAFA] p-3 flex flex-col items-center">
              <div className="text-[10px] font-bold text-[#9A8A6A] uppercase tracking-widest mb-1">سعرك</div>
              <div className="flex items-baseline gap-1">
@@ -2292,11 +2465,67 @@ function MarketComparisonCard({ myPrice, mkt, status, sym }) {
   );
 }
 
+function AnalysisAdBanner({ adBanner, canManageAds = false, onManageAds }) {
+  const hasContent = adBanner?.enabled && adBanner?.imageUrl;
+  if (!hasContent && !canManageAds) return null;
+
+  const handleClick = () => {
+    if (!hasContent || !adBanner?.targetUrl) return;
+    window.open(adBanner.targetUrl, "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <div className="relative rounded-[24px] border border-[#E2D8C4] bg-white p-3 shadow-sm overflow-hidden">
+      {canManageAds ? (
+        <button
+          type="button"
+          onClick={onManageAds}
+          className="absolute right-3 top-3 z-10 rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm"
+          style={{ fontFamily: AR }}
+        >
+          تعديل الإعلان
+        </button>
+      ) : null}
+
+      {hasContent ? (
+        <>
+          <button
+            type="button"
+            onClick={handleClick}
+            className="block w-full overflow-hidden rounded-2xl bg-[#F7F3EC]"
+          >
+            <img
+              src={adBanner.imageUrl}
+              alt={adBanner.alt || adBanner.title || "ad-banner"}
+              loading="lazy"
+              className="w-full h-auto object-cover"
+            />
+          </button>
+          {adBanner.title ? (
+            <p className="mt-2 text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+              {adBanner.title}
+            </p>
+          ) : null}
+        </>
+      ) : (
+        <div className="rounded-2xl border-2 border-dashed border-[#d4a843]/40 bg-[#fff9ec] px-4 py-5 text-center">
+          <p className="text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+            لا توجد صورة إعلان مفعلة لهذا المكان
+          </p>
+          <p className="mt-1 text-[10px] text-[#9A8A6A]" style={{ fontFamily: AR }}>
+            اضغط تعديل الإعلان لإضافة الصورة والرابط
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AnalysisScreen({
   authMode,
   country, selectedItem, resources, setResources, onOpenAddModal, onSave, onRfq, onExport, toast,
   qty, setQty, overhead, setOverhead, profit, setProfit, factor, setFactor,
-  settings,
+  settings, topAdBanner, bottomAdBanner, canManageAds = false, onManageAds,
 }) {
   const c = COUNTRIES[country] || COUNTRIES.sa;
   const sym = c.currency;
@@ -2434,7 +2663,7 @@ function AnalysisScreen({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: "الكمية", val: qty, setter: setQty, unit: selectedItem.unit, step: "0.1" },
           { label: "مصاريف غير مباشرة", val: overhead, setter: setOverhead, unit: "%", step: "0.1" },
@@ -2556,7 +2785,7 @@ function AnalysisScreen({
       })}
 
       {calc && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {[
             { label: "إجمالي المواد", value: calc.matT, color: "#C9A84C" },
             { label: "إجمالي العمالة", value: calc.labT, color: "#E07B2A" },
@@ -2583,7 +2812,7 @@ function AnalysisScreen({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {[
               {
                 label: "مجموع البنود المباشرة", value: calc.direct, tone: "text-[#082555]",
@@ -2630,6 +2859,8 @@ function AnalysisScreen({
         sym={sym}
       />
 
+      <AnalysisAdBanner adBanner={topAdBanner} canManageAds={canManageAds} onManageAds={onManageAds} />
+
       {calc && (
         <div className="relative overflow-hidden rounded-[32px] bg-[#082555] p-6 shadow-2xl mt-5 border border-[#C9A84C]/20">
           <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(201,168,76,0.1)_0%,transparent_100%)] pointer-events-none" />
@@ -2647,7 +2878,7 @@ function AnalysisScreen({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-5 border-t border-white/10 pt-5">
+          <div className="grid grid-cols-1 gap-5 border-t border-white/10 pt-5 sm:grid-cols-2">
             <div className="space-y-1.5">
               <span className="text-[11px] font-bold text-[#9A8A6A] uppercase tracking-widest">Gross Proposal</span>
               <div className="text-[18px] font-bold text-white leading-none" style={{ fontFamily: MONO }}>{fmtNum(calc.finalTotal)} <span className="text-[11px] opacity-60 ml-1">{sym}</span></div>
@@ -2666,7 +2897,7 @@ function AnalysisScreen({
             </div>
           </div>
 
-          <div className="mt-5 flex gap-3">
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             <button onClick={onSave} className="flex-1 min-h-[56px] rounded-2xl bg-[#C9A84C] text-[#082555] font-bold text-[15px] flex items-center justify-center gap-2 shadow-lg transition hover:bg-[#E8C97A] active:scale-[0.98]">
               <SaveIcon className="h-5 w-5" /> حفظ / تصدير تحليل البند PDF
             </button>
@@ -2676,15 +2907,35 @@ function AnalysisScreen({
           </div>
         </div>
       )}
+
+      <AnalysisAdBanner adBanner={bottomAdBanner} canManageAds={canManageAds} onManageAds={onManageAds} />
     </div>
   );
 }
 
-function MarketScreen({ country, onSelectItem, onSelfPrice }) {
+function MarketScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, itemRemaining = null, onOpenSubscription }) {
   const c = country ? COUNTRIES[country] : COUNTRIES["sa"];
   const divs = CSI_DIVISIONS.filter((d) => c.rates[d.rateKey] > 0);
   return (
     <div className="space-y-4">
+      {itemLocked ? (
+        <div className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-4">
+          <p className="text-[12px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+            لقد وصلت للحد المجاني للبنود. اشترك الآن لفتح جميع بنود السوق.
+          </p>
+          <button
+            type="button"
+            onClick={onOpenSubscription}
+            className="mt-3 w-full rounded-xl bg-[#082555] py-2.5 text-[12px] font-bold text-[#E8C97A]"
+          >
+            فتح صفحة الاشتراك
+          </button>
+        </div>
+      ) : Number.isFinite(itemRemaining) ? (
+        <div className="rounded-2xl border border-[#d4a843]/30 bg-[#fff8e7] px-4 py-3 text-[12px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+          المتبقي لك في الخطة المجانية: {itemRemaining} بند
+        </div>
+      ) : null}
       <div className="flex items-center justify-between px-2">
         <span className="text-[15px] font-bold text-[#082555]" style={{ fontFamily: AR }}>أسعار السوق الحالية</span>
         <span className="text-[11px] font-bold text-[#9A8A6A] tracking-tighter uppercase" style={{ fontFamily: AR }}>SOURCE: TASEERA · {c.name}</span>
@@ -2696,8 +2947,17 @@ function MarketScreen({ country, onSelectItem, onSelfPrice }) {
           const up = changeVal >= 0;
           return (
             <div key={d.num}
-              className="w-full flex min-h-[80px] items-center gap-4 rounded-3xl border-2 border-[#E2D8C4] bg-white p-4 shadow-sm text-right transition-all hover:border-[#C9A84C] hover:shadow-md">
-              <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { if (d.items[0]) onSelectItem(d.items[0], d); }}>
+              className="w-full flex min-h-[80px] flex-col items-stretch gap-3 rounded-3xl border-2 border-[#E2D8C4] bg-white p-3 text-right shadow-sm transition-all hover:border-[#C9A84C] hover:shadow-md sm:flex-row sm:items-center sm:gap-4 sm:p-4">
+              <div
+                className={`flex-1 min-w-0 ${itemLocked ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
+                onClick={() => {
+                  if (itemLocked) {
+                    onOpenSubscription?.();
+                    return;
+                  }
+                  if (d.items[0]) onSelectItem(d.items[0], d);
+                }}
+              >
                 <div className="text-[11px] font-bold text-[#C9A84C] uppercase tracking-widest" style={{ fontFamily: MONO }}>{d.num} · {d.en}</div>
                 <div className="text-[16px] font-bold text-[#082555] mt-1.5 truncate" style={{ fontFamily: AR }}>{d.ar}</div>
                 <div className="text-[11px] font-bold text-[#9A8A6A] mt-1.5 flex items-center gap-2">
@@ -2706,21 +2966,23 @@ function MarketScreen({ country, onSelectItem, onSelfPrice }) {
                   <span className={up ? "text-emerald-600" : "text-amber-600"}>{up ? "↑" : "↓"} {Math.abs(changeVal)}% Trend</span>
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-2 shrink-0">
-                <div className="text-left">
+              <div className="flex shrink-0 flex-col gap-2 sm:items-end">
+                <div className="text-right sm:text-left">
                   <div className="text-[20px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{price.toLocaleString()}</div>
                   <div className="text-[10px] font-bold text-[#9A8A6A] uppercase tracking-wider">{c.currency}</div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button type="button"
                     onClick={() => { if (d.items[0]) onSelfPrice(d.items[0], d); }}
-                    className="rounded-xl border-2 border-[#082555] bg-white px-3 py-1.5 text-[11px] font-bold text-[#082555] hover:bg-[#F5EDD8] transition active:scale-[0.95]">
-                    💡 سعر بنفسك
+                    disabled={itemLocked}
+                    className="flex-1 rounded-xl border-2 border-[#082555] bg-white px-3 py-1.5 text-[11px] font-bold text-[#082555] transition hover:bg-[#F5EDD8] active:scale-[0.95] sm:flex-none">
+                    {itemLocked ? "🔒 مقفول" : "💡 سعر بنفسك"}
                   </button>
                   <button type="button"
                     onClick={() => { if (d.items[0]) onSelectItem(d.items[0], d); }}
-                    className="rounded-xl bg-[#C9A84C] px-3 py-1.5 text-[11px] font-bold text-[#082555] hover:bg-[#E8C97A] transition active:scale-[0.95]">
-                    اختر
+                    disabled={itemLocked}
+                    className="flex-1 rounded-xl bg-[#C9A84C] px-3 py-1.5 text-[11px] font-bold text-[#082555] transition hover:bg-[#E8C97A] active:scale-[0.95] sm:flex-none">
+                    {itemLocked ? "🔒 مقفول" : "اختر"}
                   </button>
                 </div>
               </div>
@@ -2751,7 +3013,7 @@ function AddResourceModal({ defaultType, onAdd, onClose }) {
           <span className="text-[18px] font-bold text-[#082555]" style={{ fontFamily: AR }}>إضافة مورد جديد للتحليل</span>
           <button type="button" onClick={onClose} className="h-10 w-10 flex items-center justify-center rounded-2xl bg-[#F7F3EC] text-[#9A8A6A] hover:bg-[#E2D8C4] transition-colors">✕</button>
         </div>
-        <div className="grid grid-cols-3 gap-3 mb-8">
+        <div className="grid grid-cols-1 gap-3 mb-8 sm:grid-cols-3">
           {["مواد", "عمالة", "معدات"].map((t) => (
             <button key={t} type="button" onClick={() => setType(t)}
               className={`min-h-[52px] rounded-2xl border-2 py-2 text-[14px] font-bold transition-all ${type === t ? "border-[#C9A84C] bg-[#F5EDD8] text-[#082555]" : "border-[#E2D8C4] bg-white text-[#9A8A6A]"}`}
@@ -2766,7 +3028,7 @@ function AddResourceModal({ defaultType, onAdd, onClose }) {
             className="min-h-[56px] w-full rounded-2xl border-2 border-[#E2D8C4] bg-[#F7F3EC] px-4 py-2 text-[15px] font-bold outline-none focus:border-[#C9A84C] transition-colors"
             style={{ fontFamily: AR }} />
         </div>
-        <div className="grid grid-cols-3 gap-4 mb-10">
+        <div className="grid grid-cols-1 gap-4 mb-10 sm:grid-cols-3">
           <div>
             <label className="block text-[12px] font-bold text-[#082555] mb-2 pr-1" style={{ fontFamily: AR }}>الكمية</label>
             <input type="number" value={qty} onChange={(e) => setQty(e.target.value)}

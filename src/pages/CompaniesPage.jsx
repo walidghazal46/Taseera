@@ -23,6 +23,9 @@ export default function CompaniesPage(props) {
         subtitleAr="ابدأ من الدولة المناسبة ثم تابع إلى دليل الشركات والمشاريع"
         subtitleEn="Start with your country then browse companies and projects"
         onSelect={handleSelectCountry}
+        sessionMeta={props.sessionMeta}
+        authMode={props.authMode}
+        section="companies"
       />
     );
   }
