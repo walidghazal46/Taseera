@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "732996943611-pl4qs7f6lhn4hu1e1laco6avd7o5nmme.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.taseera.app",
+            "certificate_hash": "07fd6251e4445590d05ced50afe6a38d5ac94ec2"
+          }
+        },
+        {
           "client_id": "732996943611-svsnsbthhkica23honfqra3mr719gmkp.apps.googleusercontent.com",
           "client_type": 3
         }

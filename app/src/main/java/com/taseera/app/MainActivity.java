@@ -276,8 +276,8 @@ public class MainActivity extends AppCompatActivity {
                     authenticateWithFirebase(account.getIdToken(), account.getDisplayName(), account.getEmail());
                 }
             } catch (ApiException e) {
-                Log.w(TAG, "Google sign in failed", e);
-                emitGoogleSignInError("Google sign in failed");
+                Log.w(TAG, "Google sign in failed, code: " + e.getStatusCode(), e);
+                emitGoogleSignInError("Google sign in failed (Status: " + e.getStatusCode() + ")");
             }
         } else if (requestCode == REQUEST_SAVE_FILE && resultCode == RESULT_OK && data != null) {
             Uri uri = data.getData();
