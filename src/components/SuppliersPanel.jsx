@@ -117,13 +117,21 @@ function FilterSelect({ label, value, options, onChange, ariaLabel }) {
   );
 }
 
-function InlineAdBanner({ adBanner, canManageAds = false, onToggleVisibility, onRemove }) {
+function InlineAdBanner({ adBanner, canManageAds = false, onEdit, onToggleVisibility, onRemove }) {
   const hasContent = adBanner?.enabled && adBanner?.imageUrl;
 
   return (
     <div className="relative rounded-2xl border-2 border-[#E2D8C4] bg-white p-2.5 shadow-sm overflow-hidden">
       {canManageAds ? (
         <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onEdit?.()}
+            className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm"
+            style={{ fontFamily: AR }}
+          >
+            تعديل
+          </button>
           <button
             type="button"
             onClick={() => onToggleVisibility?.(true)}
@@ -317,6 +325,36 @@ export default function SuppliersPanel({
     }
   }, [adminProfile, canManageAds, suppliersAdBanner]);
 
+  const handleEditAd = useCallback(async () => {
+    if (!canManageAds) return;
+
+    const current = { ...(suppliersAdBanner || DEFAULT_AD_BANNER) };
+    const title = window.prompt("عنوان الإعلان", current.title || "");
+    if (title === null) return;
+    const imageUrl = window.prompt("رابط صورة الإعلان", current.imageUrl || "");
+    if (imageUrl === null) return;
+    const targetUrl = window.prompt("رابط التحويل عند الضغط", current.targetUrl || "");
+    if (targetUrl === null) return;
+    const alt = window.prompt("نص بديل للصورة (اختياري)", current.alt || "");
+    if (alt === null) return;
+
+    try {
+      await saveAdBanner(
+        adminProfile,
+        {
+          ...current,
+          title: title.trim(),
+          imageUrl: imageUrl.trim(),
+          targetUrl: targetUrl.trim(),
+          alt: alt.trim(),
+        },
+        AD_SLOT_IDS.suppliersAfterPagination
+      );
+    } catch {
+      window.alert("تعذر حفظ تعديل الإعلان");
+    }
+  }, [adminProfile, canManageAds, suppliersAdBanner]);
+
   const handleRemoveAd = useCallback(async () => {
     if (!canManageAds) return;
     try {
@@ -491,6 +529,7 @@ export default function SuppliersPanel({
           <InlineAdBanner
             adBanner={suppliersAdBanner}
             canManageAds={canManageAds}
+            onEdit={handleEditAd}
             onToggleVisibility={handleToggleAdVisibility}
             onRemove={handleRemoveAd}
           />
