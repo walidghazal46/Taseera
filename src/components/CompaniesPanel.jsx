@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FolderIcon, PlusIcon, SearchIcon, StarIcon, ChevronRightIcon, BuildingsIcon } from "./icons";
 import useBackStack from "../hooks/useBackStack";
+import useAdminSession from "../hooks/useAdminSession";
+import { SUPER_ADMIN_EMAIL } from "../constants/admin";
+import { AD_SLOT_IDS, DEFAULT_AD_BANNER, listenAdBanner, saveAdBanner } from "../services/subscriptionApi";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
 const MONO = "'IBM Plex Mono',monospace";
@@ -318,12 +321,93 @@ function FormField({ label, value, onChange, placeholder, type = "text" }) {
   );
 }
 
+function InlineAdBanner({ adBanner, canManageAds = false, onToggleVisibility, onRemove }) {
+  const hasContent = adBanner?.enabled && adBanner?.imageUrl;
+
+  return (
+    <div className="relative rounded-2xl border-2 border-[#E2D8C4] bg-white p-2.5 shadow-sm overflow-hidden">
+      {canManageAds ? (
+        <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onToggleVisibility?.(true)}
+            className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm"
+            style={{ fontFamily: AR }}
+          >
+            إظهار
+          </button>
+          <button
+            type="button"
+            onClick={() => onToggleVisibility?.(false)}
+            className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm"
+            style={{ fontFamily: AR }}
+          >
+            إخفاء
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const ok = window.confirm("هل تريد إزالة محتوى هذا الإعلان؟");
+              if (!ok) return;
+              onRemove?.();
+            }}
+            className="rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-bold text-rose-700 shadow-sm"
+            style={{ fontFamily: AR }}
+          >
+            إزالة
+          </button>
+        </div>
+      ) : null}
+
+      {hasContent ? (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              if (!adBanner?.targetUrl) return;
+              window.open(adBanner.targetUrl, "_blank", "noopener,noreferrer");
+            }}
+            className="mx-auto block h-[230px] w-full max-w-[608px] overflow-hidden rounded-xl bg-[#F7F3EC]"
+          >
+            <img
+              src={adBanner.imageUrl}
+              alt={adBanner.alt || adBanner.title || "companies-ad-banner"}
+              loading="lazy"
+              className="h-full w-full object-cover"
+            />
+          </button>
+          {adBanner.title ? (
+            <p className="mt-2 text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+              {adBanner.title}
+            </p>
+          ) : null}
+        </>
+      ) : (
+        <div className="mx-auto flex h-[230px] w-full max-w-[608px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#d4a843]/35 bg-[#fff9ec] px-4 py-5 text-center">
+          <p className="text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+            مساحة إعلانية
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CompaniesPanel({
   companies, company, selectedCompanyId, selectedProjectId,
   onSelectCompany, onSelectProject, onAddCompany, onAddProject,
-  navigationBridge, settings,
+  navigationBridge, settings, sessionMeta, authMode,
 }) {
   const copy = getCompaniesCopy(settings?.language);
+  const { profile: adminProfile } = useAdminSession({
+    uid: sessionMeta?.uid,
+    email: settings?.userEmail,
+    displayName: settings?.userName,
+  });
+  const canManageAds = authMode !== "guest" && (
+    adminProfile?.canAccessAdmin === true ||
+    String(settings?.userEmail || "").toLowerCase() === SUPER_ADMIN_EMAIL
+  );
   const countryOptions = useMemo(() => ([
     { value: COUNTRY_VALUES.sa, label: copy.saudiArabia },
     { value: COUNTRY_VALUES.eg, label: copy.egypt },
@@ -340,6 +424,7 @@ export default function CompaniesPanel({
     name: "", location: "", stage: copy.pricingStage, budget: "",
   });
   const [directoryPage, setDirectoryPage] = useState(1);
+  const [companiesAdBanner, setCompaniesAdBanner] = useState(null);
   const nav = useBackStack({
     initialEntry: { section: "directory", detailCompanyId: null },
     registerBackHandler: navigationBridge?.registerBackHandler,
@@ -404,6 +489,47 @@ export default function CompaniesPanel({
       setActiveCountry(COUNTRY_VALUES.sa);
     }
   }, [activeCountry, countryOptions]);
+
+  useEffect(() => {
+    const unsubscribe = listenAdBanner(
+      (data) => setCompaniesAdBanner(data),
+      AD_SLOT_IDS.companiesAfterPagination
+    );
+    return () => unsubscribe?.();
+  }, []);
+
+  const handleToggleAdVisibility = useCallback(async (nextEnabled) => {
+    if (!canManageAds) return;
+    try {
+      await saveAdBanner(
+        adminProfile,
+        { ...(companiesAdBanner || DEFAULT_AD_BANNER), enabled: Boolean(nextEnabled) },
+        AD_SLOT_IDS.companiesAfterPagination
+      );
+    } catch {
+      window.alert("تعذر تحديث حالة الإعلان");
+    }
+  }, [adminProfile, canManageAds, companiesAdBanner]);
+
+  const handleRemoveAd = useCallback(async () => {
+    if (!canManageAds) return;
+    try {
+      await saveAdBanner(
+        adminProfile,
+        {
+          ...DEFAULT_AD_BANNER,
+          enabled: false,
+          title: "",
+          imageUrl: "",
+          targetUrl: "",
+          alt: "",
+        },
+        AD_SLOT_IDS.companiesAfterPagination
+      );
+    } catch {
+      window.alert("تعذر إزالة الإعلان");
+    }
+  }, [adminProfile, canManageAds]);
 
   const submitCompany = (e) => {
     e.preventDefault();
@@ -504,6 +630,13 @@ export default function CompaniesPanel({
               {copy.next}
             </button>
           </div>
+
+          <InlineAdBanner
+            adBanner={companiesAdBanner}
+            canManageAds={canManageAds}
+            onToggleVisibility={handleToggleAdVisibility}
+            onRemove={handleRemoveAd}
+          />
         </div>
       )}
 

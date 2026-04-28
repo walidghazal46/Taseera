@@ -48,6 +48,10 @@ export const DEFAULT_AD_BANNER = {
 export const AD_SLOT_IDS = {
   analysisPreResult: "item_analysis_bottom_banner",
   analysisPostResult: "item_analysis_after_result_banner",
+  areaFormAfterCard: "area_form_after_card_banner",
+  areaResultsAfterNote: "area_results_after_note_banner",
+  companiesAfterPagination: "companies_after_pagination_banner",
+  suppliersAfterPagination: "suppliers_after_pagination_banner",
 };
 
 function formatOrderId(year, seq) {

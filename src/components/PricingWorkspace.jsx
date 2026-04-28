@@ -4,7 +4,7 @@ import { SaveIcon, TagIcon, BuildingsIcon, PricingIcon, ChevronLeftIcon, ArrowRi
 import { CSI_DIVISIONS, COUNTRIES, getDefaultResources, AREA_PRICING_BASE } from "../data/csiData";
 import usePersistentState from "../hooks/usePersistentState";
 import useAdminSession from "../hooks/useAdminSession";
-import { AD_SLOT_IDS, incrementUsageCounter, listenAdBanner } from "../services/subscriptionApi";
+import { AD_SLOT_IDS, DEFAULT_AD_BANNER, incrementUsageCounter, listenAdBanner, saveAdBanner } from "../services/subscriptionApi";
 import { SUPER_ADMIN_EMAIL } from "../constants/admin";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
@@ -720,7 +720,7 @@ function AreaScenarioCompare({ scenarios, currentScenario, currency, onAddCurren
   );
 }
 
-function AreaPricingForm({ country, onCalculate }) {
+function AreaPricingForm({ country, onCalculate, adBanner, canManageAds = false, onManageAds, onToggleAdVisibility, onRemoveAd }) {
   const [area, setArea] = useState(100);
   const [floors, setFloors] = useState(1);
   const [finish, setFinish] = useState("economic");
@@ -811,11 +811,19 @@ function AreaPricingForm({ country, onCalculate }) {
           <PricingIcon className="h-6 w-6" /> إظهار تفاصيل تسعير المبنى
         </button>
       </div>
+
+      <AnalysisAdBanner
+        adBanner={{ ...(adBanner || {}), slotId: AD_SLOT_IDS.areaFormAfterCard }}
+        canManageAds={canManageAds}
+        onManageAds={onManageAds}
+        onToggleVisibility={onToggleAdVisibility}
+        onRemove={onRemoveAd}
+      />
     </div>
   );
 }
 
-function AreaResultsView({ country, params, results, onBack, onExport, onSave, onOpenSection, scenarios, currentScenario, onAddScenario, onRemoveScenario }) {
+function AreaResultsView({ country, params, results, onBack, onExport, onSave, onOpenSection, scenarios, currentScenario, onAddScenario, onRemoveScenario, adBanner, canManageAds = false, onManageAds, onToggleAdVisibility, onRemoveAd }) {
   const c = COUNTRIES[country] || COUNTRIES.sa;
   const finishLabel = FINISH_LEVELS.find(f => f.id === params.finish)?.ar;
   const typeLabel = BUILDING_TYPES.find(t => t.id === params.type)?.ar;
@@ -943,6 +951,14 @@ function AreaResultsView({ country, params, results, onBack, onExport, onSave, o
            </p>
          </div>
       </div>
+
+      <AnalysisAdBanner
+        adBanner={{ ...(adBanner || {}), slotId: AD_SLOT_IDS.areaResultsAfterNote }}
+        canManageAds={canManageAds}
+        onManageAds={onManageAds}
+        onToggleVisibility={onToggleAdVisibility}
+        onRemove={onRemoveAd}
+      />
     </div>
   );
 }
@@ -1077,7 +1093,7 @@ function AreaSectionDetailView({ country, params, draft, overallResults, onBack,
 
 // --- Main Pricing Workspace Component ---
 
-export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings, sessionMeta, onOpenSubscription, onOpenAdSettings }) {
+export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings, sessionMeta, onOpenSubscription }) {
   // initialCountry comes from the CountryPicker on PricingPage; always override persisted value
   const [country, setCountry] = useState(initialCountry || "sa");
   const [mode, setMode] = useState("selection"); // selection, items, area, area-results
@@ -1108,6 +1124,14 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   const [guestAreaTrialCount, setGuestAreaTrialCount] = usePersistentState("taseera.v3.guestAreaTrialCount", 0);
   const [analysisTopAdBanner, setAnalysisTopAdBanner] = useState(null);
   const [analysisBottomAdBanner, setAnalysisBottomAdBanner] = useState(null);
+  const [areaFormAdBanner, setAreaFormAdBanner] = useState(null);
+  const [areaResultsAdBanner, setAreaResultsAdBanner] = useState(null);
+  const [adEditor, setAdEditor] = useState({
+    open: false,
+    slotId: AD_SLOT_IDS.analysisPreResult,
+    draft: { ...DEFAULT_AD_BANNER },
+    saving: false,
+  });
 
   // Analysis Parameters (Moved up for persistence and export)
   const [qty, setQty] = useState(1);
@@ -1119,9 +1143,13 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   useEffect(() => {
     const unsubscribeTop = listenAdBanner((data) => setAnalysisTopAdBanner(data), AD_SLOT_IDS.analysisPreResult);
     const unsubscribeBottom = listenAdBanner((data) => setAnalysisBottomAdBanner(data), AD_SLOT_IDS.analysisPostResult);
+    const unsubscribeAreaForm = listenAdBanner((data) => setAreaFormAdBanner(data), AD_SLOT_IDS.areaFormAfterCard);
+    const unsubscribeAreaResults = listenAdBanner((data) => setAreaResultsAdBanner(data), AD_SLOT_IDS.areaResultsAfterNote);
     return () => {
       unsubscribeTop?.();
       unsubscribeBottom?.();
+      unsubscribeAreaForm?.();
+      unsubscribeAreaResults?.();
     };
   }, []);
 
@@ -1138,6 +1166,97 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   const itemLocked = !isSubscribed && itemUsed >= itemLimit;
   const areaLocked = !isSubscribed && areaUsed >= areaLimit;
   const itemRemaining = Number.isFinite(itemLimit) ? Math.max(0, itemLimit - itemUsed) : null;
+
+  const getAdSlotLabel = useCallback((slotId) => {
+    if (slotId === AD_SLOT_IDS.analysisPreResult) return "إعلان أعلى شاشة التحليل";
+    if (slotId === AD_SLOT_IDS.analysisPostResult) return "إعلان أسفل نتيجة التحليل";
+    if (slotId === AD_SLOT_IDS.areaFormAfterCard) return "إعلان بعد نموذج تسعير المبنى";
+    if (slotId === AD_SLOT_IDS.areaResultsAfterNote) return "إعلان بعد ملاحظة تسعير المبنى";
+    return "إعدادات الإعلان";
+  }, []);
+
+  const handleOpenAdEditor = useCallback((slotId, currentBanner) => {
+    setAdEditor({
+      open: true,
+      slotId,
+      draft: { ...DEFAULT_AD_BANNER, ...(currentBanner || {}) },
+      saving: false,
+    });
+  }, []);
+
+  const handleCloseAdEditor = useCallback(() => {
+    setAdEditor((prev) => ({ ...prev, open: false, saving: false }));
+  }, []);
+
+  const handleAdEditorDraftChange = useCallback((key, value) => {
+    setAdEditor((prev) => ({
+      ...prev,
+      draft: {
+        ...prev.draft,
+        [key]: value,
+      },
+    }));
+  }, []);
+
+  const handleSaveAdEditor = useCallback(async () => {
+    if (!userProfile) {
+      showToast("يلزم تسجيل الدخول قبل تعديل الإعلان");
+      return;
+    }
+
+    try {
+      setAdEditor((prev) => ({ ...prev, saving: true }));
+      await saveAdBanner(userProfile, adEditor.draft, adEditor.slotId);
+      showToast("تم حفظ الإعلان بنجاح");
+      setAdEditor((prev) => ({ ...prev, open: false, saving: false }));
+    } catch (error) {
+      setAdEditor((prev) => ({ ...prev, saving: false }));
+      showToast(error?.message || "تعذر حفظ الإعلان");
+    }
+  }, [adEditor.draft, adEditor.slotId, showToast, userProfile]);
+
+  const handleToggleAdVisibility = useCallback(async (slotId, currentBanner, nextEnabled) => {
+    if (!userProfile) {
+      showToast("يلزم تسجيل الدخول قبل تعديل الإعلان");
+      return;
+    }
+
+    try {
+      await saveAdBanner(
+        userProfile,
+        { ...(currentBanner || DEFAULT_AD_BANNER), enabled: Boolean(nextEnabled) },
+        slotId || AD_SLOT_IDS.analysisPreResult
+      );
+      showToast(nextEnabled ? "تم إظهار الإعلان" : "تم إخفاء الإعلان");
+    } catch (error) {
+      showToast(error?.message || "تعذر تحديث حالة الإعلان");
+    }
+  }, [showToast, userProfile]);
+
+  const handleRemoveAd = useCallback(async (slotId) => {
+    if (!userProfile) {
+      showToast("يلزم تسجيل الدخول قبل تعديل الإعلان");
+      return;
+    }
+
+    try {
+      await saveAdBanner(
+        userProfile,
+        {
+          ...DEFAULT_AD_BANNER,
+          enabled: false,
+          title: "",
+          imageUrl: "",
+          targetUrl: "",
+          alt: "",
+        },
+        slotId || AD_SLOT_IDS.analysisPreResult
+      );
+      showToast("تمت إزالة محتوى الإعلان");
+    } catch (error) {
+      showToast(error?.message || "تعذر إزالة الإعلان");
+    }
+  }, [showToast, userProfile]);
 
   const buildAnalysisSnapshot = useCallback((itemValue, resourcesValue, paramsValue) => ({
     selectedItem: itemValue ? { ...itemValue } : null,
@@ -1854,7 +1973,9 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 topAdBanner={analysisTopAdBanner}
                 bottomAdBanner={analysisBottomAdBanner}
                 canManageAds={isAdminUnlocked}
-                onManageAds={onOpenAdSettings}
+                onManageAds={handleOpenAdEditor}
+                onToggleAdVisibility={handleToggleAdVisibility}
+                onRemoveAd={handleRemoveAd}
 
               />
             )}
@@ -1871,7 +1992,17 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
           </div>
         )}
 
-        {mode === "area" && <AreaPricingForm country={country} onCalculate={handleCalculateArea} />}
+        {mode === "area" && (
+          <AreaPricingForm
+            country={country}
+            onCalculate={handleCalculateArea}
+            adBanner={areaFormAdBanner}
+            canManageAds={isAdminUnlocked}
+            onManageAds={handleOpenAdEditor}
+            onToggleAdVisibility={handleToggleAdVisibility}
+            onRemoveAd={handleRemoveAd}
+          />
+        )}
 
         {mode === "area-results" && (
           <AreaResultsView
@@ -1895,6 +2026,11 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
               showToast("تم حفظ تسعير المشروع بنجاح");
             }}
             onOpenSection={handleOpenAreaSection}
+            adBanner={areaResultsAdBanner}
+            canManageAds={isAdminUnlocked}
+            onManageAds={handleOpenAdEditor}
+            onToggleAdVisibility={handleToggleAdVisibility}
+            onRemoveAd={handleRemoveAd}
           />
         )}
 
@@ -1938,6 +2074,17 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
       {addModalType && (
         <AddResourceModal defaultType={addModalType} onAdd={handleAddResource} onClose={() => setAddModalType(null)} />
       )}
+
+      {adEditor.open ? (
+        <InlineAdEditorModal
+          title={getAdSlotLabel(adEditor.slotId)}
+          draft={adEditor.draft}
+          saving={adEditor.saving}
+          onChange={handleAdEditorDraftChange}
+          onSave={handleSaveAdEditor}
+          onClose={handleCloseAdEditor}
+        />
+      ) : null}
 
       {toastVisible && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-xl bg-[#082555] px-5 py-2.5 text-[12px] font-medium text-[#E8C97A] shadow-xl"
@@ -2465,8 +2612,9 @@ function MarketComparisonCard({ myPrice, mkt, status, sym }) {
   );
 }
 
-function AnalysisAdBanner({ adBanner, canManageAds = false, onManageAds }) {
+function AnalysisAdBanner({ adBanner, canManageAds = false, onManageAds, onToggleVisibility, onRemove }) {
   const hasContent = adBanner?.enabled && adBanner?.imageUrl;
+  const isEnabled = adBanner?.enabled === true;
   if (!hasContent && !canManageAds) return null;
 
   const handleClick = () => {
@@ -2477,14 +2625,44 @@ function AnalysisAdBanner({ adBanner, canManageAds = false, onManageAds }) {
   return (
     <div className="relative rounded-[24px] border border-[#E2D8C4] bg-white p-3 shadow-sm overflow-hidden">
       {canManageAds ? (
-        <button
-          type="button"
-          onClick={onManageAds}
-          className="absolute right-3 top-3 z-10 rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm"
-          style={{ fontFamily: AR }}
-        >
-          تعديل الإعلان
-        </button>
+        <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onManageAds?.(adBanner?.slotId || AD_SLOT_IDS.analysisPreResult, adBanner)}
+            className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm"
+            style={{ fontFamily: AR }}
+          >
+            تعديل
+          </button>
+          <button
+            type="button"
+            onClick={() => onToggleVisibility?.(adBanner?.slotId || AD_SLOT_IDS.analysisPreResult, adBanner, true)}
+            className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm"
+            style={{ fontFamily: AR }}
+          >
+            إظهار
+          </button>
+          <button
+            type="button"
+            onClick={() => onToggleVisibility?.(adBanner?.slotId || AD_SLOT_IDS.analysisPreResult, adBanner, false)}
+            className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm"
+            style={{ fontFamily: AR }}
+          >
+            إخفاء
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const ok = window.confirm("هل تريد إزالة محتوى هذا الإعلان؟");
+              if (!ok) return;
+              onRemove?.(adBanner?.slotId || AD_SLOT_IDS.analysisPreResult, adBanner);
+            }}
+            className="rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-bold text-rose-700 shadow-sm"
+            style={{ fontFamily: AR }}
+          >
+            إزالة
+          </button>
+        </div>
       ) : null}
 
       {hasContent ? (
@@ -2492,13 +2670,13 @@ function AnalysisAdBanner({ adBanner, canManageAds = false, onManageAds }) {
           <button
             type="button"
             onClick={handleClick}
-            className="block w-full overflow-hidden rounded-2xl bg-[#F7F3EC]"
+            className="mx-auto block h-[230px] w-full max-w-[608px] overflow-hidden rounded-2xl bg-[#F7F3EC]"
           >
             <img
               src={adBanner.imageUrl}
               alt={adBanner.alt || adBanner.title || "ad-banner"}
               loading="lazy"
-              className="w-full h-auto object-cover"
+              className="h-full w-full object-cover"
             />
           </button>
           {adBanner.title ? (
@@ -2508,7 +2686,7 @@ function AnalysisAdBanner({ adBanner, canManageAds = false, onManageAds }) {
           ) : null}
         </>
       ) : (
-        <div className="rounded-2xl border-2 border-dashed border-[#d4a843]/40 bg-[#fff9ec] px-4 py-5 text-center">
+        <div className="mx-auto flex h-[230px] w-full max-w-[608px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#d4a843]/40 bg-[#fff9ec] px-4 py-5 text-center">
           <p className="text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
             لا توجد صورة إعلان مفعلة لهذا المكان
           </p>
@@ -2525,7 +2703,7 @@ function AnalysisScreen({
   authMode,
   country, selectedItem, resources, setResources, onOpenAddModal, onSave, onRfq, onExport, toast,
   qty, setQty, overhead, setOverhead, profit, setProfit, factor, setFactor,
-  settings, topAdBanner, bottomAdBanner, canManageAds = false, onManageAds,
+  settings, topAdBanner, bottomAdBanner, canManageAds = false, onManageAds, onToggleAdVisibility, onRemoveAd,
 }) {
   const c = COUNTRIES[country] || COUNTRIES.sa;
   const sym = c.currency;
@@ -2859,8 +3037,6 @@ function AnalysisScreen({
         sym={sym}
       />
 
-      <AnalysisAdBanner adBanner={topAdBanner} canManageAds={canManageAds} onManageAds={onManageAds} />
-
       {calc && (
         <div className="relative overflow-hidden rounded-[32px] bg-[#082555] p-6 shadow-2xl mt-5 border border-[#C9A84C]/20">
           <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(201,168,76,0.1)_0%,transparent_100%)] pointer-events-none" />
@@ -2908,7 +3084,100 @@ function AnalysisScreen({
         </div>
       )}
 
-      <AnalysisAdBanner adBanner={bottomAdBanner} canManageAds={canManageAds} onManageAds={onManageAds} />
+      <AnalysisAdBanner
+        adBanner={{ ...(bottomAdBanner || {}), slotId: AD_SLOT_IDS.analysisPostResult }}
+        canManageAds={canManageAds}
+        onManageAds={onManageAds}
+        onToggleVisibility={onToggleAdVisibility}
+        onRemove={onRemoveAd}
+      />
+    </div>
+  );
+}
+
+function InlineAdEditorModal({ title, draft, saving = false, onChange, onSave, onClose }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#082555]/45 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-3xl border-2 border-[#E2D8C4] bg-white p-5 shadow-2xl">
+        <h3 className="text-[16px] font-bold text-[#082555]" style={{ fontFamily: AR }}>
+          {title}
+        </h3>
+
+        <div className="mt-4 space-y-3">
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+              عنوان الإعلان
+            </span>
+            <input
+              type="text"
+              value={draft?.title || ""}
+              onChange={(e) => onChange("title", e.target.value)}
+              className="w-full rounded-xl border-2 border-[#E2D8C4] px-3 py-2 text-[13px] font-bold text-[#082555] outline-none focus:border-[#C9A84C]"
+              style={{ fontFamily: AR }}
+              placeholder="مثال: خصم خاص لموردي المعدات"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+              رابط الصورة
+            </span>
+            <input
+              type="url"
+              value={draft?.imageUrl || ""}
+              onChange={(e) => onChange("imageUrl", e.target.value)}
+              className="w-full rounded-xl border-2 border-[#E2D8C4] px-3 py-2 text-[12px] font-bold text-[#082555] outline-none focus:border-[#C9A84C]"
+              style={{ fontFamily: MONO }}
+              placeholder="https://..."
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+              رابط التحويل عند الضغط
+            </span>
+            <input
+              type="url"
+              value={draft?.targetUrl || ""}
+              onChange={(e) => onChange("targetUrl", e.target.value)}
+              className="w-full rounded-xl border-2 border-[#E2D8C4] px-3 py-2 text-[12px] font-bold text-[#082555] outline-none focus:border-[#C9A84C]"
+              style={{ fontFamily: MONO }}
+              placeholder="https://..."
+            />
+          </label>
+
+          <label className="flex items-center justify-between rounded-xl border-2 border-[#E2D8C4] bg-[#F7F3EC] px-3 py-2">
+            <span className="text-[12px] font-bold text-[#082555]" style={{ fontFamily: AR }}>تفعيل الإعلان</span>
+            <input
+              type="checkbox"
+              checked={Boolean(draft?.enabled)}
+              onChange={(e) => onChange("enabled", e.target.checked)}
+              className="h-4 w-4"
+            />
+          </label>
+        </div>
+
+        <div className="mt-4 flex gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="flex-1 rounded-xl border-2 border-[#E2D8C4] px-3 py-2 text-[12px] font-bold text-[#5A4E38]"
+            style={{ fontFamily: AR }}
+          >
+            إغلاق
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={saving}
+            className="flex-1 rounded-xl bg-[#082555] px-3 py-2 text-[12px] font-bold text-[#E8C97A] disabled:opacity-60"
+            style={{ fontFamily: AR }}
+          >
+            {saving ? "جارٍ الحفظ..." : "حفظ الإعلان"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

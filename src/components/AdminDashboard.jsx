@@ -235,6 +235,10 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
   const [paymentSettingsDraft, setPaymentSettingsDraft] = useState(DEFAULT_PAYMENT_SETTINGS);
   const [analysisTopAdDraft, setAnalysisTopAdDraft] = useState(DEFAULT_AD_BANNER);
   const [analysisBottomAdDraft, setAnalysisBottomAdDraft] = useState(DEFAULT_AD_BANNER);
+  const [areaFormAdDraft, setAreaFormAdDraft] = useState(DEFAULT_AD_BANNER);
+  const [areaResultsAdDraft, setAreaResultsAdDraft] = useState(DEFAULT_AD_BANNER);
+  const [companiesPaginationAdDraft, setCompaniesPaginationAdDraft] = useState(DEFAULT_AD_BANNER);
+  const [suppliersPaginationAdDraft, setSuppliersPaginationAdDraft] = useState(DEFAULT_AD_BANNER);
   const [savingSettings, setSavingSettings] = useState(false);
 
   const [confirmDeleteUser, setConfirmDeleteUser] = useState(null);
@@ -501,10 +505,42 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
       AD_SLOT_IDS.analysisPostResult
     );
 
+    const unSubAreaFormAd = listenAdBanner(
+      (data) => {
+        setAreaFormAdDraft(data || DEFAULT_AD_BANNER);
+      },
+      AD_SLOT_IDS.areaFormAfterCard
+    );
+
+    const unSubAreaResultsAd = listenAdBanner(
+      (data) => {
+        setAreaResultsAdDraft(data || DEFAULT_AD_BANNER);
+      },
+      AD_SLOT_IDS.areaResultsAfterNote
+    );
+
+    const unSubCompaniesPaginationAd = listenAdBanner(
+      (data) => {
+        setCompaniesPaginationAdDraft(data || DEFAULT_AD_BANNER);
+      },
+      AD_SLOT_IDS.companiesAfterPagination
+    );
+
+    const unSubSuppliersPaginationAd = listenAdBanner(
+      (data) => {
+        setSuppliersPaginationAdDraft(data || DEFAULT_AD_BANNER);
+      },
+      AD_SLOT_IDS.suppliersAfterPagination
+    );
+
     return () => {
       unSubPayment?.();
       unSubTopAd?.();
       unSubBottomAd?.();
+      unSubAreaFormAd?.();
+      unSubAreaResultsAd?.();
+      unSubCompaniesPaginationAd?.();
+      unSubSuppliersPaginationAd?.();
     };
   }, [activeTab]);
 
@@ -1200,6 +1236,187 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                       </label>
                     </div>
                   )}
+                </div>
+
+                <div className="rounded-2xl border border-[#e2e8f0] bg-white p-3">
+                  <p className="text-[12px] font-bold text-[#082555]">Area Form Banner (After Card)</p>
+                  {!canManageRuntimeSettings ? (
+                    <p className="mt-2 text-[11px] text-amber-700">No permission: approvePayments</p>
+                  ) : (
+                    <div className="mt-3 grid grid-cols-1 gap-2">
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Enabled</span>
+                        <select
+                          value={areaFormAdDraft.enabled ? "yes" : "no"}
+                          onChange={(e) => setAreaFormAdDraft((curr) => ({ ...curr, enabled: e.target.value === "yes" }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        >
+                          <option value="yes">Yes</option>
+                          <option value="no">No</option>
+                        </select>
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Banner Title</span>
+                        <input
+                          value={areaFormAdDraft.title || ""}
+                          onChange={(e) => setAreaFormAdDraft((curr) => ({ ...curr, title: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Image URL</span>
+                        <input
+                          value={areaFormAdDraft.imageUrl || ""}
+                          onChange={(e) => setAreaFormAdDraft((curr) => ({ ...curr, imageUrl: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Target URL</span>
+                        <input
+                          value={areaFormAdDraft.targetUrl || ""}
+                          onChange={(e) => setAreaFormAdDraft((curr) => ({ ...curr, targetUrl: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-2xl border border-[#e2e8f0] bg-white p-3">
+                  <p className="text-[12px] font-bold text-[#082555]">Area Results Banner (After Note)</p>
+                  {!canManageRuntimeSettings ? (
+                    <p className="mt-2 text-[11px] text-amber-700">No permission: approvePayments</p>
+                  ) : (
+                    <div className="mt-3 grid grid-cols-1 gap-2">
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Enabled</span>
+                        <select
+                          value={areaResultsAdDraft.enabled ? "yes" : "no"}
+                          onChange={(e) => setAreaResultsAdDraft((curr) => ({ ...curr, enabled: e.target.value === "yes" }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        >
+                          <option value="yes">Yes</option>
+                          <option value="no">No</option>
+                        </select>
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Banner Title</span>
+                        <input
+                          value={areaResultsAdDraft.title || ""}
+                          onChange={(e) => setAreaResultsAdDraft((curr) => ({ ...curr, title: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Image URL</span>
+                        <input
+                          value={areaResultsAdDraft.imageUrl || ""}
+                          onChange={(e) => setAreaResultsAdDraft((curr) => ({ ...curr, imageUrl: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Target URL</span>
+                        <input
+                          value={areaResultsAdDraft.targetUrl || ""}
+                          onChange={(e) => setAreaResultsAdDraft((curr) => ({ ...curr, targetUrl: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                    </div>
+                  )}
+
+                </div>
+
+                <div className="rounded-2xl border border-[#e2e8f0] bg-white p-3">
+                  <p className="text-[12px] font-bold text-[#082555]">Companies Banner (After Pagination)</p>
+                  {!canManageRuntimeSettings ? (
+                    <p className="mt-2 text-[11px] text-amber-700">No permission: approvePayments</p>
+                  ) : (
+                    <div className="mt-3 grid grid-cols-1 gap-2">
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Enabled</span>
+                        <select
+                          value={companiesPaginationAdDraft.enabled ? "yes" : "no"}
+                          onChange={(e) => setCompaniesPaginationAdDraft((curr) => ({ ...curr, enabled: e.target.value === "yes" }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        >
+                          <option value="yes">Yes</option>
+                          <option value="no">No</option>
+                        </select>
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Banner Title</span>
+                        <input
+                          value={companiesPaginationAdDraft.title || ""}
+                          onChange={(e) => setCompaniesPaginationAdDraft((curr) => ({ ...curr, title: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Image URL</span>
+                        <input
+                          value={companiesPaginationAdDraft.imageUrl || ""}
+                          onChange={(e) => setCompaniesPaginationAdDraft((curr) => ({ ...curr, imageUrl: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Target URL</span>
+                        <input
+                          value={companiesPaginationAdDraft.targetUrl || ""}
+                          onChange={(e) => setCompaniesPaginationAdDraft((curr) => ({ ...curr, targetUrl: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-2xl border border-[#e2e8f0] bg-white p-3">
+                  <p className="text-[12px] font-bold text-[#082555]">Suppliers Banner (After Pagination)</p>
+                  {!canManageRuntimeSettings ? (
+                    <p className="mt-2 text-[11px] text-amber-700">No permission: approvePayments</p>
+                  ) : (
+                    <div className="mt-3 grid grid-cols-1 gap-2">
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Enabled</span>
+                        <select
+                          value={suppliersPaginationAdDraft.enabled ? "yes" : "no"}
+                          onChange={(e) => setSuppliersPaginationAdDraft((curr) => ({ ...curr, enabled: e.target.value === "yes" }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        >
+                          <option value="yes">Yes</option>
+                          <option value="no">No</option>
+                        </select>
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Banner Title</span>
+                        <input
+                          value={suppliersPaginationAdDraft.title || ""}
+                          onChange={(e) => setSuppliersPaginationAdDraft((curr) => ({ ...curr, title: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Image URL</span>
+                        <input
+                          value={suppliersPaginationAdDraft.imageUrl || ""}
+                          onChange={(e) => setSuppliersPaginationAdDraft((curr) => ({ ...curr, imageUrl: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Target URL</span>
+                        <input
+                          value={suppliersPaginationAdDraft.targetUrl || ""}
+                          onChange={(e) => setSuppliersPaginationAdDraft((curr) => ({ ...curr, targetUrl: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                    </div>
+                  )}
 
                   {canManageRuntimeSettings && (
                     <button
@@ -1211,6 +1428,10 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                           await savePaymentSettings(adminProfile, paymentSettingsDraft);
                           await saveAdBanner(adminProfile, analysisTopAdDraft, AD_SLOT_IDS.analysisPreResult);
                           await saveAdBanner(adminProfile, analysisBottomAdDraft, AD_SLOT_IDS.analysisPostResult);
+                          await saveAdBanner(adminProfile, areaFormAdDraft, AD_SLOT_IDS.areaFormAfterCard);
+                          await saveAdBanner(adminProfile, areaResultsAdDraft, AD_SLOT_IDS.areaResultsAfterNote);
+                          await saveAdBanner(adminProfile, companiesPaginationAdDraft, AD_SLOT_IDS.companiesAfterPagination);
+                          await saveAdBanner(adminProfile, suppliersPaginationAdDraft, AD_SLOT_IDS.suppliersAfterPagination);
                           onToast?.("Settings updated", "success");
                         } catch (error) {
                           onToast?.(error.message || "Failed to save settings", "warning");
