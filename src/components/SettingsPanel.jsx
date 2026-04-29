@@ -3,12 +3,7 @@ import { getAppText } from "../data/appText";
 import useBackStack from "../hooks/useBackStack";
 import useAdminSession from "../hooks/useAdminSession";
 import AdminDashboard from "./AdminDashboard";
-import {
-  createPaymentRequest,
-  DEFAULT_PAYMENT_SETTINGS,
-  listMyPaymentRequests,
-  listenPaymentSettings,
-} from "../services/subscriptionApi";
+import SubscriptionPanel from "./SubscriptionPanel";
 
 function getSettingsCopy(language) {
   return language === "en"
@@ -401,7 +396,7 @@ function ContactLinksCard({ onOpen }) {
         </p>
         <span className="text-[9px] text-slate-400">اختر المنصة المناسبة</span>
       </div>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-3 gap-2">
         {links.map((link) => (
           <button
             key={link.id}
@@ -663,268 +658,6 @@ function AccountTab({
   );
 }
 
-function SubscriptionTab({ settings, authMode, sessionMeta, onOpenAuthScreen, onShowStatus, copy }) {
-  const isGuest = authMode === "guest";
-  const [paymentSettings, setPaymentSettings] = useState(DEFAULT_PAYMENT_SETTINGS);
-  const [loadingSettings, setLoadingSettings] = useState(true);
-  const [requests, setRequests] = useState([]);
-  const [loadingRequests, setLoadingRequests] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [lastSuccess, setLastSuccess] = useState(null);
-
-  const [paymentMethod, setPaymentMethod] = useState(DEFAULT_PAYMENT_SETTINGS.acceptedMethods[0]);
-  const [paymentReference, setPaymentReference] = useState("");
-  const [note, setNote] = useState("");
-  const [receiptFile, setReceiptFile] = useState(null);
-
-  useEffect(() => {
-    const unsubscribe = listenPaymentSettings((data) => {
-      setPaymentSettings(data || DEFAULT_PAYMENT_SETTINGS);
-      setLoadingSettings(false);
-    });
-    return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    if (!sessionMeta?.uid) {
-      setRequests([]);
-      return;
-    }
-    let active = true;
-    setLoadingRequests(true);
-    listMyPaymentRequests(sessionMeta.uid)
-      .then((rows) => {
-        if (active) setRequests(rows);
-      })
-      .catch((error) => onShowStatus?.(error.message || "Failed to load payment requests", "warning"))
-      .finally(() => {
-        if (active) setLoadingRequests(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [onShowStatus, sessionMeta?.uid]);
-
-  const displayAmount = useMemo(() => {
-    const amount = Number(paymentSettings.baseAmountSar) || 100;
-    return `${amount} SAR`;
-  }, [paymentSettings.baseAmountSar]);
-
-  async function handleSubmitRequest() {
-    if (!sessionMeta?.uid || isGuest) {
-      onShowStatus?.(copy.loginRequired, "warning");
-      return;
-    }
-    if (!receiptFile) {
-      onShowStatus?.(copy.receiptRequired, "warning");
-      return;
-    }
-
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-    if (!allowedTypes.includes(receiptFile.type) || receiptFile.size > 8 * 1024 * 1024) {
-      onShowStatus?.(copy.invalidFile, "warning");
-      return;
-    }
-
-    if (!paymentReference.trim()) {
-      onShowStatus?.(settings.language === "en" ? "Please add transfer reference." : "يرجى إدخال مرجع التحويل.", "warning");
-      return;
-    }
-
-    setSubmitting(true);
-    setUploadProgress(0);
-    try {
-      const amount = Number(paymentSettings.baseAmountSar) || 100;
-      const created = await createPaymentRequest({
-        uid: sessionMeta.uid,
-        userName: settings.userName,
-        email: settings.userEmail,
-        paymentMethod,
-        paymentReference: paymentReference.trim(),
-        receiptFile,
-        amount,
-        currency: "SAR",
-        country: settings.country,
-        note: note.trim(),
-        onProgress: (value) => setUploadProgress(value),
-      });
-
-      const submittedData = {
-        orderId: created.orderId,
-        userSerial: created.userSerial,
-        paymentMethod,
-        requestStatus: "pending_review",
-      };
-      setLastSuccess(submittedData);
-
-      onShowStatus?.(
-        settings.language === "en"
-          ? `Request sent successfully. Order: ${created.orderId}`
-          : `تم إرسال طلب الدفع بنجاح. رقم الطلب: ${created.orderId}`,
-        "success"
-      );
-      setPaymentReference("");
-      setNote("");
-      setReceiptFile(null);
-      const rows = await listMyPaymentRequests(sessionMeta.uid);
-      setRequests(rows);
-    } catch (error) {
-      onShowStatus?.(error.message || "Failed to submit payment request", "warning");
-    } finally {
-      setSubmitting(false);
-      setUploadProgress(0);
-    }
-  }
-
-  const badgeClass = (status) => {
-    if (status === "approved") return "bg-emerald-100 text-emerald-700";
-    if (status === "rejected") return "bg-rose-100 text-rose-700";
-    return "bg-amber-100 text-amber-700";
-  };
-
-  return (
-    <div className="space-y-3">
-      {lastSuccess && (
-        <SectionCard title={copy.requestSubmitted} icon="✅">
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-[11px] text-emerald-800">
-            <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-              <p><span className="font-bold">{copy.orderId}:</span> {lastSuccess.orderId}</p>
-              <p><span className="font-bold">{copy.serial}:</span> {lastSuccess.userSerial}</p>
-              <p><span className="font-bold">{copy.paymentMethod}:</span> {paymentSettings.methodLabels?.[lastSuccess.paymentMethod] || lastSuccess.paymentMethod}</p>
-              <p><span className="font-bold">{copy.requestStatus}:</span> {copy.pendingReview}</p>
-            </div>
-            <p className="mt-2">{copy.requestStatusPendingMessage}</p>
-          </div>
-        </SectionCard>
-      )}
-
-      <SectionCard title={copy.subscriptionTitle} icon="💎">
-        <div className="space-y-3">
-          <div className="rounded-xl border border-[#d4a843]/30 bg-[#fff9ec] p-3">
-            <p className="text-[11px] font-bold text-[#6b4f1d]">{copy.subscriptionHint}</p>
-            <p className="mt-1 text-[13px] font-bold text-[#0d2545]">
-              {copy.basePrice}: {displayAmount}
-            </p>
-            <p className="mt-1 text-[10px] text-slate-600">{paymentSettings.note || DEFAULT_PAYMENT_SETTINGS.note}</p>
-          </div>
-
-          {isGuest ? (
-            <button
-              type="button"
-              onClick={() => onOpenAuthScreen?.("login")}
-              className="w-full rounded-xl bg-[#0d2545] px-3 py-2.5 text-[11px] font-bold text-white"
-            >
-              {copy.loginToSubscribe}
-            </button>
-          ) : (
-            <>
-              <SettingInput
-                label={copy.paymentMethod}
-                type="select"
-                value={paymentMethod}
-                onChange={setPaymentMethod}
-                options={(paymentSettings.acceptedMethods || []).map((method) => ({
-                  value: method,
-                  label: paymentSettings.methodLabels?.[method] || method,
-                }))}
-              />
-              <div className="rounded-xl border border-[#e8dcc8] bg-[#faf6ef] p-2 text-[10px] text-slate-600">
-                {paymentSettings.paymentAccounts?.[paymentMethod] || "-"}
-              </div>
-              <SettingInput
-                label={copy.paymentReference}
-                value={paymentReference}
-                onChange={setPaymentReference}
-                placeholder={settings.language === "en" ? "Transfer number / receipt id" : "رقم التحويل / رقم الإيصال"}
-              />
-              <label className="block">
-                <span className="mb-1 block text-[10px] font-bold text-slate-500" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
-                  {copy.receiptFile}
-                </span>
-                <input
-                  type="file"
-                  accept="image/*,.pdf"
-                  onChange={(event) => setReceiptFile(event.target.files?.[0] || null)}
-                  className="w-full rounded-xl border border-[#e8dcc8] bg-white px-3 py-2.5 text-[11px] text-slate-900 outline-none transition focus:border-[#d4a843] focus:ring-2 focus:ring-[#d4a843]/20"
-                />
-                <p className="mt-1 text-[10px] text-slate-500">
-                  {receiptFile ? receiptFile.name : copy.receiptRequired}
-                </p>
-              </label>
-              <SettingInput
-                label={copy.paymentNote}
-                value={note}
-                onChange={setNote}
-                placeholder={settings.language === "en" ? "Optional note" : "ملاحظات اختيارية"}
-              />
-
-              {submitting && (
-                <div className="rounded-xl border border-[#e8dcc8] bg-[#faf6ef] p-2">
-                  <div className="mb-1 text-[10px] font-bold text-slate-600">{copy.uploadProgress}: {uploadProgress}%</div>
-                  <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-                    <div className="h-full bg-[#0d2545] transition-all" style={{ width: `${uploadProgress}%` }} />
-                  </div>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={handleSubmitRequest}
-                disabled={submitting || loadingSettings}
-                className="w-full rounded-xl bg-[#0d2545] px-3 py-2.5 text-[11px] font-bold text-white disabled:opacity-60"
-              >
-                {submitting ? "..." : copy.sendPaymentRequest}
-              </button>
-            </>
-          )}
-        </div>
-      </SectionCard>
-
-      <SectionCard title={copy.myRequestsBoard} icon="🧾">
-        {loadingRequests ? (
-          <p className="text-[11px] text-slate-500">...</p>
-        ) : requests.length === 0 ? (
-          <p className="text-[11px] text-slate-500">{settings.language === "en" ? "No requests yet." : "لا توجد طلبات بعد."}</p>
-        ) : (
-          <div className="space-y-2">
-            {requests.map((request) => (
-              <div key={request.id} className="rounded-xl border border-[#e8dcc8] bg-white p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[11px] font-bold text-[#0d2545]">{copy.orderId}: {request.orderId || "-"}</p>
-                  <span className={`rounded-lg px-2 py-1 text-[10px] font-bold ${badgeClass(request.requestStatus)}`}>
-                    {request.requestStatus === "approved"
-                      ? copy.approved
-                      : request.requestStatus === "rejected"
-                      ? copy.rejected
-                      : copy.pendingReview}
-                  </span>
-                </div>
-                <div className="mt-1 grid grid-cols-1 gap-1 text-[10px] text-slate-500 sm:grid-cols-2">
-                  <p>{copy.serial}: {request.userSerial || "-"}</p>
-                  <p>{copy.createdOn}: {request.createdAt?.toDate?.()?.toLocaleString?.("en-GB") || "-"}</p>
-                  <p>{copy.paymentMethod}: {paymentSettings.methodLabels?.[request.paymentMethod] || request.paymentMethod || "-"}</p>
-                  <p>{copy.amount}: {request.amount || 0} {request.currency || "SAR"}</p>
-                  <p>{copy.adminNote}: {request.rejectionReason || request.adminNote || copy.noAdminNote}</p>
-                  <p>
-                    <a
-                      href={request.receiptUrl || "#"}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={`font-bold ${request.receiptUrl ? "text-[#0d2545] underline" : "text-slate-400"}`}
-                    >
-                      {copy.viewReceipt}
-                    </a>
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </SectionCard>
-    </div>
-  );
-}
 
 export default function SettingsPanel({
   settings, authMode, onLogout, onUpdateSetting, onSettingsAction,
@@ -975,13 +708,13 @@ export default function SettingsPanel({
       {activeView === "pricing" ? (
         <PricingTab settings={settings} onUpdateSetting={onUpdateSetting} copy={copy} />
       ) : activeView === "subscription" ? (
-        <SubscriptionTab
-          settings={settings}
+        <SubscriptionPanel
+          language={settings?.language || "ar"}
           authMode={authMode}
           sessionMeta={sessionMeta}
+          settings={settings}
           onOpenAuthScreen={onOpenAuthScreen}
           onShowStatus={onShowStatus}
-          copy={copy}
         />
       ) : (
         <AccountTab

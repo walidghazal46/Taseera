@@ -52,8 +52,7 @@ service cloud.firestore {
       return request.resource.data.userId == authUid() &&
         request.resource.data.orderId is string &&
         request.resource.data.userSerial is string &&
-        request.resource.data.receiptUrl is string &&
-        request.resource.data.requestStatus == "pending_review";
+        request.resource.data.requestStatus in ["pending_review", "waiting_receipt"];
     }
 
     function touchesAdminFields() {
@@ -97,6 +96,14 @@ service cloud.firestore {
         );
 
       allow delete: if isSuperAdmin() || (hasPermission("deleteUsers") && !targetIsSuperAdmin(userId));
+    }
+
+    match /systemCounters/{counterId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() &&
+        request.resource.data.keys().hasOnly(["seq", "updatedAt"]) &&
+        request.resource.data.seq is int;
+      allow delete: if isSuperAdmin();
     }
 
     match /paymentRequests/{requestId} {

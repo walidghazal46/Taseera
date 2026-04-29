@@ -240,6 +240,8 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
   const [companiesPaginationAdDraft, setCompaniesPaginationAdDraft] = useState(DEFAULT_AD_BANNER);
   const [suppliersPaginationAdDraft, setSuppliersPaginationAdDraft] = useState(DEFAULT_AD_BANNER);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [openSections, setOpenSections] = useState({});
+  const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const [confirmDeleteUser, setConfirmDeleteUser] = useState(null);
   const [confirmRemoveAdmin, setConfirmRemoveAdmin] = useState(null);
@@ -841,7 +843,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                       <button type="button" onClick={exportPaymentsCsv} className="rounded-xl bg-[#082555] px-3 py-2 text-[12px] font-bold text-white">Export CSV</button>
                     </div>
 
-                    {(paymentsLoading ? [] : filteredPayments.filter((p) => p.requestStatus === "pending_review")).map((request) => (
+                    {(paymentsLoading ? [] : filteredPayments.filter((p) => ["pending_review", "waiting_receipt"].includes(p.requestStatus))).map((request) => (
                     <div key={request.id} className="rounded-2xl border border-[#e2e8f0] bg-white p-3">
                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         <div className="text-[12px] font-bold text-[#082555]">{request.userName || "-"}</div>
@@ -901,7 +903,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                   ))}
                   </>
                 )}
-                {!paymentsLoading && filteredPayments.filter((p) => p.requestStatus === "pending_review").length === 0 && (
+                {!paymentsLoading && filteredPayments.filter((p) => ["pending_review", "waiting_receipt"].includes(p.requestStatus)).length === 0 && (
                   <p className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-3 text-[12px] font-bold text-slate-500">{t.noData}</p>
                 )}
               </div>
@@ -923,6 +925,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                       <select value={paymentStatusFilter} onChange={(event) => setPaymentStatusFilter(event.target.value)} className="rounded-xl border border-[#dbe2ea] px-3 py-2 text-[12px]">
                         <option value="all">All statuses</option>
                         <option value="pending_review">pending_review</option>
+                        <option value="waiting_receipt">waiting_receipt</option>
                         <option value="approved">approved</option>
                         <option value="rejected">rejected</option>
                       </select>
@@ -1100,18 +1103,27 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
 
             {activeTab === "settings" && (
               <div className="space-y-3">
-                <div className="rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] p-3">
-                  <p className="text-[12px] font-bold text-[#082555]">Security checklist</p>
+                <div className="rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] overflow-hidden">
+                  <button type="button" onClick={() => toggleSection("security")} className="flex w-full items-center justify-between px-3 py-3 text-left">
+                    <p className="text-[12px] font-bold text-[#082555]">Security checklist</p>
+                    <span className="text-slate-400 text-[10px]">{openSections["security"] ? "▲" : "▼"}</span>
+                  </button>
+                  {openSections["security"] && <div className="px-3 pb-3">
                   <ul className="mt-2 list-disc space-y-1 pr-4 text-[11px] text-slate-600">
                     <li>All sensitive writes are logged to adminLogs.</li>
                     <li>UI actions are permission-gated by role and permissions map.</li>
                     <li>Firestore Rules must be deployed to enforce backend security.</li>
                     <li>Use pagination and indexed filters for large data sets.</li>
                   </ul>
+                  </div>}
                 </div>
 
-                <div className="rounded-2xl border border-[#e2e8f0] bg-white p-3">
-                  <p className="text-[12px] font-bold text-[#082555]">Payment Settings</p>
+                <div className="rounded-2xl border border-[#e2e8f0] bg-white overflow-hidden">
+                  <button type="button" onClick={() => toggleSection("payment")} className="flex w-full items-center justify-between px-3 py-3 text-left">
+                    <p className="text-[12px] font-bold text-[#082555]">Payment Settings</p>
+                    <span className="text-slate-400 text-[10px]">{openSections["payment"] ? "▲" : "▼"}</span>
+                  </button>
+                  {openSections["payment"] && <div className="px-3 pb-3">
                   {!canManageRuntimeSettings ? (
                     <p className="mt-2 text-[11px] text-amber-700">No permission: approvePayments</p>
                   ) : (
@@ -1146,10 +1158,15 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                       </label>
                     </div>
                   )}
+                  </div>}
                 </div>
 
-                <div className="rounded-2xl border border-[#e2e8f0] bg-white p-3">
-                  <p className="text-[12px] font-bold text-[#082555]">Analysis Banner (Before Result Card)</p>
+                <div className="rounded-2xl border border-[#e2e8f0] bg-white overflow-hidden">
+                  <button type="button" onClick={() => toggleSection("adTop")} className="flex w-full items-center justify-between px-3 py-3 text-left">
+                    <p className="text-[12px] font-bold text-[#082555]">Analysis Banner (Before Result Card)</p>
+                    <span className="text-slate-400 text-[10px]">{openSections["adTop"] ? "▲" : "▼"}</span>
+                  </button>
+                  {openSections["adTop"] && <div className="px-3 pb-3">
                   {!canManageRuntimeSettings ? (
                     <p className="mt-2 text-[11px] text-amber-700">No permission: approvePayments</p>
                   ) : (
@@ -1191,10 +1208,15 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                       </label>
                     </div>
                   )}
+                  </div>}
                 </div>
 
-                <div className="rounded-2xl border border-[#e2e8f0] bg-white p-3">
-                  <p className="text-[12px] font-bold text-[#082555]">Analysis Banner (After Result Card)</p>
+                <div className="rounded-2xl border border-[#e2e8f0] bg-white overflow-hidden">
+                  <button type="button" onClick={() => toggleSection("adBottom")} className="flex w-full items-center justify-between px-3 py-3 text-left">
+                    <p className="text-[12px] font-bold text-[#082555]">Analysis Banner (After Result Card)</p>
+                    <span className="text-slate-400 text-[10px]">{openSections["adBottom"] ? "▲" : "▼"}</span>
+                  </button>
+                  {openSections["adBottom"] && <div className="px-3 pb-3">
                   {!canManageRuntimeSettings ? (
                     <p className="mt-2 text-[11px] text-amber-700">No permission: approvePayments</p>
                   ) : (
@@ -1236,10 +1258,15 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                       </label>
                     </div>
                   )}
+                  </div>}
                 </div>
 
-                <div className="rounded-2xl border border-[#e2e8f0] bg-white p-3">
-                  <p className="text-[12px] font-bold text-[#082555]">Area Form Banner (After Card)</p>
+                <div className="rounded-2xl border border-[#e2e8f0] bg-white overflow-hidden">
+                  <button type="button" onClick={() => toggleSection("areaForm")} className="flex w-full items-center justify-between px-3 py-3 text-left">
+                    <p className="text-[12px] font-bold text-[#082555]">Area Form Banner (After Card)</p>
+                    <span className="text-slate-400 text-[10px]">{openSections["areaForm"] ? "▲" : "▼"}</span>
+                  </button>
+                  {openSections["areaForm"] && <div className="px-3 pb-3">
                   {!canManageRuntimeSettings ? (
                     <p className="mt-2 text-[11px] text-amber-700">No permission: approvePayments</p>
                   ) : (
@@ -1281,10 +1308,15 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                       </label>
                     </div>
                   )}
+                  </div>}
                 </div>
 
-                <div className="rounded-2xl border border-[#e2e8f0] bg-white p-3">
-                  <p className="text-[12px] font-bold text-[#082555]">Area Results Banner (After Note)</p>
+                <div className="rounded-2xl border border-[#e2e8f0] bg-white overflow-hidden">
+                  <button type="button" onClick={() => toggleSection("areaResults")} className="flex w-full items-center justify-between px-3 py-3 text-left">
+                    <p className="text-[12px] font-bold text-[#082555]">Area Results Banner (After Note)</p>
+                    <span className="text-slate-400 text-[10px]">{openSections["areaResults"] ? "▲" : "▼"}</span>
+                  </button>
+                  {openSections["areaResults"] && <div className="px-3 pb-3">
                   {!canManageRuntimeSettings ? (
                     <p className="mt-2 text-[11px] text-amber-700">No permission: approvePayments</p>
                   ) : (
@@ -1327,10 +1359,15 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                     </div>
                   )}
 
+                  </div>}
                 </div>
 
-                <div className="rounded-2xl border border-[#e2e8f0] bg-white p-3">
-                  <p className="text-[12px] font-bold text-[#082555]">Companies Banner (After Pagination)</p>
+                <div className="rounded-2xl border border-[#e2e8f0] bg-white overflow-hidden">
+                  <button type="button" onClick={() => toggleSection("companies")} className="flex w-full items-center justify-between px-3 py-3 text-left">
+                    <p className="text-[12px] font-bold text-[#082555]">Companies Banner (After Pagination)</p>
+                    <span className="text-slate-400 text-[10px]">{openSections["companies"] ? "▲" : "▼"}</span>
+                  </button>
+                  {openSections["companies"] && <div className="px-3 pb-3">
                   {!canManageRuntimeSettings ? (
                     <p className="mt-2 text-[11px] text-amber-700">No permission: approvePayments</p>
                   ) : (
@@ -1372,10 +1409,15 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                       </label>
                     </div>
                   )}
+                  </div>}
                 </div>
 
-                <div className="rounded-2xl border border-[#e2e8f0] bg-white p-3">
-                  <p className="text-[12px] font-bold text-[#082555]">Suppliers Banner (After Pagination)</p>
+                <div className="rounded-2xl border border-[#e2e8f0] bg-white overflow-hidden">
+                  <button type="button" onClick={() => toggleSection("suppliers")} className="flex w-full items-center justify-between px-3 py-3 text-left">
+                    <p className="text-[12px] font-bold text-[#082555]">Suppliers Banner (After Pagination)</p>
+                    <span className="text-slate-400 text-[10px]">{openSections["suppliers"] ? "▲" : "▼"}</span>
+                  </button>
+                  {openSections["suppliers"] && <div className="px-3 pb-3">
                   {!canManageRuntimeSettings ? (
                     <p className="mt-2 text-[11px] text-amber-700">No permission: approvePayments</p>
                   ) : (
@@ -1444,6 +1486,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                       {savingSettings ? "..." : "Save payment + ad settings"}
                     </button>
                   )}
+                  </div>}
                 </div>
               </div>
             )}

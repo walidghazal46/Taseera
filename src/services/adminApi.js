@@ -74,7 +74,8 @@ export async function getDashboardStats() {
     activeUsers,
     suspendedUsers,
     paidUsers,
-    pendingRequests,
+    pendingRequestsReview,
+    pendingRequestsWaiting,
     newToday,
     newWeek,
     newMonth,
@@ -84,6 +85,7 @@ export async function getDashboardStats() {
     getCountFromServer(query(usersRef, where("status", "==", "suspended"))),
     getCountFromServer(query(usersRef, where("isPaid", "==", true))),
     getCountFromServer(query(paymentRef, where("requestStatus", "==", "pending_review"))),
+    getCountFromServer(query(paymentRef, where("requestStatus", "==", "waiting_receipt"))),
     getCountFromServer(query(usersRef, where("createdAt", ">=", dayStart))),
     getCountFromServer(query(usersRef, where("createdAt", ">=", weekStart))),
     getCountFromServer(query(usersRef, where("createdAt", ">=", monthStart))),
@@ -94,7 +96,7 @@ export async function getDashboardStats() {
     activeUsers: activeUsers.data().count,
     suspendedUsers: suspendedUsers.data().count,
     paidUsers: paidUsers.data().count,
-    pendingRequests: pendingRequests.data().count,
+    pendingRequests: pendingRequestsReview.data().count + pendingRequestsWaiting.data().count,
     newToday: newToday.data().count,
     newWeek: newWeek.data().count,
     newMonth: newMonth.data().count,
@@ -232,7 +234,7 @@ export async function deleteUserByAdmin(adminProfile, userId) {
 
 export async function listPaymentRequests({ pageSize = 20, onlyPending = false } = {}) {
   const constraints = [orderBy("createdAt", "desc"), limit(pageSize)];
-  if (onlyPending) constraints.unshift(where("requestStatus", "==", "pending_review"));
+  if (onlyPending) constraints.unshift(where("requestStatus", "in", ["pending_review", "waiting_receipt"]));
 
   const q = query(collection(db, "paymentRequests"), ...constraints);
   const snap = await getDocs(q);

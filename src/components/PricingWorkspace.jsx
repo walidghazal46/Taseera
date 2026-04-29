@@ -6,6 +6,7 @@ import usePersistentState from "../hooks/usePersistentState";
 import useAdminSession from "../hooks/useAdminSession";
 import { AD_SLOT_IDS, DEFAULT_AD_BANNER, incrementUsageCounter, listenAdBanner, saveAdBanner } from "../services/subscriptionApi";
 import { SUPER_ADMIN_EMAIL } from "../constants/admin";
+import SubscriptionPanel from "./SubscriptionPanel";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
 const MONO = "'IBM Plex Mono',monospace";
@@ -1093,7 +1094,7 @@ function AreaSectionDetailView({ country, params, draft, overallResults, onBack,
 
 // --- Main Pricing Workspace Component ---
 
-export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings, sessionMeta, onOpenSubscription }) {
+export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings, sessionMeta, onOpenSubscription, onOpenAuthScreen, onShowStatus }) {
   // initialCountry comes from the CountryPicker on PricingPage; always override persisted value
   const [country, setCountry] = useState(initialCountry || "sa");
   const [mode, setMode] = useState("selection"); // selection, items, area, area-results
@@ -1672,9 +1673,11 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     }
   }, [mode, country, areaParams, areaResults, effectiveAreaResults, selectedItem, resources, qty, overhead, profit, factor, showToast]);
 
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+
   const openSubscriptionScreen = useCallback(() => {
-    onOpenSubscription?.();
-  }, [onOpenSubscription]);
+    setShowSubscriptionModal(true);
+  }, []);
 
   const itemLockMessage = isGuest
     ? "لقد وصلت للحد المجاني للبنود. يرجى تسجيل الدخول والاشتراك لفتح جميع البنود."
@@ -2090,6 +2093,44 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-xl bg-[#082555] px-5 py-2.5 text-[12px] font-medium text-[#E8C97A] shadow-xl"
           style={{ fontFamily: AR }}>
           {toastMsg}
+        </div>
+      )}
+
+      {showSubscriptionModal && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50"
+          style={{ backdropFilter: "blur(4px)" }}
+          onClick={() => setShowSubscriptionModal(false)}
+        >
+          <div
+            className="w-full max-w-lg rounded-t-3xl bg-[#F7F3EC] shadow-2xl"
+            style={{ maxHeight: "90vh", overflowY: "auto" }}
+            onClick={(e) => e.stopPropagation()}
+            dir={settings?.language === "en" ? "ltr" : "rtl"}
+          >
+            <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-3xl bg-gradient-to-r from-[#082555] to-[#0d3070] px-5 py-4">
+              <p className="text-[15px] font-bold text-white" style={{ fontFamily: AR }}>
+                {settings?.language === "en" ? "Subscription" : "الاشتراك"}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowSubscriptionModal(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-white hover:bg-white/20"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4">
+              <SubscriptionPanel
+                language={settings?.language || "ar"}
+                authMode={authMode}
+                sessionMeta={sessionMeta}
+                settings={settings}
+                onOpenAuthScreen={onOpenAuthScreen}
+                onShowStatus={(msg, tone) => showToast(msg)}
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -14,9 +14,10 @@ import {
   getDocs,
   addDoc,
 } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
-import { db, storage } from "../firebase";
+import { db } from "../firebase";
 import { hasPermission } from "./adminApi";
+
+const ADMIN_EMAIL = "walidghazal46@gmail.com";
 
 export const DEFAULT_PAYMENT_SETTINGS = {
   enabled: true,
@@ -62,47 +63,6 @@ function formatUserSerial(seq) {
   return `USR-${String(seq).padStart(6, "0")}`;
 }
 
-function sanitizeFileName(name = "receipt") {
-  return String(name)
-    .replace(/[^a-zA-Z0-9._-]/g, "_")
-    .slice(0, 90);
-}
-
-function uploadReceiptFile({ uid, orderId, file, onProgress }) {
-  return new Promise((resolve, reject) => {
-    const safeName = sanitizeFileName(file?.name || "receipt");
-    const receiptPath = `paymentReceipts/${uid}/${orderId}-${Date.now()}-${safeName}`;
-    const receiptRef = ref(storage, receiptPath);
-
-    const task = uploadBytesResumable(receiptRef, file, {
-      contentType: file?.type || "application/octet-stream",
-      customMetadata: {
-        uid,
-        orderId,
-      },
-    });
-
-    task.on(
-      "state_changed",
-      (snapshot) => {
-        const progress = snapshot.totalBytes > 0
-          ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
-          : 0;
-        onProgress?.(progress);
-      },
-      (error) => reject(error),
-      async () => {
-        try {
-          const receiptUrl = await getDownloadURL(task.snapshot.ref);
-          resolve({ receiptUrl, receiptPath });
-        } catch (error) {
-          reject(error);
-        }
-      }
-    );
-  });
-}
-
 async function reserveOrderAndSerial(uid) {
   const year = new Date().getFullYear();
   const orderCounterRef = doc(db, "systemCounters", `orders_${year}`);
@@ -110,21 +70,23 @@ async function reserveOrderAndSerial(uid) {
   const userRef = doc(db, "users", uid);
 
   return runTransaction(db, async (tx) => {
+    // All reads must happen before any writes in a Firestore transaction
     const userSnap = await tx.get(userRef);
     if (!userSnap.exists()) {
       throw new Error("User profile not found.");
     }
-
     const userData = userSnap.data() || {};
 
     const orderCounterSnap = await tx.get(orderCounterRef);
+    const serialCounterSnap = await tx.get(serialCounterRef);
+
+    // Now do all writes
     const nextOrderSeq = Number(orderCounterSnap.data()?.seq || 0) + 1;
     tx.set(orderCounterRef, { seq: nextOrderSeq, updatedAt: serverTimestamp() }, { merge: true });
     const orderId = formatOrderId(year, nextOrderSeq);
 
     let userSerial = userData.userSerial;
     if (!userSerial) {
-      const serialCounterSnap = await tx.get(serialCounterRef);
       const nextSerialSeq = Number(serialCounterSnap.data()?.seq || 0) + 1;
       tx.set(serialCounterRef, { seq: nextSerialSeq, updatedAt: serverTimestamp() }, { merge: true });
       userSerial = formatUserSerial(nextSerialSeq);
@@ -202,30 +164,19 @@ export async function createPaymentRequest({
   email,
   paymentMethod,
   paymentReference,
-  receiptFile,
   amount,
   currency,
   country,
   note,
-  onProgress,
 }) {
   if (!uid) {
     throw new Error("Sign-in is required before submitting a payment request.");
   }
-  if (!receiptFile) {
-    throw new Error("Receipt image/file is required before submitting the request.");
-  }
 
+  // Reserve order ID and serial
   const { orderId, userSerial } = await reserveOrderAndSerial(uid);
-  onProgress?.(5);
 
-  const { receiptUrl, receiptPath } = await uploadReceiptFile({
-    uid,
-    orderId,
-    file: receiptFile,
-    onProgress: (value) => onProgress?.(Math.max(10, Math.min(85, value))),
-  });
-
+  // Create payload for Firestore
   const payload = {
     userId: uid,
     userSerial,
@@ -238,21 +189,41 @@ export async function createPaymentRequest({
     paymentReference: paymentReference || "",
     note: note || "",
     orderId,
-    receiptUrl,
-    receiptPath,
     subscriptionType: "full_access",
     requestStatus: "pending_review",
-    paymentStatus: "submitted_manual_receipt",
+    paymentStatus: "awaiting_manual_receipt",
     adminNote: "",
     rejectionReason: "",
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
 
-  onProgress?.(92);
+  // Save to Firestore
   const ref = await addDoc(collection(db, "paymentRequests"), payload);
-  onProgress?.(100);
-  return { id: ref.id, orderId: payload.orderId, userSerial };
+
+  // Return data for mailto link
+  const mailtoBody = `
+طلب دفع جديد
+
+رقم الطلب: ${orderId}
+الاسم: ${userName}
+البريد: ${email}
+المبلغ: ${amount} ${currency}
+طريقة الدفع: ${paymentMethod}
+مرجع التحويل: ${paymentReference}
+البلد: ${country || "غير محدد"}
+ملاحظات: ${note || "بدون ملاحظات"}
+
+---
+يرجى إرفاق الإيصال الأصلي (Receipt) مع الرد على هذا الإيميل
+  `;
+
+  return {
+    id: ref.id,
+    orderId,
+    userSerial,
+    mailtoLink: `mailto:${ADMIN_EMAIL}?subject=${encodeURIComponent(`طلب دفع #${orderId} - ${userName}`)}&body=${encodeURIComponent(mailtoBody)}`,
+  };
 }
 
 export async function listMyPaymentRequests(uid) {
