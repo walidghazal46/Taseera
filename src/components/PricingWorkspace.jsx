@@ -2455,78 +2455,140 @@ function CSIScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, ite
   }, [search]);
   const isSearching = search.trim().length > 0;
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
+
+      {/* Free plan banner */}
       {!itemLocked && Number.isFinite(itemRemaining) && (
-        <div className="rounded-2xl border border-[#d4a843]/30 bg-[#fff8e7] px-4 py-3 text-[12px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
-          المتبقي لك في الخطة المجانية: {itemRemaining} بند
-        </div>
-      )}
-      {itemLocked && (
-        <div className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-4">
-          <p className="text-[12px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
-            لقد وصلت للحد المجاني للبنود. يرجى تسجيل الدخول والاشتراك للوصول الكامل.
+        <div className="flex items-center gap-3 rounded-2xl border border-[#d4a843]/30 bg-[#fffbf0] px-4 py-3">
+          <span className="text-lg">🎯</span>
+          <p className="text-[12px] font-bold text-[#7a5c1e]" style={{ fontFamily: AR }}>
+            المتبقي في الخطة المجانية: <span className="text-[#C9A84C]">{itemRemaining} بند</span>
           </p>
-          <button
-            type="button"
-            onClick={onOpenSubscription}
-            className="mt-3 w-full rounded-xl bg-[#082555] py-2.5 text-[12px] font-bold text-[#E8C97A]"
-          >
-            فتح صفحة الاشتراك
-          </button>
         </div>
       )}
-      <div className="rounded-3xl bg-white border-2 border-[#E2D8C4] p-5 shadow-sm">
-        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-          placeholder="🔍  ابحث عن بند أو وصف..."
-          className="min-h-[52px] w-full rounded-2xl border-2 border-[#E2D8C4] bg-[#F7F3EC] px-4 py-2.5 text-[15px] outline-none focus:border-[#C9A84C] transition-colors"
-          style={{ fontFamily: AR }} />
-        <div className="mt-3 flex items-center justify-between">
-          <span className="text-[11px] font-bold text-[#9A8A6A] tracking-wider uppercase mr-1" style={{ fontFamily: AR }}>CSI MasterFormat 2024</span>
-          {c && (
-             <span className="text-[11px] font-bold text-[#C9A84C] bg-[#F5EDD8] px-3 py-1 rounded-lg">قاعدة بيانات {c.name}</span>
+
+      {/* Locked banner */}
+      {itemLocked && (
+        <div className="overflow-hidden rounded-2xl border border-[#E2D8C4] bg-white shadow-sm">
+          <div className="bg-gradient-to-r from-[#082555] to-[#0d3070] px-4 py-3">
+            <p className="text-[13px] font-bold text-white" style={{ fontFamily: AR }}>🔒 تم الوصول للحد المجاني</p>
+          </div>
+          <div className="p-4">
+            <p className="text-[12px] leading-6 text-[#5A4E38]" style={{ fontFamily: AR }}>
+              اشترك للوصول الكامل لجميع البنود وتسعير المباني بدون حدود.
+            </p>
+            <button type="button" onClick={onOpenSubscription}
+              className="mt-3 w-full rounded-xl bg-gradient-to-r from-[#C9A84C] to-[#E8C97A] py-2.5 text-[13px] font-bold text-[#082555] shadow-md transition-all hover:shadow-lg active:scale-[0.98]"
+              style={{ fontFamily: AR }}>
+              فتح صفحة الاشتراك ←
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Search card */}
+      <div className="overflow-hidden rounded-2xl border border-[#E2D8C4] bg-white shadow-sm">
+        <div className="border-b border-[#E2D8C4] bg-gradient-to-r from-[#082555] to-[#0d3070] px-4 py-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">CSI MasterFormat 2024</span>
+            {c && (
+              <span className="rounded-full bg-[#C9A84C]/20 border border-[#C9A84C]/30 px-2.5 py-0.5 text-[10px] font-bold text-[#E8C97A]">
+                {c.name}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="p-3">
+          <div className="flex items-center gap-2 rounded-xl border border-[#E2D8C4] bg-[#F7F3EC] px-3 focus-within:border-[#C9A84C] focus-within:bg-white transition-all">
+            <span className="shrink-0 text-[16px]">🔍</span>
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+              placeholder="ابحث عن بند أو وصف..."
+              className="h-[44px] flex-1 bg-transparent text-[14px] font-medium text-[#082555] outline-none placeholder:text-[#B0A090]"
+              style={{ fontFamily: AR }} />
+            {search && (
+              <button type="button" onClick={() => setSearch("")}
+                className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-[#E2D8C4] text-[10px] font-bold text-[#9A8A6A] hover:bg-[#C9A84C]/20">
+                ✕
+              </button>
+            )}
+          </div>
+          {isSearching && (
+            <p className="mt-2 px-1 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+              {filtered.reduce((n, d) => n + d.items.length, 0)} نتيجة
+            </p>
           )}
         </div>
       </div>
-      <div className="flex flex-col gap-3">
+
+      {/* Division cards */}
+      <div className="flex flex-col gap-2">
         {filtered.map((div) => {
           const isOpen = isSearching || openDiv === div.num;
           const price = c?.rates?.[div.rateKey] > 0 ? c.rates[div.rateKey] : null;
           return (
-            <div key={div.num} className="rounded-2xl bg-white border-2 border-[#E2D8C4] overflow-hidden shadow-sm transition-all hover:shadow-md">
+            <div key={div.num}
+              className="overflow-hidden rounded-2xl border border-[#E2D8C4] bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-px">
+
+              {/* Division header */}
               <button type="button" onClick={() => setOpenDiv(openDiv === div.num ? null : div.num)}
-                className={`w-full flex min-h-[72px] items-center gap-4 px-4 py-3 text-right transition-colors ${isOpen ? "bg-[#F5EDD8]" : "hover:bg-[#F5EDD8]/30"}`}>
-                <span className="rounded-xl bg-[#082555] px-3 py-2 text-[12px] font-bold text-[#E8C97A]" style={{ fontFamily: MONO }}>{div.num}</span>
+                className={`w-full flex items-center gap-3 px-4 py-3.5 text-right transition-colors duration-150 ${isOpen ? "bg-[#F5EDD8]" : "hover:bg-[#F5EDD8]/40"}`}>
+                {/* Num badge */}
+                <span className="shrink-0 rounded-xl bg-[#082555] px-2.5 py-1.5 text-[11px] font-black text-[#E8C97A] shadow-sm"
+                  style={{ fontFamily: MONO }}>{div.num}</span>
+
+                {/* Name */}
                 <div className="flex-1 min-w-0 text-right">
-                  <div className="text-[15px] font-bold text-[#082555] truncate mb-0.5" style={{ fontFamily: AR }}>{div.ar}</div>
-                  <div className="text-[11px] text-[#9A8A6A] font-bold uppercase tracking-tight">{div.en}</div>
+                  <div className="text-[14px] font-bold leading-snug text-[#082555]" style={{ fontFamily: AR }}>{div.ar}</div>
+                  <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-[#9A8A6A]">{div.en}</div>
                 </div>
-                {price && (
-                  <div className="text-left shrink-0 ml-1">
-                    <div className="text-[14px] font-bold text-[#C9A84C]" style={{ fontFamily: MONO }}>{price.toLocaleString()}</div>
-                    <div className="text-[9px] text-[#9A8A6A] font-bold uppercase">{c.currency}/{div.unit}</div>
-                  </div>
-                )}
-                <span className={`text-[14px] text-[#9A8A6A] transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}>▼</span>
+
+                {/* Price + count + chevron */}
+                <div className="flex shrink-0 items-center gap-2">
+                  {price && (
+                    <div className="hidden sm:block text-right">
+                      <div className="text-[13px] font-black text-[#C9A84C]" style={{ fontFamily: MONO }}>{price.toLocaleString()}</div>
+                      <div className="text-[8px] font-bold uppercase text-[#9A8A6A]">{c.currency}/{div.unit}</div>
+                    </div>
+                  )}
+                  <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#082555]/8 text-[11px] text-[#082555]/50 transition-transform duration-200"
+                    style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+                </div>
               </button>
+
+              {/* Items list */}
               {isOpen && (
-                <div className="border-t-2 border-[#E2D8C4] bg-[#FAFAFA]">
-                  {div.items.map((item) => (
-                    <div key={item.num} className="flex min-h-[64px] flex-wrap items-start gap-2 border-b border-[#E2D8C4] px-3 py-3 last:border-b-0 transition-colors hover:bg-white sm:items-center sm:gap-4 sm:px-5">
-                      <span className="min-w-[58px] text-[11px] font-bold text-[#C9A84C]" style={{ fontFamily: MONO }}>{item.num}</span>
-                      <span className="w-full flex-1 text-[14px] font-bold text-[#082555] sm:w-auto" style={{ fontFamily: AR }}>{item.ar}</span>
-                      <span className="rounded-lg bg-[#F7F3EC] px-2.5 py-1 text-[10px] font-bold text-[#9A8A6A]">{item.unit}</span>
-                      <button type="button" onClick={() => onSelfPrice(item, div)}
-                        disabled={itemLocked}
-                        className="min-h-[40px] flex-1 rounded-xl border-2 border-[#082555] bg-white px-3 py-1 text-[12px] font-bold text-[#082555] transition hover:bg-[#F5EDD8] active:scale-[0.95] sm:flex-none sm:px-4"
-                        style={{ fontFamily: AR }}>
-                        {itemLocked ? "🔒 مقفول" : "💡 سعر بنفسك"}
-                      </button>
-                      <button type="button" onClick={() => onSelectItem(item, div)}
-                        disabled={itemLocked}
-                        className="min-h-[40px] flex-1 rounded-xl bg-[#C9A84C] px-4 py-1 text-[13px] font-bold text-[#082555] transition hover:bg-[#E8C97A] active:scale-[0.95] sm:flex-none sm:px-5"
-                        style={{ fontFamily: AR }}>
-                        {itemLocked ? "🔒 مقفول" : "اختر"}
-                      </button>
+                <div className="border-t border-[#E2D8C4]">
+                  {div.items.map((item, idx) => (
+                    <div key={item.num}
+                      className={`group flex flex-col gap-2.5 border-b border-[#E2D8C4] px-4 py-3 last:border-b-0 transition-colors duration-150 hover:bg-[#FFFDF8]
+                        sm:flex-row sm:items-center sm:gap-4 ${idx % 2 === 0 ? "bg-white" : "bg-[#FAFAF8]"}`}>
+
+                      {/* Item code + name */}
+                      <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                        <span className="mt-0.5 shrink-0 rounded-lg bg-[#F5EDD8] px-2 py-1 text-[10px] font-black text-[#C9A84C]"
+                          style={{ fontFamily: MONO }}>{item.num}</span>
+                        <span className="text-[13px] font-bold leading-snug text-[#082555]"
+                          style={{ fontFamily: AR }}>{item.ar}</span>
+                      </div>
+
+                      {/* Unit + buttons */}
+                      <div className="flex items-center gap-2 sm:shrink-0">
+                        <span className="rounded-lg border border-[#E2D8C4] bg-[#F7F3EC] px-2.5 py-1 text-[10px] font-bold text-[#9A8A6A]">
+                          {item.unit}
+                        </span>
+                        <button type="button" onClick={() => onSelfPrice(item, div)}
+                          disabled={itemLocked}
+                          className="flex-1 sm:flex-none min-h-[36px] rounded-xl border border-[#082555]/20 bg-white px-3 text-[11px] font-bold text-[#082555] shadow-sm transition-all duration-150 hover:border-[#082555] hover:bg-[#F5EDD8] hover:shadow-md active:scale-[0.96] disabled:opacity-40"
+                          style={{ fontFamily: AR }}>
+                          {itemLocked ? "🔒 مقفول" : "💡 سعر بنفسك"}
+                        </button>
+                        <button type="button" onClick={() => onSelectItem(item, div)}
+                          disabled={itemLocked}
+                          className="flex-1 sm:flex-none min-h-[36px] rounded-xl bg-[#C9A84C] px-4 text-[12px] font-bold text-[#082555] shadow-sm transition-all duration-150 hover:bg-[#E8C97A] hover:shadow-md active:scale-[0.96] disabled:opacity-40"
+                          style={{ fontFamily: AR }}>
+                          {itemLocked ? "🔒" : "اختر"}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -2535,6 +2597,15 @@ function CSIScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, ite
           );
         })}
       </div>
+
+      {/* Empty state */}
+      {filtered.length === 0 && (
+        <div className="rounded-2xl border border-[#E2D8C4] bg-white py-12 text-center">
+          <p className="text-3xl mb-3">🔍</p>
+          <p className="text-[14px] font-bold text-[#082555]" style={{ fontFamily: AR }}>لا توجد نتائج</p>
+          <p className="mt-1 text-[11px] text-[#9A8A6A]" style={{ fontFamily: AR }}>جرب كلمة بحث مختلفة</p>
+        </div>
+      )}
     </div>
   );
 }
