@@ -6,7 +6,7 @@ import { getAppText } from "../data/appText";
 
 export default function CompaniesPage(props) {
   const text = getAppText(props.settings?.language);
-  const [selectedCountry, setSelectedCountry] = useState(null);
+  const [selectedCountry, setSelectedCountry] = useState(props.settings?.country || null);
 
   const handleSelectCountry = (country) => {
     props.onUpdateSetting?.("country", country);
@@ -37,7 +37,7 @@ export default function CompaniesPage(props) {
         title=""
         description={text.pages.companies.description}
       />
-      <CompaniesPanel {...props} />
+      <CompaniesPanel {...props} initialCountry={selectedCountry} />
     </div>
   );
 }

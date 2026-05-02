@@ -6,7 +6,7 @@ import { getAppText } from "../data/appText";
 
 export default function SuppliersPage(props) {
   const text = getAppText(props.settings?.language);
-  const [selectedCountry, setSelectedCountry] = useState(null);
+  const [selectedCountry, setSelectedCountry] = useState(props.settings?.country || null);
 
   const handleSelectCountry = (country) => {
     props.onUpdateSetting?.("country", country);

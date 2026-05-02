@@ -313,6 +313,11 @@ export default function SuppliersPanel({
   }, [activeCountry, copy.all, copy.allCities]);
 
   useEffect(() => {
+    const nextCountry = normalizeCountry(initialCountry || settings?.country || COUNTRY_VALUES.sa);
+    setActiveCountry(nextCountry);
+  }, [initialCountry, settings?.country]);
+
+  useEffect(() => {
     const unsubscribe = listenAdBanner(
       (data) => setSuppliersAdBanner(data),
       AD_SLOT_IDS.suppliersAfterPagination
@@ -415,9 +420,17 @@ export default function SuppliersPanel({
               <p className="text-[11px] font-bold text-[#082555] uppercase tracking-wider" style={{ fontFamily: AR }}>
                 {copy.supplierSpecialties}
               </p>
-              <span className="rounded-full bg-[#082555]/8 px-2.5 py-0.5 text-[10px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>
-                {filtered.length} / {suppliers.length}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-[#C9A84C]/12 px-2.5 py-0.5 text-[10px] font-bold text-[#8B6A1F]" style={{ fontFamily: AR }}>
+                  {activeCountry}
+                </span>
+                <span className="rounded-full bg-[#082555]/8 px-2.5 py-0.5 text-[10px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>
+                  {countrySuppliers.length}
+                </span>
+                <span className="rounded-full bg-[#082555]/8 px-2.5 py-0.5 text-[10px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>
+                  {filtered.length} / {suppliers.length}
+                </span>
+              </div>
             </div>
 
             <div className="p-3 space-y-2.5">

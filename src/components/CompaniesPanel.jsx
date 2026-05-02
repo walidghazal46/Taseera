@@ -412,7 +412,7 @@ function InlineAdBanner({ adBanner, canManageAds = false, onEdit, onToggleVisibi
 export default function CompaniesPanel({
   companies, company, selectedCompanyId, selectedProjectId,
   onSelectCompany, onSelectProject, onAddCompany, onAddProject,
-  navigationBridge, settings, sessionMeta, authMode,
+  navigationBridge, settings, sessionMeta, authMode, initialCountry,
 }) {
   const copy = getCompaniesCopy(settings?.language);
   const { profile: adminProfile } = useAdminSession({
@@ -429,11 +429,11 @@ export default function CompaniesPanel({
     { value: COUNTRY_VALUES.eg, label: copy.egypt },
     { value: COUNTRY_VALUES.ae, label: copy.uae },
   ]), [copy.egypt, copy.saudiArabia, copy.uae]);
-  const [activeCountry, setActiveCountry] = useState(normalizeCountry(settings?.country || COUNTRY_VALUES.sa));
+  const [activeCountry, setActiveCountry] = useState(normalizeCountry(initialCountry || settings?.country || COUNTRY_VALUES.sa));
   const [query, setQuery] = useState("");
   const [companyForm, setCompanyForm] = useState({
     name: "", type: "Contractor",
-    country: normalizeCountry(settings?.country || COUNTRY_VALUES.sa),
+    country: normalizeCountry(initialCountry || settings?.country || COUNTRY_VALUES.sa),
     specialization: "", headquarters: "",
   });
   const [projectForm, setProjectForm] = useState({
@@ -505,6 +505,12 @@ export default function CompaniesPanel({
       setActiveCountry(COUNTRY_VALUES.sa);
     }
   }, [activeCountry, countryOptions]);
+
+  useEffect(() => {
+    const nextCountry = normalizeCountry(initialCountry || settings?.country || COUNTRY_VALUES.sa);
+    setActiveCountry(nextCountry);
+    setCompanyForm((current) => ({ ...current, country: nextCountry }));
+  }, [initialCountry, settings?.country]);
 
   useEffect(() => {
     const unsubscribe = listenAdBanner(

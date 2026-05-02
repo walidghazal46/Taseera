@@ -21,6 +21,20 @@ import { getAppText } from "./data/appText";
 
 const APP_STORAGE_PREFIX = "taseera.v3";
 
+function makeSeedMergeKey(entry) {
+  const name = String(entry?.name || "").trim().toLowerCase();
+  const country = String(entry?.country || "").trim().toLowerCase();
+  return `${name}::${country}`;
+}
+
+function mergeSeedData(currentItems, seedItems) {
+  const safeCurrent = Array.isArray(currentItems) ? currentItems : [];
+  const safeSeed = Array.isArray(seedItems) ? seedItems : [];
+  const existingKeys = new Set(safeCurrent.map(makeSeedMergeKey));
+  const missingSeeds = safeSeed.filter((item) => !existingKeys.has(makeSeedMergeKey(item)));
+  return missingSeeds.length ? [...safeCurrent, ...missingSeeds] : safeCurrent;
+}
+
 function getForcedScreen() {
   if (typeof window === "undefined") {
     return null;
@@ -200,6 +214,14 @@ export default function App() {
   const [pageResetVersion, setPageResetVersion] = useState({ companies: 0, pricing: 0, suppliers: 0, settings: 0 });
   const [scrollResetVersion, setScrollResetVersion] = useState(0);
 
+  useEffect(() => {
+    setCompanies((current) => mergeSeedData(current, sampleCompanies));
+    setSuppliers((current) => mergeSeedData(current, sampleSuppliers));
+  }, [setCompanies, setSuppliers]);
+
+  const mergedCompanies = useMemo(() => mergeSeedData(companies, sampleCompanies), [companies]);
+  const mergedSuppliers = useMemo(() => mergeSeedData(suppliers, sampleSuppliers), [suppliers]);
+
   // UI States
   const [status, setStatus] = useState(null);
   const [dialog, setDialog] = useState(null);
@@ -235,20 +257,20 @@ export default function App() {
 
   // Selection Sync
   useEffect(() => {
-    const selectedCompanyExists = companies.some((c) => c.id === selectedCompanyId);
+    const selectedCompanyExists = mergedCompanies.some((c) => c.id === selectedCompanyId);
     if (!selectedCompanyExists) {
-      const fallback = companies[0] || null;
+      const fallback = mergedCompanies[0] || null;
       setSelectedCompanyId(fallback?.id || null);
       setSelectedProjectId(fallback?.projects?.[0]?.id || null);
     }
-  }, [companies, selectedCompanyId, setSelectedCompanyId, setSelectedProjectId]);
+  }, [mergedCompanies, selectedCompanyId, setSelectedCompanyId, setSelectedProjectId]);
 
   useEffect(() => {
-    const selectedCompany = companies.find((c) => c.id === selectedCompanyId);
+    const selectedCompany = mergedCompanies.find((c) => c.id === selectedCompanyId);
     if (!selectedCompany) return;
     const projectExists = selectedCompany.projects.some((p) => p.id === selectedProjectId);
     if (!projectExists) setSelectedProjectId(selectedCompany.projects[0]?.id || null);
-  }, [companies, selectedCompanyId, selectedProjectId, setSelectedProjectId]);
+  }, [mergedCompanies, selectedCompanyId, selectedProjectId, setSelectedProjectId]);
 
   // Navigation Logic
   const registerPageBackHandler = useCallback((handler) => {
@@ -376,13 +398,13 @@ export default function App() {
   }, [activePage, bridge.isAndroid, openLoginScreen, performBackNavigation, pushHistoryEntry]);
 
   // Data Helpers
-  const selectedCompany = useMemo(() => companies.find((c) => c.id === selectedCompanyId) || null, [companies, selectedCompanyId]);
+  const selectedCompany = useMemo(() => mergedCompanies.find((c) => c.id === selectedCompanyId) || null, [mergedCompanies, selectedCompanyId]);
   const selectedProject = useMemo(() => {
     if (!selectedCompany) return null;
     return selectedCompany.projects.find((p) => p.id === selectedProjectId) || selectedCompany.projects[0] || null;
   }, [selectedCompany, selectedProjectId]);
 
-  const selectCompany = (id) => { const c = companies.find((i) => i.id === id); setSelectedCompanyId(id); setSelectedProjectId(c?.projects[0]?.id || null); };
+  const selectCompany = (id) => { const c = mergedCompanies.find((i) => i.id === id); setSelectedCompanyId(id); setSelectedProjectId(c?.projects[0]?.id || null); };
   const selectProject = (cid, pid) => { setSelectedCompanyId(cid); setSelectedProjectId(pid); };
 
   const addCompany = (input) => {
@@ -461,7 +483,7 @@ export default function App() {
   const navigationBridge = useMemo(() => ({ registerBackHandler: registerPageBackHandler, pushHistoryEntry, onEntryChange: notifySubpageNavigation }), [notifySubpageNavigation, pushHistoryEntry, registerPageBackHandler]);
 
   const pageProps = {
-    authMode, companies, suppliers, settings, pricingCatalog, importedPricingSource, savedAnalyses, rfqRequests, systemBridge: bridge, navigationBridge,
+    authMode, companies: mergedCompanies, suppliers: mergedSuppliers, settings, pricingCatalog, importedPricingSource, savedAnalyses, rfqRequests, systemBridge: bridge, navigationBridge,
     selectedPricingItemId, selectedCompanyId, selectedProjectId, company: selectedCompany, project: selectedProject,
     onSelectPricingItem: setSelectedPricingItemId, onSelectCompany: selectCompany, onSelectProject: selectProject, onAddCompany: addCompany, onAddProject: addProject, onAddSupplier: addSupplier, onUpdateSetting: updateSetting, onLogout: handleLogout, onShowStatus: showStatus, onSaveAnalysis: handleSaveAnalysis, onCreateRfq: handleCreateRfq, onContactSupplier: handleContactSupplier, onSettingsAction: handleSettingsAction, onOpenAuthScreen: openAuthScreen, sessionMeta: authSession,
     onOpenSubscription: handleOpenSubscription,
