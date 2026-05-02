@@ -110,9 +110,9 @@ export const MARKET_RATES = {
 };
 
 export const COUNTRIES = {
-  sa: { name: "المملكة العربية السعودية", flag: "🇸🇦", currency: "ريال", rateKey: "sa", rates: MARKET_RATES.sa },
-  eg: { name: "جمهورية مصر العربية", flag: "🇪🇬", currency: "جنية", rateKey: "eg", rates: MARKET_RATES.eg },
-  ae: { name: "الإمارات العربية المتحدة", flag: "🇦🇪", currency: "درهم", rateKey: "ae", rates: MARKET_RATES.ae },
+  sa: { name: "المملكة العربية السعودية", flag: "🇸🇦", currency: CURRENCY_INFO.sa.symbol, currencyCode: CURRENCY_INFO.sa.code, currencyName: CURRENCY_INFO.sa.name, rateKey: "sa", rates: MARKET_RATES.sa },
+  eg: { name: "جمهورية مصر العربية", flag: "🇪🇬", currency: CURRENCY_INFO.eg.symbol, currencyCode: CURRENCY_INFO.eg.code, currencyName: CURRENCY_INFO.eg.name, rateKey: "eg", rates: MARKET_RATES.eg },
+  ae: { name: "الإمارات العربية المتحدة", flag: "🇦🇪", currency: CURRENCY_INFO.ae.symbol, currencyCode: CURRENCY_INFO.ae.code, currencyName: CURRENCY_INFO.ae.name, rateKey: "ae", rates: MARKET_RATES.ae },
 };
 
 export const CSI_DIVISIONS = [

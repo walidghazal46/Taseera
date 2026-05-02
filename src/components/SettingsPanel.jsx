@@ -648,6 +648,12 @@ export default function SettingsPanel({
   onOpenAuthScreen, sessionMeta, companies, suppliers, onShowStatus,
 }) {
   const copy = getSettingsCopy(settings.language);
+  const isGuest = authMode === "guest";
+  const isSuperAdminEmail = settings.userEmail?.toLowerCase() === "walidghazal46@gmail.com";
+  const { profile: adminProfile, loading: adminLoading } = useAdminSession({
+    uid: sessionMeta?.uid, email: settings.userEmail, displayName: settings.userName,
+  });
+  const isSubscribed = !isGuest && (isSuperAdminEmail || adminProfile?.canAccessAdmin === true || adminProfile?.isPaid === true);
   const initialSection = settings?.settingsPanelSection || "account";
   const nav = useBackStack({
     initialEntry: { section: initialSection },
@@ -713,6 +719,7 @@ export default function SettingsPanel({
           authMode={authMode}
           sessionMeta={sessionMeta}
           settings={settings}
+          isSubscribed={isSubscribed}
           onOpenAuthScreen={onOpenAuthScreen}
           onShowStatus={onShowStatus}
         />

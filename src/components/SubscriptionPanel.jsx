@@ -40,6 +40,8 @@ export function getSubscriptionCopy(language) {
         serial: "Serial",
         noAdminNote: "No admin note",
         invalidFile: "Only image/pdf files are allowed (max 8 MB).",
+        subscriptionActive: "Subscription active",
+        subscribedNow: "Subscribed",
       }
     : {
         subscriptionTitle: "اشتراك الوصول الكامل",
@@ -71,6 +73,8 @@ export function getSubscriptionCopy(language) {
         serial: "السيريال",
         noAdminNote: "لا توجد ملاحظة",
         invalidFile: "مسموح فقط بصيغ الصور أو PDF وبحد أقصى 8 ميجابايت.",
+        subscriptionActive: "الاشتراك مفعل",
+        subscribedNow: "تم الاشتراك",
       };
 }
 
@@ -128,6 +132,7 @@ export default function SubscriptionPanel({
   authMode,
   sessionMeta,
   settings = {},
+  isSubscribed = false,
   onOpenAuthScreen,
   onShowStatus,
 }) {
@@ -171,6 +176,17 @@ export default function SubscriptionPanel({
   const displayAmount = useMemo(() => {
     return Number(paymentSettings.baseAmountSar) || 100;
   }, [paymentSettings.baseAmountSar]);
+
+  const hasApprovedRequest = useMemo(
+    () => requests.some((row) => row?.requestStatus === "approved" || row?.paymentStatus === "approved"),
+    [requests]
+  );
+
+  const subscriptionActive = Boolean(isSubscribed || hasApprovedRequest);
+
+  useEffect(() => {
+    if (subscriptionActive) setShowForm(false);
+  }, [subscriptionActive]);
 
   async function handleSubmitRequest() {
     if (!sessionMeta?.uid || isGuest) {
@@ -258,27 +274,47 @@ export default function SubscriptionPanel({
       )}
 
       {/* Premium Pricing Card */}
-      <div className="overflow-hidden rounded-3xl shadow-[0_12px_40px_rgba(13,37,69,0.25)]">
+      <div
+        className={`overflow-hidden rounded-3xl ${
+          subscriptionActive
+            ? "border border-emerald-300/60 shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_14px_40px_rgba(16,185,129,0.22),0_0_28px_rgba(74,222,128,0.14)]"
+            : "shadow-[0_12px_40px_rgba(13,37,69,0.25)]"
+        }`}
+      >
         {/* Hero */}
-        <div className="relative bg-gradient-to-br from-[#0d2545] via-[#122d55] to-[#1a3c72] px-5 pt-6 pb-5">
+        <div
+          className={`relative px-5 pt-6 pb-5 ${
+            subscriptionActive
+              ? "bg-gradient-to-br from-[#0c503f] via-[#0e6b52] to-[#148060]"
+              : "bg-gradient-to-br from-[#0d2545] via-[#122d55] to-[#1a3c72]"
+          }`}
+        >
           {/* Popular badge */}
           <div
-            className="absolute top-4 rounded-full bg-[#d4a843] px-3 py-1 text-[9px] font-bold text-white shadow-lg"
+            className={`absolute top-4 rounded-full px-3 py-1 text-[9px] font-bold text-white shadow-lg ${
+              subscriptionActive ? "bg-emerald-500 shadow-[0_0_18px_rgba(16,185,129,0.45)]" : "bg-[#d4a843]"
+            }`}
             style={{ [isAr ? "left" : "right"]: "1rem" }}
           >
-            {isAr ? "الأكثر طلباً" : "Most Popular"}
+            {subscriptionActive ? copy.subscriptionActive : isAr ? "الأكثر طلباً" : "Most Popular"}
           </div>
 
           <div className="text-center">
-            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#d4a843]/20 text-3xl shadow-inner">
-              💎
+            <div
+              className={`mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl text-3xl shadow-inner ${
+                subscriptionActive ? "bg-emerald-200/20 ring-1 ring-emerald-200/30" : "bg-[#d4a843]/20"
+              }`}
+            >
+              {subscriptionActive ? "✅" : "💎"}
             </div>
             <p className="text-[17px] font-bold text-white">{copy.subscriptionTitle}</p>
-            <p className="mt-1.5 text-[11px] text-white/60 leading-relaxed">{copy.subscriptionHint}</p>
+            <p className="mt-1.5 text-[11px] text-white/60 leading-relaxed">
+              {subscriptionActive ? copy.subscriptionActive : copy.subscriptionHint}
+            </p>
 
             {/* Price display */}
             <div className="mt-5 flex items-baseline justify-center gap-1">
-              <span className="text-[40px] font-bold leading-none text-[#d4a843]">{displayAmount}</span>
+              <span className={`text-[40px] font-bold leading-none ${subscriptionActive ? "text-emerald-200" : "text-[#d4a843]"}`}>{displayAmount}</span>
               <div className="flex flex-col items-start">
                 <span className="text-[14px] font-bold text-white/80">SAR</span>
                 <span className="text-[10px] text-white/40">{isAr ? "دفعة واحدة" : "one-time"}</span>
@@ -288,11 +324,23 @@ export default function SubscriptionPanel({
         </div>
 
         {/* Features */}
-        <div className="border-t border-white/10 bg-gradient-to-b from-[#162e52] to-[#1a3870] px-5 py-4">
+        <div
+          className={`border-t px-5 py-4 ${
+            subscriptionActive
+              ? "border-emerald-200/10 bg-gradient-to-b from-[#0d5d49] to-[#11765b]"
+              : "border-white/10 bg-gradient-to-b from-[#162e52] to-[#1a3870]"
+          }`}
+        >
           <div className="space-y-2.5">
             {features.map((f, i) => (
               <div key={i} className="flex items-center gap-3">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#d4a843]/25 text-[11px] font-bold text-[#d4a843]">✓</span>
+                <span
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
+                    subscriptionActive ? "bg-emerald-200/20 text-emerald-100" : "bg-[#d4a843]/25 text-[#d4a843]"
+                  }`}
+                >
+                  ✓
+                </span>
                 <p className="text-[11px] text-white/75">{f}</p>
               </div>
             ))}
@@ -301,13 +349,13 @@ export default function SubscriptionPanel({
 
         {/* Note from admin */}
         {(paymentSettings.note || DEFAULT_PAYMENT_SETTINGS.note) && (
-          <div className="border-t border-white/10 bg-[#1a3870]/80 px-5 py-3">
+          <div className={`border-t px-5 py-3 ${subscriptionActive ? "border-emerald-200/10 bg-[#11765b]/85" : "border-white/10 bg-[#1a3870]/80"}`}>
             <p className="text-[10px] text-white/50 leading-relaxed">{paymentSettings.note || DEFAULT_PAYMENT_SETTINGS.note}</p>
           </div>
         )}
 
         {/* CTA */}
-        <div className="border-t border-white/10 bg-[#1a3870] px-5 pb-5 pt-4">
+        <div className={`border-t px-5 pb-5 pt-4 ${subscriptionActive ? "border-emerald-200/10 bg-[#11765b]" : "border-white/10 bg-[#1a3870]"}`}>
           {isGuest ? (
             <button
               type="button"
@@ -315,6 +363,14 @@ export default function SubscriptionPanel({
               className="w-full rounded-2xl bg-[#d4a843] py-3.5 text-[13px] font-bold text-white shadow-[0_4px_16px_rgba(212,168,67,0.4)] transition-all duration-150 hover:bg-[#c49a38] hover:shadow-[0_6px_20px_rgba(212,168,67,0.5)] active:scale-[0.98]"
             >
               {copy.loginToSubscribe}
+            </button>
+          ) : subscriptionActive ? (
+            <button
+              type="button"
+              disabled
+              className="w-full rounded-2xl bg-emerald-500 py-3.5 text-[13px] font-bold text-white shadow-[0_0_0_1px_rgba(167,243,208,0.28),0_8px_24px_rgba(16,185,129,0.35),0_0_22px_rgba(74,222,128,0.24)]"
+            >
+              {copy.subscribedNow}
             </button>
           ) : !showForm ? (
             <button
@@ -329,7 +385,7 @@ export default function SubscriptionPanel({
       </div>
 
       {/* Payment Form */}
-      {!isGuest && showForm && (
+      {!isGuest && showForm && !subscriptionActive && (
         <div className="overflow-hidden rounded-2xl border border-[#e8dcc8] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
           <div className="flex items-center justify-between border-b border-[#f0e8d8] bg-[#faf6ef] px-4 py-3">
             <div className="flex items-center gap-2">
