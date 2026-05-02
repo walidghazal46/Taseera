@@ -164,22 +164,26 @@ function ModeSelection({ onSelect, areaLocked = false, areaMessage = "", onOpenS
       </button>
 
       {areaLocked && (
-        <div className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-4">
-          <p className="text-[12px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>{areaMessage}</p>
-          <button
-            type="button"
-            onClick={onOpenSubscription}
-            className="mt-3 w-full rounded-xl bg-[#082555] py-2.5 text-[12px] font-bold text-[#E8C97A]"
-          >
-            الاشتراك الآن
-          </button>
+        <div className="overflow-hidden rounded-2xl border border-[#E2D8C4] bg-white shadow-sm">
+          <div className="border-b border-[#F0E8D8] bg-amber-50 px-4 py-2.5">
+            <p className="text-[11px] font-bold text-amber-800" style={{ fontFamily: AR }}>🔒 {areaMessage}</p>
+          </div>
+          <div className="p-3">
+            <button
+              type="button"
+              onClick={onOpenSubscription}
+              className="w-full h-10 rounded-xl bg-gradient-to-r from-[#082555] to-[#0d3070] text-[12px] font-bold text-[#E8C97A] shadow-md transition-all duration-150 hover:shadow-lg active:scale-[0.98]"
+            >
+              الاشتراك الآن
+            </button>
+          </div>
         </div>
       )}
 
-      <div className="mt-4 rounded-2xl bg-white/5 border-2 border-dashed border-white/10 p-5 text-center">
-         <p className="text-[12px] font-bold text-gray-500 leading-relaxed" style={{ fontFamily: AR }}>
-           جميع الحسابات تقديرية وتعتمد على متوسطات السوق الحالية في الدولة المختارة.
-         </p>
+      <div className="mt-2 rounded-xl border border-dashed border-white/10 bg-white/4 p-4 text-center">
+        <p className="text-[11px] text-gray-500 leading-relaxed" style={{ fontFamily: AR }}>
+          جميع الحسابات تقديرية وتعتمد على متوسطات السوق الحالية في الدولة المختارة.
+        </p>
       </div>
     </div>
   );
@@ -1136,9 +1140,9 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
 
   // Analysis Parameters (Moved up for persistence and export)
   const [qty, setQty] = useState(1);
-  const [overhead, setOverhead] = useState(12);
-  const [profit, setProfit] = useState(15);
-  const [factor, setFactor] = useState(1.03);
+  const [overhead, setOverhead] = useState(() => Number(settings?.overheadPercent) || 12);
+  const [profit, setProfit] = useState(() => Number(settings?.profitPercent) || 15);
+  const [factor, setFactor] = useState(() => Number(settings?.locationFactor) || 1.03);
   const [analysisBaseline, setAnalysisBaseline] = useState(null);
 
   useEffect(() => {
@@ -1275,10 +1279,10 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     setSelectedItem(snapshot.selectedItem ? { ...snapshot.selectedItem } : null);
     setResources(JSON.parse(JSON.stringify(snapshot.resources || { مواد: [], عمالة: [], معدات: [] })));
     setQty(snapshot.params?.qty ?? 1);
-    setFactor(snapshot.params?.factor ?? 1.03);
-    setOverhead(snapshot.params?.overhead ?? 12);
-    setProfit(snapshot.params?.profit ?? 15);
-  }, []);
+    setFactor(snapshot.params?.factor ?? (Number(settings?.locationFactor) || 1.03));
+    setOverhead(snapshot.params?.overhead ?? (Number(settings?.overheadPercent) || 12));
+    setProfit(snapshot.params?.profit ?? (Number(settings?.profitPercent) || 15));
+  }, [settings]);
 
   const currentAnalysisSignature = useMemo(() => JSON.stringify(
     buildAnalysisSnapshot(selectedItem, resources, {
@@ -1881,10 +1885,10 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   }, [mode, tab, navigationBridge?.onEntryChange]);
 
   const tabs = [
-    { id: "csi", label: "البنود" },
-    { id: "analysis", label: "التحليل" },
-    { id: "market", label: "السوق" },
-    { id: "history", label: "المحفوظة" },
+    { id: "csi",      label: "البنود",    icon: "📋" },
+    { id: "analysis", label: "التحليل",   icon: "📊" },
+    { id: "market",   label: "السوق",     icon: "📈" },
+    { id: "history",  label: "المحفوظة", icon: "🕘" },
   ];
 
   if (!country) {
@@ -1903,19 +1907,17 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
       <div className="mx-auto w-full max-w-[720px] p-3 sm:p-4 pb-4">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
-          <button onClick={() => handleModeChange("selection")} className="flex items-center gap-3 text-right">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0d2545] text-[#d4a843] shadow-lg">
+          <button onClick={() => handleModeChange("selection")} className="group flex items-center gap-3 text-right">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#0d2545] to-[#162e52] text-[#d4a843] shadow-lg ring-1 ring-[#d4a843]/20 transition-shadow group-hover:shadow-[0_4px_16px_rgba(212,168,67,0.25)]">
               <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
                 <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71L12 2z" />
               </svg>
             </div>
             <div>
               <h1 className="text-[16px] font-bold text-[#0d2545] leading-none">تسعيرة</h1>
-              <p className="text-[10px] font-bold text-[#d4a843] mt-1.5 uppercase tracking-tighter">Construction Pricing</p>
+              <p className="text-[10px] font-bold text-[#d4a843] mt-1 uppercase tracking-widest">Construction Pricing</p>
             </div>
           </button>
-
-
         </div>
 
         {/* --- MAIN CONTENT SWITCHER --- */}
@@ -1931,14 +1933,21 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
 
         {mode === "items" && (
           <div className="animate-in fade-in slide-in-from-left-4 duration-500">
-            <div className="mb-6 w-full rounded-2xl bg-[#082555] p-1.5 flex gap-1.5 shadow-xl">
-              {tabs.map((t) => (
-                <button key={t.id} type="button" onClick={() => handleTabChange(t.id)}
-                  className={`flex-1 min-w-0 min-h-[44px] rounded-xl py-2 text-[13px] font-bold transition-all duration-300 ${tab === t.id ? "bg-[#C9A84C] text-[#082555] shadow-lg" : "text-[#9A8A6A] hover:text-white"}`}
-                  style={{ fontFamily: AR }}>
-                  <span className="truncate block px-1">{t.label}</span>
-                </button>
-              ))}
+            <div className="mb-5 w-full overflow-hidden rounded-2xl bg-gradient-to-br from-[#082555] to-[#0d3070] p-1.5 shadow-[0_8px_24px_rgba(8,37,85,0.22)]">
+              <div className="flex gap-1.5">
+                {tabs.map((t) => (
+                  <button key={t.id} type="button" onClick={() => handleTabChange(t.id)}
+                    className={`flex flex-1 min-w-0 flex-col items-center gap-0.5 rounded-xl py-2.5 px-1 text-[11px] font-bold transition-all duration-200 ${
+                      tab === t.id
+                        ? "bg-[#C9A84C] text-[#082555] shadow-[0_2px_10px_rgba(201,168,76,0.4)]"
+                        : "text-white/50 hover:text-white hover:bg-white/8"
+                    }`}
+                    style={{ fontFamily: AR }}>
+                    <span className="text-base leading-none">{t.icon}</span>
+                    <span className="truncate">{t.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
             {tab === "csi" && (
               <CSIScreen
@@ -2749,7 +2758,7 @@ function AnalysisScreen({
   const c = COUNTRIES[country] || COUNTRIES.sa;
   const sym = c.currency;
   const mkt = selectedItem ? selectedItem.market : 0;
-  const taxPct = Number(settings?.taxPercent) || 15;
+  const [taxPct, setTaxPct] = useState(() => Number(settings?.taxPercent) || 15);
   const isAuthenticated = authMode && authMode !== "guest";
 
   const calc = useMemo(() => {
@@ -2922,69 +2931,81 @@ function AnalysisScreen({
                 </button>
               </div>
             </div>
+            {/* Column header — shown once per section */}
+            {(resources[key] || []).length > 0 && (
+              <div className="flex items-center gap-2 border-b border-[#E2D8C4] bg-[#F7F3EC]/60 px-3 py-1.5">
+                <div className="h-9 w-9 shrink-0" />
+                <div className="flex-1 min-w-0 text-[8px] font-bold uppercase tracking-wider text-[#9A8A6A]">البند</div>
+                <div className="w-16 shrink-0 text-center text-[8px] font-bold uppercase tracking-wider text-[#9A8A6A]">الكمية</div>
+                <div className="w-20 shrink-0 text-center text-[8px] font-bold uppercase tracking-wider text-[#9A8A6A]">السعر</div>
+                <div className="w-20 shrink-0 text-center text-[8px] font-bold uppercase tracking-wider text-[#C9A84C]">الإجمالي</div>
+                {isAuthenticated && <div className="w-10 shrink-0" />}
+              </div>
+            )}
+
             {(resources[key] || []).map((r, i) => {
               const lineTotal = r.qty * r.rate * (Number(qty) || 1) * (Number(factor) || 1);
               return (
-                <div key={i} className="flex min-h-[56px] items-center gap-3 border-b border-[#E2D8C4] px-4 py-2.5 last:border-0 hover:bg-[#F7F3EC]/50 transition-colors">
-                  <div className="h-10 w-10 flex items-center justify-center rounded-2xl bg-[#F7F3EC] text-lg shrink-0 shadow-inner">{r.icon}</div>
+                <div key={i} className="flex items-center gap-2 border-b border-[#E2D8C4] px-3 py-2 last:border-0 hover:bg-[#F7F3EC]/50 transition-colors">
+                  {/* Icon */}
+                  <div className="h-9 w-9 flex items-center justify-center rounded-xl bg-[#F7F3EC] text-base shrink-0 shadow-inner">{r.icon}</div>
+
+                  {/* Name */}
                   <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-bold text-[#082555] truncate mb-0.5" style={{ fontFamily: AR }}>{r.name}</div>
-                    <div className="flex items-center gap-2">
-                      {isAuthenticated ? (
-                        <input
-                          type="number"
-                          value={r.qty}
-                          step="0.01"
-                          onChange={(e) => updateQty(key, i, e.target.value)}
-                          className="w-16 rounded-lg border border-[#E2D8C4] bg-white px-2 py-1 text-[10px] font-bold text-[#9A8A6A] outline-none focus:border-[#C9A84C]"
-                          style={{ fontFamily: MONO }}
-                        />
-                      ) : (
-                        <span className="text-[11px] font-bold text-[#9A8A6A] uppercase tracking-tighter">{r.qty}</span>
-                      )}
-                      <span className="h-1 w-1 rounded-full bg-[#E2D8C4]" />
-                      {isAuthenticated ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            value={r.rate}
-                            step="0.01"
-                            onChange={(e) => updateRate(key, i, e.target.value)}
-                            className="w-20 rounded-lg border border-[#E2D8C4] bg-white px-2 py-1 text-[10px] font-bold text-[#C9A84C] outline-none focus:border-[#C9A84C]"
-                            style={{ fontFamily: MONO }}
-                          />
-                          <span className="text-[11px] font-bold text-[#C9A84C] uppercase tracking-tighter">/ {r.unit}</span>
-                        </div>
-                      ) : (
-                        <span className="text-[11px] font-bold text-[#C9A84C] uppercase tracking-tighter">{r.rate} / {r.unit}</span>
-                      )}
-                    </div>
+                    <div className="text-[12px] font-bold text-[#082555] truncate" style={{ fontFamily: AR }}>{r.name}</div>
+                    <div className="text-[9px] font-bold text-[#C9A84C] mt-0.5">{r.unit}</div>
                   </div>
-                  <div className="text-left min-w-[84px]">
+
+                  {/* Qty */}
+                  <div className="w-16 shrink-0">
                     {isAuthenticated ? (
-                      <>
-                        <input
-                          type="number"
-                          value={roundTo(lineTotal)}
-                          step="0.01"
-                          onChange={(e) => updateLineTotal(key, i, e.target.value)}
-                          className="w-full rounded-lg border border-[#E2D8C4] bg-white px-2 py-1 text-left text-[14px] font-bold text-[#082555] outline-none focus:border-[#C9A84C]"
-                          style={{ fontFamily: MONO }}
-                        />
-                        <div className="text-[9px] text-[#9A8A6A] font-bold uppercase mt-1">{sym}</div>
-                      </>
+                      <input
+                        type="number" value={r.qty} step="0.01"
+                        onChange={(e) => updateQty(key, i, e.target.value)}
+                        className="w-full rounded-lg border border-[#E2D8C4] bg-white px-1.5 py-1.5 text-center text-[11px] font-bold text-[#082555] outline-none focus:border-[#C9A84C]"
+                        style={{ fontFamily: MONO }}
+                      />
                     ) : (
-                      <>
-                        <div className="text-[14px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{fmtNum(lineTotal)}</div>
-                        <div className="text-[8px] text-[#9A8A6A] font-bold uppercase">{sym}</div>
-                      </>
+                      <span className="block text-center text-[11px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{r.qty}</span>
                     )}
                   </div>
+
+                  {/* Rate */}
+                  <div className="w-20 shrink-0">
+                    {isAuthenticated ? (
+                      <input
+                        type="number" value={r.rate} step="0.01"
+                        onChange={(e) => updateRate(key, i, e.target.value)}
+                        className="w-full rounded-lg border border-[#E2D8C4] bg-white px-1.5 py-1.5 text-center text-[11px] font-bold text-[#C9A84C] outline-none focus:border-[#C9A84C]"
+                        style={{ fontFamily: MONO }}
+                      />
+                    ) : (
+                      <span className="block text-center text-[11px] font-bold text-[#C9A84C]" style={{ fontFamily: MONO }}>{r.rate}</span>
+                    )}
+                  </div>
+
+                  {/* Total */}
+                  <div className="w-20 shrink-0">
+                    {isAuthenticated ? (
+                      <input
+                        type="number" value={roundTo(lineTotal)} step="0.01"
+                        onChange={(e) => updateLineTotal(key, i, e.target.value)}
+                        className="w-full rounded-lg border border-[#C9A84C]/60 bg-[#FFFBF0] px-1.5 py-1.5 text-center text-[11px] font-bold text-[#082555] outline-none focus:border-[#C9A84C]"
+                        style={{ fontFamily: MONO }}
+                      />
+                    ) : (
+                      <div className="rounded-lg border border-[#C9A84C]/60 bg-[#FFFBF0] px-1.5 py-1.5 text-center text-[11px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>
+                        {fmtNum(lineTotal)}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Delete */}
                   {isAuthenticated && (
                     <button
                       type="button"
                       onClick={() => deleteResource(key, i)}
-                      className="rounded-xl border border-[#E2D8C4] px-2 py-1.5 text-[10px] font-bold text-[#9A8A6A] transition hover:border-red-300 hover:text-red-500"
+                      className="w-10 shrink-0 rounded-xl border border-[#E2D8C4] py-1.5 text-[10px] font-bold text-[#9A8A6A] transition hover:border-red-300 hover:bg-red-50 hover:text-red-500"
                     >
                       حذف
                     </button>
@@ -3032,41 +3053,103 @@ function AnalysisScreen({
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {[
-              {
-                label: "مجموع البنود المباشرة", value: calc.direct, tone: "text-[#082555]",
-                hint: `مواد ${fmtNum(calc.matT)} + عمالة ${fmtNum(calc.labT)} + معدات ${fmtNum(calc.eqpT)} ${sym}`,
-              },
-              {
-                label: "المصاريف غير المباشرة", value: calc.indirect, tone: "text-[#9A8A6A]",
-                hint: `${overhead}% × ${fmtNum(calc.direct)} ${sym}`,
-              },
-              {
-                label: `هامش الربح ${profit}%`, value: calc.profitAmt, tone: "text-[#6FCF97]",
-                hint: `${profit}% × ${fmtNum(calc.withOverhead)} ${sym}`,
-              },
-              {
-                label: `ضريبة القيمة المضافة ${taxPct}%`, value: calc.taxAmt, tone: "text-[#E07B2A]",
-                hint: `${taxPct}% × ${fmtNum(calc.finalTotal)} ${sym}`,
-              },
-              {
-                label: "إجمالي البند قبل الضريبة", value: calc.finalTotal, tone: "text-[#082555]",
-                hint: `${fmtNum(calc.withOverhead)} + ربح ${fmtNum(calc.profitAmt)} ${sym}`,
-              },
-              {
-                label: "إجمالي البند بعد الضريبة", value: calc.totalWithTax, tone: "text-[#C9A84C]",
-                hint: `${fmtNum(calc.finalTotal)} + ضريبة ${fmtNum(calc.taxAmt)} ${sym}`,
-              },
-            ].map((item) => (
-              <div key={item.label} className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
-                <div className="mb-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>{item.label}</div>
-                <div className={`text-[20px] font-bold ${item.tone}`} style={{ fontFamily: MONO }}>{fmtNum(item.value)}</div>
-                <div className="mt-1 text-[10px] font-bold text-[#C9A84C]">{sym}</div>
-                {item.hint ? (
-                  <div className="mt-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>{item.hint}</div>
-                ) : null}
+
+            {/* مجموع البنود المباشرة */}
+            <div className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
+              <div className="mb-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>مجموع البنود المباشرة</div>
+              <div className="text-[20px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{fmtNum(calc.direct)}</div>
+              <div className="mt-1 text-[10px] font-bold text-[#C9A84C]">{sym}</div>
+              <div className="mt-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+                مواد {fmtNum(calc.matT)} + عمالة {fmtNum(calc.labT)} + معدات {fmtNum(calc.eqpT)} {sym}
               </div>
-            ))}
+            </div>
+
+            {/* المصاريف غير المباشرة — editable */}
+            <div className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>المصاريف غير المباشرة</span>
+                <div className="flex items-center gap-1 rounded-lg border border-[#E2D8C4] bg-white px-2 py-1">
+                  <input
+                    type="number" min="0" max="100" step="0.1"
+                    value={overhead}
+                    onChange={(e) => setOverhead(e.target.value)}
+                    className="w-10 bg-transparent text-center text-[11px] font-bold text-[#082555] outline-none"
+                    style={{ fontFamily: MONO }}
+                  />
+                  <span className="text-[10px] font-bold text-[#9A8A6A]">%</span>
+                </div>
+              </div>
+              <div className="text-[20px] font-bold text-[#9A8A6A]" style={{ fontFamily: MONO }}>{fmtNum(calc.indirect)}</div>
+              <div className="mt-1 text-[10px] font-bold text-[#C9A84C]">{sym}</div>
+              <div className="mt-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+                {overhead}% × {fmtNum(calc.direct)} {sym}
+              </div>
+            </div>
+
+            {/* هامش الربح — editable */}
+            <div className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>هامش الربح</span>
+                <div className="flex items-center gap-1 rounded-lg border border-[#6FCF97]/50 bg-[#6FCF97]/8 px-2 py-1">
+                  <input
+                    type="number" min="0" max="100" step="0.1"
+                    value={profit}
+                    onChange={(e) => setProfit(e.target.value)}
+                    className="w-10 bg-transparent text-center text-[11px] font-bold text-[#6FCF97] outline-none"
+                    style={{ fontFamily: MONO }}
+                  />
+                  <span className="text-[10px] font-bold text-[#6FCF97]">%</span>
+                </div>
+              </div>
+              <div className="text-[20px] font-bold text-[#6FCF97]" style={{ fontFamily: MONO }}>{fmtNum(calc.profitAmt)}</div>
+              <div className="mt-1 text-[10px] font-bold text-[#C9A84C]">{sym}</div>
+              <div className="mt-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+                {profit}% × {fmtNum(calc.withOverhead)} {sym}
+              </div>
+            </div>
+
+            {/* ضريبة القيمة المضافة — editable */}
+            <div className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>ضريبة القيمة المضافة</span>
+                <div className="flex items-center gap-1 rounded-lg border border-[#E07B2A]/50 bg-[#E07B2A]/8 px-2 py-1">
+                  <input
+                    type="number" min="0" max="100" step="0.1"
+                    value={taxPct}
+                    onChange={(e) => setTaxPct(e.target.value)}
+                    className="w-10 bg-transparent text-center text-[11px] font-bold text-[#E07B2A] outline-none"
+                    style={{ fontFamily: MONO }}
+                  />
+                  <span className="text-[10px] font-bold text-[#E07B2A]">%</span>
+                </div>
+              </div>
+              <div className="text-[20px] font-bold text-[#E07B2A]" style={{ fontFamily: MONO }}>{fmtNum(calc.taxAmt)}</div>
+              <div className="mt-1 text-[10px] font-bold text-[#C9A84C]">{sym}</div>
+              <div className="mt-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+                {taxPct}% × {fmtNum(calc.finalTotal)} {sym}
+              </div>
+            </div>
+
+            {/* إجمالي قبل الضريبة */}
+            <div className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
+              <div className="mb-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>إجمالي البند قبل الضريبة</div>
+              <div className="text-[20px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{fmtNum(calc.finalTotal)}</div>
+              <div className="mt-1 text-[10px] font-bold text-[#C9A84C]">{sym}</div>
+              <div className="mt-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+                {fmtNum(calc.withOverhead)} + ربح {fmtNum(calc.profitAmt)} {sym}
+              </div>
+            </div>
+
+            {/* إجمالي بعد الضريبة */}
+            <div className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
+              <div className="mb-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>إجمالي البند بعد الضريبة</div>
+              <div className="text-[20px] font-bold text-[#C9A84C]" style={{ fontFamily: MONO }}>{fmtNum(calc.totalWithTax)}</div>
+              <div className="mt-1 text-[10px] font-bold text-[#C9A84C]">{sym}</div>
+              <div className="mt-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+                {fmtNum(calc.finalTotal)} + ضريبة {fmtNum(calc.taxAmt)} {sym}
+              </div>
+            </div>
+
           </div>
         </div>
       )}
