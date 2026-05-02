@@ -37,7 +37,7 @@ export default function CompaniesPage(props) {
         title=""
         description={text.pages.companies.description}
       />
-      <CompaniesPanel {...props} />
+      <CompaniesPanel {...props} initialCountry={selectedCountry} />
     </div>
   );
 }
