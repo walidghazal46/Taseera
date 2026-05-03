@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from 'xlsx';
+import AdSenseUnit from "./AdSenseUnit";
 import { SaveIcon, TagIcon, BuildingsIcon, PricingIcon, ChevronLeftIcon, ArrowRightIcon, ShareIcon, PrinterIcon, FileIcon } from "./icons";
 import { CSI_DIVISIONS, COUNTRIES, CURRENCY_INFO, getDefaultResources, AREA_PRICING_BASE } from "../data/csiData";
 import usePersistentState from "../hooks/usePersistentState";
@@ -2598,10 +2599,12 @@ function SelfPricingAdBanner({ adBanner, canManageAds, adminProfile }) {
           </button>
           {adBanner.title && <p className="mt-2 text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>{adBanner.title}</p>}
         </>
-      ) : (
+      ) : canManageAds ? (
         <div className="mx-auto flex h-[230px] w-full max-w-[608px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#d4a843]/35 bg-[#fff9ec] px-4 py-5 text-center">
           <p className="text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>مساحة إعلانية</p>
         </div>
+      ) : (
+        <AdSenseUnit />
       )}
     </div>
   );
@@ -3053,7 +3056,7 @@ function AnalysisAdBanner({ adBanner, canManageAds = false, onManageAds, onToggl
             </p>
           ) : null}
         </>
-      ) : (
+      ) : canManageAds ? (
         <div className="mx-auto flex h-[230px] w-full max-w-[608px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#d4a843]/40 bg-[#fff9ec] px-4 py-5 text-center">
           <span className="mb-2 rounded-full bg-[#C9A84C]/12 px-3 py-1 text-[10px] font-bold text-[#8B6A1F]" style={{ fontFamily: AR }}>
             مساحة إعلانية
@@ -3062,9 +3065,11 @@ function AnalysisAdBanner({ adBanner, canManageAds = false, onManageAds, onToggl
             {isEnabled ? "الإعلان مفعّل لكن بدون صورة حالية" : "لا توجد صورة إعلان مفعلة لهذا المكان"}
           </p>
           <p className="mt-1 text-[10px] text-[#9A8A6A]" style={{ fontFamily: AR }}>
-            {canManageAds ? "اضغط تعديل الإعلان لإضافة الصورة والرابط" : "ستظهر اللوحة هنا تلقائيًا عند إضافة الإعلان"}
+            اضغط تعديل الإعلان لإضافة الصورة والرابط
           </p>
         </div>
+      ) : (
+        <AdSenseUnit />
       )}
     </div>
   );
