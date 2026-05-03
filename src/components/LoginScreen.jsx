@@ -108,11 +108,15 @@ export default function LoginScreen({
           setLoading(false);
           onLogin("authenticated", { uid: e.detail.uid, userName: e.detail.displayName, userEmail: e.detail.email });
         };
-        const handleError = () => {
+        const handleError = (e) => {
           window.removeEventListener("taseera:google-signin-success", handleSuccess);
           window.removeEventListener("taseera:google-signin-error", handleError);
           setLoading(false);
-          setError(language === "en" ? "Google sign-in failed." : "فشل تسجيل الدخول بجوجل.");
+          const nativeMessage = e?.detail?.error;
+          setError(
+            nativeMessage ||
+            (language === "en" ? "Google sign-in failed." : "فشل تسجيل الدخول بجوجل.")
+          );
         };
         window.addEventListener("taseera:google-signin-success", handleSuccess);
         window.addEventListener("taseera:google-signin-error", handleError);
