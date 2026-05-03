@@ -1643,38 +1643,25 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
         </html>
       `;
 
-      const printFrame = document.createElement("iframe");
-      printFrame.style.position = "fixed";
-      printFrame.style.right = "0";
-      printFrame.style.bottom = "0";
-      printFrame.style.width = "0";
-      printFrame.style.height = "0";
-      printFrame.style.border = "0";
-      printFrame.setAttribute("aria-hidden", "true");
-      document.body.appendChild(printFrame);
-
-      const frameWindow = printFrame.contentWindow;
-      const frameDocument = printFrame.contentDocument || frameWindow?.document;
-
-      if (!frameWindow || !frameDocument) {
-        printFrame.remove();
-        showToast("تعذر تجهيز الطباعة في هذا المتصفح.");
-        return;
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const blobUrl = URL.createObjectURL(blob);
+      const printWin = window.open(blobUrl, "_blank", "width=900,height=700");
+      if (printWin) {
+        printWin.addEventListener("load", () => {
+          setTimeout(() => {
+            printWin.print();
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+          }, 300);
+        });
+        showToast("اختر «حفظ كـ PDF» من قائمة الطباعة");
+      } else {
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `تحليل_بند_${selectedItem.num.replace(/\s/g, "_")}.html`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+        showToast("تم تحميل ملف التقرير");
       }
-
-      frameDocument.open();
-      frameDocument.write(html);
-      frameDocument.close();
-
-      setTimeout(() => {
-        frameWindow.focus();
-        frameWindow.print();
-        setTimeout(() => {
-          printFrame.remove();
-        }, 1000);
-      }, 300);
-
-      showToast("تم تجهيز ملف PDF/الطباعة بالقيم الحالية");
     }
   }, [mode, country, areaParams, areaResults, effectiveAreaResults, selectedItem, resources, qty, overhead, profit, factor, showToast]);
 
@@ -2057,14 +2044,16 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             overhead={selfPriceOverhead} setOverhead={setSelfPriceOverhead}
             profit={selfPriceProfit} setProfit={setSelfPriceProfit}
             country={country}
+            authMode={authMode}
+            sessionMeta={sessionMeta}
+            settings={settings}
             onBack={() => { setMode("items"); setTab("csi"); }}
             onSave={(result) => {
               onSaveAnalysis?.({
-                itemName: selfPriceItem.ar,
-                itemNum: selfPriceItem.num,
+                item: selfPriceItem,
                 resources: selfPriceResources,
                 params: { qty: selfPriceQty, overhead: selfPriceOverhead, profit: selfPriceProfit, unit: selfPriceItem.unit, market: selfPriceItem.market, divAr: selfPriceItem.divAr },
-                result,
+                results: result,
                 mode: 'item',
               });
               showToast("تم حفظ تحليل السعر بنجاح ✔️");
@@ -2158,9 +2147,17 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
 // Sub-components (Moved from previous implementation or newly added)
 
 // ===== سعر بنفسك Screen =====
-function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhead, setOverhead, profit, setProfit, country, onBack, onSave }) {
+function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhead, setOverhead, profit, setProfit, country, authMode, sessionMeta, settings, onBack, onSave }) {
   const sym = getCurrencySymbol(country);
   const fmt = (n) => Number(n).toLocaleString("en-US", { maximumFractionDigits: 0 });
+
+  const { profile: adminProfile } = useAdminSession({ uid: sessionMeta?.uid, email: settings?.userEmail, displayName: settings?.userName });
+  const canManageAds = authMode !== "guest" && (adminProfile?.canAccessAdmin === true || String(settings?.userEmail || "").toLowerCase() === SUPER_ADMIN_EMAIL);
+  const [selfPricingAd, setSelfPricingAd] = useState(null);
+  useEffect(() => {
+    const unsub = listenAdBanner((data) => setSelfPricingAd(data), AD_SLOT_IDS.selfPricingAfterActions);
+    return () => unsub?.();
+  }, []);
 
   // حساب مجموع كل مجموعة
   const sumGroup = (grp) =>
@@ -2241,71 +2238,56 @@ function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhea
               </button>
             </div>
           </div>
-          <div className="overflow-x-auto">
-            <div className="min-w-[620px]">
-              {/* Header for Self Pricing */}
-              <div className="grid grid-cols-[44px_1fr_88px_105px_118px_44px] items-center gap-[4px] border-b border-[#E2D8C4] bg-white bg-opacity-40 px-4 py-2">
-                <div />
-                <div className="text-[10px] font-bold uppercase tracking-wider text-[#9A8A6A]" style={{ fontFamily: AR }}>الوصف</div>
-                <div className="text-center text-[10px] font-bold uppercase tracking-wider text-[#9A8A6A]" style={{ fontFamily: AR }}>الكمية</div>
-                <div className="text-center text-[10px] font-bold uppercase tracking-wider text-[#9A8A6A]" style={{ fontFamily: AR }}>السعر</div>
-                <div className="text-center text-[10px] font-bold uppercase tracking-wider text-[#C9A84C]" style={{ fontFamily: MONO }}>TOTAL</div>
-                <div />
-              </div>
-
-              <div className="divide-y divide-[#E2D8C4]">
-                {(resources[key] || []).map((row, idx) => (
-                  <div key={idx} className="grid grid-cols-[44px_1fr_88px_105px_118px_44px] items-center gap-[4px] px-4 py-3 bg-white hover:bg-gray-50 transition">
-                    <span className="text-xl shrink-0 flex justify-center">{row.icon || "📦"}</span>
-                    <div className="min-w-0 pr-1">
-                      <input
-                        value={row.name}
-                        onChange={e => updateRow(key, idx, "name", e.target.value)}
-                        className="w-full rounded-lg border border-transparent px-1 py-1 text-[13px] font-bold text-[#082555] focus:border-[#C9A84C] focus:outline-none bg-transparent"
-                        style={{ fontFamily: AR }}
-                      />
-                    </div>
-                    <div className="flex flex-col items-center gap-1 shrink-0 justify-start">
-                      <input type="number" min="0" step="0.01"
-                        value={row.qty}
-                        onChange={e => updateRow(key, idx, "qty", e.target.value)}
-                        className="w-[86%] rounded-xl border border-[#E2D8C4] px-2 py-1.5 text-center text-[13px] font-bold text-[#082555] focus:outline-none focus:ring-1 focus:ring-[#C9A84C]"
-                        style={{ fontFamily: MONO }}
-                        dir="ltr"
-                        lang="en"
-                      />
-                      <span className="text-[9px] font-bold text-[#9A8A6A]">{row.unit || "وحدة"}</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-1 shrink-0 justify-start">
-                      <input type="number" min="0" step="1"
-                        value={row.rate}
-                        onChange={e => updateRow(key, idx, "rate", e.target.value)}
-                        className="w-[60%] rounded-xl border border-[#E2D8C4] px-2 py-1.5 text-center text-[13px] font-bold text-[#082555] focus:outline-none focus:ring-1 focus:ring-[#C9A84C]"
-                        style={{ fontFamily: MONO }}
-                        dir="ltr"
-                        lang="en"
-                      />
-                      <span className="text-[9px] font-bold text-[#9A8A6A]">{sym}</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-1 shrink-0 justify-start">
-                      <div
-                        className="w-[60%] rounded-xl border border-[#C9A84C]/40 bg-[#FFFBF0] px-2 py-1.5 text-center text-[13px] font-bold text-[#082555] shadow-sm"
-                        style={{ fontFamily: MONO }}
-                        dir="ltr"
-                        lang="en"
-                      >
-                        {fmt((Number(row.qty)||0)*(Number(row.rate)||0))}
-                      </div>
-                      <span className="text-[9px] font-bold text-transparent select-none">{sym}</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-1 shrink-0 justify-start">
-                      <button onClick={() => removeRow(key, idx)} className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#E2D8C4] bg-white text-sm text-[#9A8A6A] transition-all hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500">✕</button>
-                      <span className="text-[9px] font-bold text-transparent select-none">{sym}</span>
-                    </div>
+          <div className="divide-y divide-[#E2D8C4]">
+            {(resources[key] || []).map((row, idx) => (
+              <div key={idx} className="px-3 py-2.5 bg-white hover:bg-gray-50 transition">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-lg shrink-0">{row.icon || "📦"}</span>
+                  <input
+                    value={row.name}
+                    onChange={e => updateRow(key, idx, "name", e.target.value)}
+                    className="flex-1 min-w-0 rounded-lg border border-transparent px-1 py-0.5 text-[13px] font-bold text-[#082555] focus:border-[#C9A84C] focus:outline-none bg-transparent"
+                    style={{ fontFamily: AR }}
+                  />
+                  <button onClick={() => removeRow(key, idx)} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#E2D8C4] bg-white text-xs text-[#9A8A6A] transition-all hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500">✕</button>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[9px] font-bold text-[#9A8A6A] tracking-wider" style={{ fontFamily: AR }}>الكمية</span>
+                    <input type="number" min="0" step="0.01"
+                      value={row.qty}
+                      onChange={e => updateRow(key, idx, "qty", e.target.value)}
+                      className="w-full rounded-xl border border-[#E2D8C4] px-2 py-1.5 text-center text-[13px] font-bold text-[#082555] focus:outline-none focus:ring-1 focus:ring-[#C9A84C]"
+                      style={{ fontFamily: MONO }}
+                      dir="ltr" lang="en"
+                    />
+                    <span className="text-[9px] font-bold text-[#9A8A6A]">{row.unit || "وحدة"}</span>
                   </div>
-                ))}
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[9px] font-bold text-[#9A8A6A] tracking-wider" style={{ fontFamily: AR }}>السعر</span>
+                    <input type="number" min="0" step="1"
+                      value={row.rate}
+                      onChange={e => updateRow(key, idx, "rate", e.target.value)}
+                      className="w-full rounded-xl border border-[#E2D8C4] px-2 py-1.5 text-center text-[13px] font-bold text-[#082555] focus:outline-none focus:ring-1 focus:ring-[#C9A84C]"
+                      style={{ fontFamily: MONO }}
+                      dir="ltr" lang="en"
+                    />
+                    <span className="text-[9px] font-bold text-[#9A8A6A]">{sym}</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[9px] font-bold text-[#C9A84C] tracking-wider" style={{ fontFamily: MONO }}>TOTAL</span>
+                    <div
+                      className="w-full rounded-xl border border-[#C9A84C]/40 bg-[#FFFBF0] px-2 py-1.5 text-center text-[13px] font-bold text-[#082555] shadow-sm"
+                      style={{ fontFamily: MONO }}
+                      dir="ltr" lang="en"
+                    >
+                      {fmt((Number(row.qty)||0)*(Number(row.rate)||0))}
+                    </div>
+                    <span className="text-[9px] font-bold text-[#9A8A6A]">{sym}</span>
+                  </div>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       ))}
@@ -2402,6 +2384,60 @@ ${GROUP_HEADERS.map(g => `<h3 style="margin-bottom:4px">${g.emoji} ${g.label}</h
           🖨️ طباعة
         </button>
       </div>
+
+      {/* Ad Banner — self pricing after actions */}
+      <div className="pb-6">
+        <SelfPricingAdBanner
+          adBanner={selfPricingAd}
+          canManageAds={canManageAds}
+          adminProfile={adminProfile}
+        />
+      </div>
+    </div>
+  );
+}
+
+function SelfPricingAdBanner({ adBanner, canManageAds, adminProfile }) {
+  const hasContent = adBanner?.enabled && adBanner?.imageUrl;
+  const handleToggle = async (nextEnabled) => {
+    await saveAdBanner(adminProfile, { ...(adBanner || DEFAULT_AD_BANNER), enabled: Boolean(nextEnabled) }, AD_SLOT_IDS.selfPricingAfterActions);
+  };
+  const handleRemove = async () => {
+    const ok = window.confirm("هل تريد إزالة محتوى هذا الإعلان؟");
+    if (!ok) return;
+    await saveAdBanner(adminProfile, { ...DEFAULT_AD_BANNER, enabled: false }, AD_SLOT_IDS.selfPricingAfterActions);
+  };
+  return (
+    <div className="relative rounded-2xl border-2 border-[#E2D8C4] bg-white p-2.5 shadow-sm overflow-hidden">
+      {canManageAds && (
+        <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5">
+          <button type="button" onClick={() => handleToggle(true)}
+            className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm" style={{ fontFamily: AR }}>
+            إظهار
+          </button>
+          <button type="button" onClick={() => handleToggle(false)}
+            className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm" style={{ fontFamily: AR }}>
+            إخفاء
+          </button>
+          <button type="button" onClick={handleRemove}
+            className="rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-bold text-rose-700 shadow-sm" style={{ fontFamily: AR }}>
+            إزالة
+          </button>
+        </div>
+      )}
+      {hasContent ? (
+        <>
+          <button type="button" onClick={() => adBanner?.targetUrl && window.open(adBanner.targetUrl, "_blank", "noopener,noreferrer")}
+            className="mx-auto block h-[230px] w-full max-w-[608px] overflow-hidden rounded-xl bg-[#F7F3EC]">
+            <img src={adBanner.imageUrl} alt={adBanner.alt || adBanner.title || "self-pricing-ad"} loading="lazy" className="h-full w-full object-cover" />
+          </button>
+          {adBanner.title && <p className="mt-2 text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>{adBanner.title}</p>}
+        </>
+      ) : (
+        <div className="mx-auto flex h-[230px] w-full max-w-[608px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#d4a843]/35 bg-[#fff9ec] px-4 py-5 text-center">
+          <p className="text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>مساحة إعلانية</p>
+        </div>
+      )}
     </div>
   );
 }
