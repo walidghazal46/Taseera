@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getAppText } from "../data/appText";
 import useBackStack from "../hooks/useBackStack";
 import useAdminSession from "../hooks/useAdminSession";
+import taseeraLogo from "../assets/taseera-logo.png";
 import AdminDashboard from "./AdminDashboard";
 import SubscriptionPanel from "./SubscriptionPanel";
 
@@ -365,6 +366,8 @@ function AccountTab({
   companies = [], suppliers = [], onShowStatus,
 }) {
   const [showHowToUse, setShowHowToUse] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
+  const [showRfqs, setShowRfqs] = useState(false);
   const text = getAppText(settings.language);
   const copy = getSettingsCopy(settings.language);
   const isAr = settings.language !== "en";
@@ -399,6 +402,126 @@ function AccountTab({
     { id: "linkedin", label: "LinkedIn",  Icon: LinkedInLogo, iconBg: "bg-[#0A66C2]", cardBg: "bg-[#EEF5FF]", border: "border-[#B3D0F5]", url: "https://www.linkedin.com/in/walid-ghazal-pmi-pmp%C2%AE-85208678/" },
     { id: "youtube",  label: "YouTube",   Icon: YouTubeLogo,  iconBg: "bg-[#FF0000]", cardBg: "bg-[#FFF0F0]", border: "border-[#FFCCCC]", url: "https://www.youtube.com/@WalidGhazal" },
   ];
+
+  if (showRfqs) {
+    const isAr2 = settings.language !== "en";
+    return (
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={() => setShowRfqs(false)}
+          className="flex items-center gap-2 rounded-xl border border-[#e2e8f0] bg-white px-3 py-2 text-[12px] font-bold text-[#082555] transition hover:bg-[#f8fafc]"
+          style={{ fontFamily: F }}
+        >
+          <span className="text-[14px]">›</span>
+          {isAr2 ? "طلبات عروض السعر" : "RFQ Requests"}
+        </button>
+
+        {rfqRequests.length === 0 ? (
+          <div className="py-16 text-center rounded-2xl border border-[#e2e8f0] bg-white">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-sky-50 text-3xl">📬</div>
+            <p className="text-[14px] font-bold text-[#082555]" style={{ fontFamily: F }}>
+              {isAr2 ? "لا يوجد طلبات بعد" : "No RFQ requests yet"}
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {rfqRequests.map((r) => {
+              const date = r.createdAt ? new Date(r.createdAt).toLocaleDateString(isAr2 ? "ar-SA" : "en-GB") : "";
+              return (
+                <div key={r.id} className="rounded-2xl border-2 border-sky-100 bg-white p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="rounded-lg bg-sky-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                      {r.rfqRef || "RFQ"}
+                    </span>
+                    <span className="text-[10px] text-slate-400">{date}</span>
+                  </div>
+                  <p className="text-[14px] font-bold text-[#082555] leading-snug" style={{ fontFamily: F }}>
+                    {r.itemName || (isAr2 ? "طلب عرض سعر عام" : "General RFQ")}
+                  </p>
+                  {r.itemId && (
+                    <p className="mt-0.5 text-[11px] text-slate-400" style={{ fontFamily: F }}>{r.itemId}</p>
+                  )}
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                      r.status === "sent" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                    }`}>
+                      {r.status === "sent" ? (isAr2 ? "تم الإرسال" : "Sent") : (isAr2 ? "مسودة" : "Draft")}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (showSaved) {
+    const isAr2 = settings.language !== "en";
+    return (
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={() => setShowSaved(false)}
+          className="flex items-center gap-2 rounded-xl border border-[#e2e8f0] bg-white px-3 py-2 text-[12px] font-bold text-[#082555] transition hover:bg-[#f8fafc]"
+          style={{ fontFamily: F }}
+        >
+          <span className="text-[14px]">›</span>
+          {isAr2 ? "التحليلات المحفوظة" : "Saved Analyses"}
+        </button>
+
+        {savedAnalyses.length === 0 ? (
+          <div className="py-16 text-center rounded-2xl border border-[#e2e8f0] bg-white">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 text-3xl">📋</div>
+            <p className="text-[14px] font-bold text-[#082555]" style={{ fontFamily: F }}>
+              {isAr2 ? "لا يوجد تحليلات محفوظة بعد" : "No saved analyses yet"}
+            </p>
+            <p className="mt-1 text-[12px] text-slate-500" style={{ fontFamily: F }}>
+              {isAr2 ? "احفظ تحليلاتك من صفحة التسعير" : "Save analyses from the pricing page"}
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-3">
+            {savedAnalyses.map((item) => {
+              const total = item.projectTotal ?? item.results?.finalTotal ?? item.results?.total ?? 0;
+              const unit = item.finalUnitPrice ?? item.results?.unitPrice ?? 0;
+              const date = item.createdAt ? new Date(item.createdAt).toLocaleDateString(isAr2 ? "ar-SA" : "en-GB") : "";
+              return (
+                <div key={item.id} className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                      item.mode === "area" ? "bg-[#082555] text-[#C9A84C]" : "bg-[#C9A84C] text-[#082555]"
+                    }`}>
+                      {item.mode === "area" ? "BUILDING" : item.itemNum || "ITEM"}
+                    </span>
+                    <span className="text-[10px] text-slate-400">{date}</span>
+                  </div>
+                  <p className="text-[14px] font-bold text-[#082555] leading-snug" style={{ fontFamily: F }}>{item.itemName}</p>
+                  {(item.companyName || item.projectName) && (
+                    <p className="mt-0.5 text-[11px] text-slate-400" style={{ fontFamily: F }}>
+                      {item.projectName}{item.projectName && item.companyName ? " · " : ""}{item.companyName}
+                    </p>
+                  )}
+                  <div className="mt-3 flex items-center justify-between border-t border-[#F7F3EC] pt-2.5">
+                    <div className="text-right">
+                      <p className="text-[8px] font-bold uppercase text-slate-400">Total</p>
+                      <p className="text-[15px] font-black text-[#082555]">{Number(total).toLocaleString()}</p>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-[8px] font-bold uppercase text-slate-400">Unit Price</p>
+                      <p className="text-[15px] font-black text-[#C9A84C]">{Number(unit).toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -449,20 +572,26 @@ function AccountTab({
           {/* Inline stats */}
           {!isGuest && (
             <div className="mx-4 mb-4 grid grid-cols-2 gap-2">
-              {[
-                { count: savedAnalyses.length, label: copy.savedAnalyses, icon: "📋", color: "from-amber-400 to-amber-500", bg: "bg-amber-500/15", border: "border-amber-500/20" },
-                { count: rfqRequests.length,   label: copy.rfqs,          icon: "📬", color: "from-sky-400 to-sky-500",   bg: "bg-sky-500/15",   border: "border-sky-500/20" },
-              ].map(({ count, label, icon, color, bg, border }) => (
-                <div key={label} className={`relative overflow-hidden flex items-center gap-3 rounded-xl ${bg} border ${border} px-3 py-2.5`}>
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${color} text-white text-base shadow-sm`}>
-                    {icon}
-                  </div>
-                  <div>
-                    <p className="text-[24px] font-black text-white leading-none">{count}</p>
-                    <p className="mt-0.5 text-[8px] font-bold text-white/40 uppercase tracking-wide leading-tight" style={{ fontFamily: F }}>{label}</p>
-                  </div>
+              <button
+                type="button"
+                onClick={() => setShowSaved(true)}
+                className="relative overflow-hidden flex items-center gap-3 rounded-xl bg-amber-500/15 border border-amber-500/20 px-3 py-2.5 text-right transition hover:bg-amber-500/25 active:scale-[0.97]"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 text-white text-base shadow-sm">📋</div>
+                <div>
+                  <p className="text-[24px] font-black text-white leading-none">{savedAnalyses.length}</p>
+                  <p className="mt-0.5 text-[8px] font-bold text-white/40 uppercase tracking-wide leading-tight" style={{ fontFamily: F }}>{copy.savedAnalyses}</p>
                 </div>
-              ))}
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-white/30 text-[10px]">‹</span>
+              </button>
+              <button type="button" onClick={() => setShowRfqs(true)} className="relative overflow-hidden flex items-center gap-3 rounded-xl bg-sky-500/15 border border-sky-500/20 px-3 py-2.5 transition hover:bg-sky-500/25 active:scale-95">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-sky-500 text-white text-base shadow-sm">📬</div>
+                <div>
+                  <p className="text-[24px] font-black text-white leading-none">{rfqRequests.length}</p>
+                  <p className="mt-0.5 text-[8px] font-bold text-white/40 uppercase tracking-wide leading-tight" style={{ fontFamily: F }}>{copy.rfqs}</p>
+                </div>
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-white/30 text-[10px]">‹</span>
+              </button>
             </div>
           )}
 
@@ -618,8 +747,14 @@ function AccountTab({
 
         <div className="relative px-4 py-5 text-center">
           <div className="mx-auto mb-3 relative w-fit">
-            <div className="absolute inset-0 rounded-2xl bg-[#d4a843]/30 blur-md scale-125" />
-            <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d4a843]/25 to-[#d4a843]/10 text-[#d4a843] text-xl ring-1 ring-[#d4a843]/30">✦</div>
+            <div className="absolute inset-2 rounded-[22px] bg-[#d4a843]/45 blur-[14px] scale-125" />
+            <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl p-0">
+              <img
+                src={taseeraLogo}
+                alt="Taseera app icon"
+                className="h-full w-full rounded-2xl object-contain shadow-[0_0_26px_rgba(212,168,67,0.35)]"
+              />
+            </div>
           </div>
           <p className="text-[15px] font-black text-white" style={{ fontFamily: F }}>{settings.appName}</p>
           <p className="mt-0.5 text-[10px] text-[#d4a843]/60 font-bold uppercase tracking-widest" style={{ fontFamily: F }}>
@@ -638,7 +773,6 @@ function AccountTab({
 /* ─── Main SettingsPanel ─────────────────────────────────────────────────── */
 const TABS = [
   { id: "account",      icon: "👤", labelKey: "accountTab" },
-  { id: "pricing",      icon: "⚙️", labelKey: "pricingTab" },
   { id: "subscription", icon: "💎", labelKey: "subscriptionTab" },
 ];
 
@@ -711,9 +845,7 @@ export default function SettingsPanel({
       </div>
 
       {/* ── Tab Content ── */}
-      {activeView === "pricing" ? (
-        <PricingTab settings={settings} onUpdateSetting={onUpdateSetting} copy={copy} />
-      ) : activeView === "subscription" ? (
+      {activeView === "subscription" ? (
         <SubscriptionPanel
           language={settings?.language || "ar"}
           authMode={authMode}

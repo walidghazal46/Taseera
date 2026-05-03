@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Modal from "./Modal";
-import { PhoneIcon, MailIcon, ShareIcon, PlusIcon, SearchIcon } from "./icons";
+import { PhoneIcon, MailIcon, ShareIcon, PlusIcon, SearchIcon, ChevronLeftIcon } from "./icons";
 import useBackStack from "../hooks/useBackStack";
 import useAdminSession from "../hooks/useAdminSession";
 import { SUPER_ADMIN_EMAIL } from "../constants/admin";
@@ -235,6 +235,10 @@ export default function SuppliersPanel({
   });
   const activeSection = nav.currentEntry.section;
 
+  useEffect(() => {
+    if (activeSection === "directory") setSelectedSupplier(null);
+  }, [activeSection]);
+
   const submitSupplier = (e) => {
     e.preventDefault();
     if (!form.name.trim() || !form.category.trim()) return;
@@ -388,9 +392,95 @@ export default function SuppliersPanel({
     }
   }, [adminProfile, canManageAds]);
 
+  if (activeSection === "supplier-detail" && selectedSupplier) {
+    return (
+      <div className="space-y-3 animate-in slide-in-from-right-4 duration-200">
+        {/* Back header */}
+        <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-[#082555] to-[#0d3070] px-4 py-3 shadow-[0_8px_24px_rgba(8,37,85,0.22)]">
+          <button
+            type="button"
+            onClick={() => nav.reset({ section: "directory" })}
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white transition hover:bg-white/20 active:scale-95"
+          >
+            <ChevronLeftIcon className="h-5 w-5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-[15px] font-black text-white truncate" style={{ fontFamily: AR }}>{selectedSupplier.name}</p>
+            <p className="text-[10px] text-[#C9A84C] font-bold truncate" style={{ fontFamily: AR }}>{selectedSupplier.category}</p>
+          </div>
+          {selectedSupplier.logo && (
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#C9A84C] text-[#082555] text-[16px] font-black">
+              {selectedSupplier.logo}
+            </div>
+          )}
+        </div>
+
+        {/* Info grid */}
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { label: copy.specialty, value: selectedSupplier.category },
+            { label: copy.location, value: selectedSupplier.location },
+            { label: copy.phone, value: selectedSupplier.phone },
+            { label: copy.email, value: selectedSupplier.email },
+          ].map(({ label, value }) => (
+            <div key={label} className="rounded-xl border border-[#E2D8C4] bg-white p-3">
+              <p className="text-[9px] font-bold text-[#9A8A6A] mb-1 uppercase tracking-wide" style={{ fontFamily: AR }}>{label}</p>
+              <p className="text-[12px] font-bold text-[#082555] leading-snug break-all" style={{ fontFamily: AR }}>{value || "—"}</p>
+            </div>
+          ))}
+        </div>
+
+        {selectedSupplier.contactPerson && (
+          <div className="rounded-xl border border-[#E2D8C4] bg-white p-3">
+            <p className="text-[9px] font-bold text-[#9A8A6A] mb-1 uppercase tracking-wide" style={{ fontFamily: AR }}>{copy.contactPerson}</p>
+            <p className="text-[12px] font-bold text-[#082555]" style={{ fontFamily: AR }}>{selectedSupplier.contactPerson}</p>
+          </div>
+        )}
+
+        {selectedSupplier.description && (
+          <div className="rounded-xl border border-[#E2D8C4] bg-white p-3">
+            <p className="text-[9px] font-bold text-[#9A8A6A] mb-1 uppercase tracking-wide" style={{ fontFamily: AR }}>{copy.summary}</p>
+            <p className="text-[12px] text-[#082555] leading-relaxed" style={{ fontFamily: AR }}>{selectedSupplier.description}</p>
+          </div>
+        )}
+
+        {selectedSupplier.website && (
+          <div className="rounded-xl border border-[#E2D8C4] bg-white p-3">
+            <p className="text-[9px] font-bold text-[#9A8A6A] mb-1 uppercase tracking-wide" style={{ fontFamily: AR }}>{copy.website}</p>
+            <p className="text-[12px] font-bold text-[#C9A84C] break-all" style={{ fontFamily: AR }}>{selectedSupplier.website}</p>
+          </div>
+        )}
+
+        {/* Contact actions */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { type: "phone", icon: <PhoneIcon className="h-5 w-5" />, label: copy.call,  cls: "border border-[#E2D8C4] bg-white text-[#082555] hover:border-[#C9A84C] hover:bg-[#FFF9EC]" },
+            { type: "email", icon: <MailIcon  className="h-5 w-5" />, label: copy.mail,  cls: "border border-[#E2D8C4] bg-white text-[#082555] hover:border-[#C9A84C] hover:bg-[#FFF9EC]" },
+            { type: "share", icon: <ShareIcon className="h-5 w-5 text-[#C9A84C]" />, label: copy.share, cls: "bg-gradient-to-br from-[#082555] to-[#0d3070] text-white shadow-md" },
+          ].map(({ type, icon, label, cls }) => (
+            <button key={type} type="button" onClick={() => onContactSupplier?.(selectedSupplier, type)}
+              className={`flex h-16 flex-col items-center justify-center gap-1.5 rounded-xl text-[11px] font-bold transition-all duration-150 active:scale-[0.97] ${cls}`}
+              style={{ fontFamily: AR }}>
+              {icon}
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <InlineAdBanner
+          adBanner={suppliersAdBanner}
+          canManageAds={canManageAds}
+          onEdit={handleEditAd}
+          onToggleVisibility={handleToggleAdVisibility}
+          onRemove={handleRemoveAd}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
-      {/* Tab bar */}
+      {/* Tab bar  */}
       <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#082555] to-[#0d3070] shadow-[0_8px_24px_rgba(8,37,85,0.22)] p-1.5">
         <div className="flex gap-1.5">
           {[
@@ -502,7 +592,7 @@ export default function SuppliersPanel({
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 border-t border-[#F0E8D8] bg-[#FAFAF8] px-4 py-2.5">
-                  <button type="button" onClick={() => setSelectedSupplier(supplier)}
+                  <button type="button" onClick={() => { setSelectedSupplier(supplier); nav.navigate({ section: "supplier-detail" }); }}
                     className="flex-1 h-9 rounded-xl border border-[#E2D8C4] bg-white text-[11px] font-bold text-[#082555] transition-all duration-150 hover:border-[#C9A84C] hover:bg-[#FFF9EC] hover:text-[#8B6914] active:scale-[0.98]"
                     style={{ fontFamily: AR }}>
                     {copy.contact}
@@ -603,55 +693,6 @@ export default function SuppliersPanel({
         </div>
       )}
 
-      {/* Supplier detail modal */}
-      {selectedSupplier && (
-        <Modal title={selectedSupplier.name} onClose={() => setSelectedSupplier(null)} closeLabel={copy.close}>
-          <div className="space-y-2.5">
-            {/* Info grid */}
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { label: copy.specialty, value: selectedSupplier.category },
-                { label: copy.location, value: selectedSupplier.location },
-                { label: copy.phone, value: selectedSupplier.phone },
-                { label: copy.email, value: selectedSupplier.email },
-              ].map(({ label, value }) => (
-                <div key={label} className="rounded-xl border border-[#E2D8C4] bg-[#FAFAF8] p-3">
-                  <p className="text-[9px] font-bold text-[#9A8A6A] mb-1 uppercase tracking-wide" style={{ fontFamily: AR }}>{label}</p>
-                  <p className="text-[12px] font-bold text-[#082555] leading-snug" style={{ fontFamily: AR }}>{value || "—"}</p>
-                </div>
-              ))}
-            </div>
-            {selectedSupplier.description && (
-              <div className="rounded-xl border border-[#E2D8C4] bg-[#FAFAF8] p-3">
-                <p className="text-[9px] font-bold text-[#9A8A6A] mb-1 uppercase tracking-wide" style={{ fontFamily: AR }}>{copy.summary}</p>
-                <p className="text-[12px] text-[#082555] leading-relaxed" style={{ fontFamily: AR }}>{selectedSupplier.description}</p>
-              </div>
-            )}
-            {selectedSupplier.website && (
-              <div className="rounded-xl border border-[#E2D8C4] bg-[#FAFAF8] p-3">
-                <p className="text-[9px] font-bold text-[#9A8A6A] mb-1 uppercase tracking-wide" style={{ fontFamily: AR }}>{copy.website}</p>
-                <p className="text-[12px] font-bold text-[#C9A84C]" style={{ fontFamily: AR }}>{selectedSupplier.website}</p>
-              </div>
-            )}
-
-            {/* Contact actions */}
-            <div className="grid grid-cols-3 gap-2 pt-1">
-              {[
-                { type: "phone", icon: <PhoneIcon className="h-5 w-5" />, label: copy.call,  cls: "border border-[#E2D8C4] bg-white text-[#082555] hover:border-[#C9A84C] hover:bg-[#FFF9EC]" },
-                { type: "email", icon: <MailIcon  className="h-5 w-5" />, label: copy.mail,  cls: "border border-[#E2D8C4] bg-white text-[#082555] hover:border-[#C9A84C] hover:bg-[#FFF9EC]" },
-                { type: "share", icon: <ShareIcon className="h-5 w-5 text-[#C9A84C]" />, label: copy.share, cls: "bg-gradient-to-br from-[#082555] to-[#0d3070] text-white shadow-md" },
-              ].map(({ type, icon, label, cls }) => (
-                <button key={type} type="button" onClick={() => onContactSupplier?.(selectedSupplier, type)}
-                  className={`flex h-16 flex-col items-center justify-center gap-1.5 rounded-xl text-[11px] font-bold transition-all duration-150 active:scale-[0.97] ${cls}`}
-                  style={{ fontFamily: AR }}>
-                  {icon}
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }

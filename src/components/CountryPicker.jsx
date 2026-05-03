@@ -2,6 +2,35 @@ import { trackCountryVisit } from "../hooks/useCountryStats";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
 const MONO = "'IBM Plex Mono', monospace";
+const COUNTRY_PICKER_EFFECTS = `
+@keyframes countryCardShineSweep {
+  0% {
+    transform: translate3d(-160%, 0, 0) skewX(-18deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.18;
+  }
+  45% {
+    opacity: 0.95;
+  }
+  62% {
+    opacity: 0.82;
+  }
+  100% {
+    transform: translate3d(210%, 0, 0) skewX(-18deg);
+    opacity: 0;
+  }
+}
+.country-card-shine-primary,
+.country-card-shine-secondary {
+  animation: none;
+}
+.group:hover .country-card-shine-primary,
+.group:hover .country-card-shine-secondary {
+  animation: countryCardShineSweep 1.25s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+}
+`;
 
 const COUNTRIES = [
   {
@@ -67,6 +96,7 @@ export default function CountryPicker({
 
   return (
     <div className="flex min-h-[70vh] flex-col items-center justify-center gap-6 py-8">
+      <style>{COUNTRY_PICKER_EFFECTS}</style>
       {/* Title */}
       <div className="text-center">
         <div className="mb-3 flex items-center justify-center">
@@ -91,17 +121,46 @@ export default function CountryPicker({
             <div key={country.value}>
               {/* Card row */}
               <div
-                className="flex w-full items-center rounded-3xl border shadow-sm transition-all"
+                className="group relative flex w-full items-center overflow-hidden rounded-3xl border shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_38px_rgba(15,23,42,0.2)]"
                 style={{
                   background: country.bg,
                   borderColor: country.border,
                 }}
               >
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                  style={{
+                    background: "linear-gradient(180deg, rgba(255,255,255,0.62) 0%, rgba(255,255,255,0.24) 30%, rgba(255,255,255,0.08) 58%, rgba(255,255,255,0) 100%)",
+                  }}
+                />
+                <div
+                  aria-hidden="true"
+                  className="country-card-shine-primary pointer-events-none absolute inset-y-[-32%] left-0 w-[44%] opacity-0 mix-blend-screen group-hover:opacity-100"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.08) 8%, rgba(255,255,255,0.5) 18%, rgba(255,255,255,0.98) 44%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.98) 56%, rgba(255,255,255,0.52) 76%, rgba(255,255,255,0.08) 92%, rgba(255,255,255,0) 100%)",
+                    filter: "blur(1px)",
+                    boxShadow: "0 0 80px rgba(255,255,255,0.95)",
+                  }}
+                />
+                <div
+                  aria-hidden="true"
+                  className="country-card-shine-secondary pointer-events-none absolute inset-y-[16%] left-0 w-[22%] opacity-0 group-hover:opacity-100"
+                  style={{
+                    background: "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0) 100%)",
+                    filter: "blur(10px)",
+                  }}
+                />
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-x-5 top-0 h-[2px] bg-white/95 opacity-95"
+                />
                 {/* Main clickable area */}
                 <button
                   type="button"
                   onClick={() => handleSelect(country)}
-                  className="flex flex-1 items-center gap-4 px-5 py-4 text-right transition-all active:scale-[0.97] hover:opacity-90"
+                  className="relative flex flex-1 items-center gap-4 px-5 py-4 text-right transition-all duration-300 active:scale-[0.97]"
                 >
                   <span className="text-[18px] font-bold shrink-0" style={{ color: country.color }}>‹</span>
 

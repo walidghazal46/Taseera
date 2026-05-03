@@ -445,11 +445,35 @@ export default function App() {
 
   const handleCreateRfq = useCallback(async ({ item, supplier, source }) => {
     if (authMode === "guest") { showStatus(systemText.loginRequiredForRfq, "warning"); return; }
-    const nextR = { id: createId("rfq"), createdAt: new Date().toISOString(), source, itemId: item?.num || null, itemName: item?.ar || systemText.genericRequest, supplierName: supplier?.name || systemText.market, status: "draft" };
+
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    const datePart = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
+    const randPart = Math.random().toString(36).slice(2, 6).toUpperCase();
+    const rfqRef = `RFQ-${datePart}-${randPart}`;
+
+    const userName = authSession?.userName || settings.userName || "غير محدد";
+    const userEmail = authSession?.userEmail || settings.userEmail || "غير محدد";
+    const dateStr = now.toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" });
+
+    const body = [
+      `رقم الطلب: ${rfqRef}`,
+      `التاريخ: ${dateStr}`,
+      "",
+      `الاسم: ${userName}`,
+      `البريد: ${userEmail}`,
+      "",
+      `البند: ${item ? `${item.num} - ${item.ar}` : "طلب عرض سعر عام"}`,
+    ].join("\n");
+
+    const subject = `طلب عرض سعر ${rfqRef}${item ? ` — ${item.ar}` : ""}`;
+
+    const nextR = { id: createId("rfq"), rfqRef, createdAt: now.toISOString(), source, itemId: item?.num || null, itemName: item?.ar || systemText.genericRequest, supplierName: supplier?.name || systemText.market, status: "draft" };
     setRfqRequests((c) => [nextR, ...c].slice(0, 50));
-    await bridge.openEmail("walidghazal46@gmail.com", systemText.rfqSubject(item?.ar || systemText.supplyService), `${systemText.rfqGreeting("Admin", item?.ar || supplier?.category)}\n\nالشركة: ${selectedCompany?.name}`);
-    showStatus(systemText.rfqCreated, "success");
-  }, [authMode, bridge, selectedCompany, setRfqRequests, systemText, showStatus]);
+
+    await bridge.openEmail("walidghazal46@gmail.com", subject, body);
+    showStatus(`تم فتح البريد — مرجع الطلب: ${rfqRef}`, "success");
+  }, [authMode, authSession, bridge, setRfqRequests, settings, systemText, showStatus]);
 
   const handleContactSupplier = useCallback(async (s, channel = "phone") => {
     if (channel === "phone" && s.phone) { bridge.openDialer(s.phone); showStatus(systemText.callOpened(s.name), "info"); }

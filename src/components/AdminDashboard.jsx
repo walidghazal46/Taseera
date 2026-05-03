@@ -239,6 +239,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
   const [areaResultsAdDraft, setAreaResultsAdDraft] = useState(DEFAULT_AD_BANNER);
   const [companiesPaginationAdDraft, setCompaniesPaginationAdDraft] = useState(DEFAULT_AD_BANNER);
   const [suppliersPaginationAdDraft, setSuppliersPaginationAdDraft] = useState(DEFAULT_AD_BANNER);
+  const [selfPricingAdDraft, setSelfPricingAdDraft] = useState(DEFAULT_AD_BANNER);
   const [savingSettings, setSavingSettings] = useState(false);
   const [openSections, setOpenSections] = useState({});
   const toggleSection = (key) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -535,6 +536,13 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
       AD_SLOT_IDS.suppliersAfterPagination
     );
 
+    const unSubSelfPricingAd = listenAdBanner(
+      (data) => {
+        setSelfPricingAdDraft(data || DEFAULT_AD_BANNER);
+      },
+      AD_SLOT_IDS.selfPricingAfterActions
+    );
+
     return () => {
       unSubPayment?.();
       unSubTopAd?.();
@@ -543,6 +551,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
       unSubAreaResultsAd?.();
       unSubCompaniesPaginationAd?.();
       unSubSuppliersPaginationAd?.();
+      unSubSelfPricingAd?.();
     };
   }, [activeTab]);
 
@@ -1460,7 +1469,60 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                     </div>
                   )}
 
-                  {canManageRuntimeSettings && (
+                  </div>}
+                </div>
+
+                <div className="rounded-2xl border border-[#e2e8f0] bg-white overflow-hidden">
+                  <button type="button" onClick={() => toggleSection("selfPricing")} className="flex w-full items-center justify-between px-3 py-3 text-left">
+                    <p className="text-[12px] font-bold text-[#082555]">Self Pricing Banner (After Actions)</p>
+                    <span className="text-slate-400 text-[10px]">{openSections["selfPricing"] ? "▲" : "▼"}</span>
+                  </button>
+                  {openSections["selfPricing"] && <div className="px-3 pb-3">
+                  {!canManageRuntimeSettings ? (
+                    <p className="mt-2 text-[11px] text-amber-700">No permission: approvePayments</p>
+                  ) : (
+                    <div className="mt-3 grid grid-cols-1 gap-2">
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Enabled</span>
+                        <select
+                          value={selfPricingAdDraft.enabled ? "yes" : "no"}
+                          onChange={(e) => setSelfPricingAdDraft((curr) => ({ ...curr, enabled: e.target.value === "yes" }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        >
+                          <option value="yes">Yes</option>
+                          <option value="no">No</option>
+                        </select>
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Banner Title</span>
+                        <input
+                          value={selfPricingAdDraft.title || ""}
+                          onChange={(e) => setSelfPricingAdDraft((curr) => ({ ...curr, title: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Image URL</span>
+                        <input
+                          value={selfPricingAdDraft.imageUrl || ""}
+                          onChange={(e) => setSelfPricingAdDraft((curr) => ({ ...curr, imageUrl: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                      <label className="text-[11px]">
+                        <span className="mb-1 block font-bold text-slate-600">Target URL</span>
+                        <input
+                          value={selfPricingAdDraft.targetUrl || ""}
+                          onChange={(e) => setSelfPricingAdDraft((curr) => ({ ...curr, targetUrl: e.target.value }))}
+                          className="w-full rounded-lg border border-[#dbe2ea] px-2 py-1.5"
+                        />
+                      </label>
+                    </div>
+                  )}
+                  </div>}
+                </div>
+
+                {canManageRuntimeSettings && (
                     <button
                       type="button"
                       disabled={savingSettings}
@@ -1474,6 +1536,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                           await saveAdBanner(adminProfile, areaResultsAdDraft, AD_SLOT_IDS.areaResultsAfterNote);
                           await saveAdBanner(adminProfile, companiesPaginationAdDraft, AD_SLOT_IDS.companiesAfterPagination);
                           await saveAdBanner(adminProfile, suppliersPaginationAdDraft, AD_SLOT_IDS.suppliersAfterPagination);
+                          await saveAdBanner(adminProfile, selfPricingAdDraft, AD_SLOT_IDS.selfPricingAfterActions);
                           onToast?.("Settings updated", "success");
                         } catch (error) {
                           onToast?.(error.message || "Failed to save settings", "warning");
@@ -1486,9 +1549,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                       {savingSettings ? "..." : "Save payment + ad settings"}
                     </button>
                   )}
-                  </div>}
                 </div>
-              </div>
             )}
           </section>
         </div>
