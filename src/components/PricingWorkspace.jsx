@@ -592,9 +592,10 @@ function HistoryInsightGraphic({ savedAnalyses }) {
   );
 }
 
-function AreaScenarioCompare({ scenarios, currentScenario, currency, onAddCurrent, onRemove }) {
+function AreaScenarioCompare({ scenarios, currentScenario, suggestedScenario, currency, onAddCurrent, onRemove }) {
   const mergedScenarios = [
     ...(currentScenario ? [{ ...currentScenario, id: "__current__", live: true }] : []),
+    ...(suggestedScenario ? [{ ...suggestedScenario, id: "__suggested__", suggested: true }] : []),
     ...scenarios,
   ];
 
@@ -632,17 +633,20 @@ function AreaScenarioCompare({ scenarios, currentScenario, currency, onAddCurren
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
                   <div className="text-[13px] font-bold text-[#082555]" style={{ fontFamily: AR }}>
-                    {scenario.live ? "السيناريو الحالي" : `سيناريو ${index}`}
+                    {scenario.live ? "السيناريو الحالي" : scenario.suggested ? "سيناريو أعلى" : `سيناريو ${index}`}
                   </div>
                   <div className="mt-1 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
                     {scenario.typeLabel} · {scenario.finishLabel}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {scenario.suggested && (
+                    <span className="rounded-full bg-[#C9A84C] px-2 py-1 text-[10px] font-bold text-[#082555]">ترقية</span>
+                  )}
                   {isBest && (
                     <span className="rounded-full bg-[#082555] px-2 py-1 text-[10px] font-bold text-[#C9A84C]">الأوفر</span>
                   )}
-                  {!scenario.live && (
+                  {!scenario.live && !scenario.suggested && (
                     <button type="button" onClick={() => onRemove(scenario.id)} className="text-[12px] font-bold text-[#9A8A6A]">
                       حذف
                     </button>
@@ -800,7 +804,7 @@ function AreaPricingForm({ country, onCalculate, adBanner, canManageAds = false,
   );
 }
 
-function AreaResultsView({ country, params, results, onBack, onExport, onSave, onOpenSection, scenarios, currentScenario, onAddScenario, onRemoveScenario, adBanner, canManageAds = false, onManageAds, onToggleAdVisibility, onRemoveAd }) {
+function AreaResultsView({ country, params, results, onBack, onExport, onSave, onOpenSection, scenarios, currentScenario, suggestedScenario, onAddScenario, onRemoveScenario, adBanner, canManageAds = false, onManageAds, onToggleAdVisibility, onRemoveAd }) {
   const c = COUNTRIES[country] || COUNTRIES.sa;
   const finishLabel = FINISH_LEVELS.find(f => f.id === params.finish)?.ar;
   const typeLabel = BUILDING_TYPES.find(t => t.id === params.type)?.ar;
@@ -875,6 +879,7 @@ function AreaResultsView({ country, params, results, onBack, onExport, onSave, o
       <AreaScenarioCompare
         scenarios={scenarios}
         currentScenario={currentScenario}
+        suggestedScenario={suggestedScenario}
         currency={c.currency}
         onAddCurrent={onAddScenario}
         onRemove={onRemoveScenario}
@@ -948,6 +953,7 @@ function AreaSectionDetailView({
   onBack,
   onReset,
   onUpdateItem,
+  onSave,
   adBanner,
   canManageAds = false,
   onManageAds,
@@ -959,6 +965,78 @@ function AreaSectionDetailView({
   const overallShare = overallResults?.total > 0 ? (draft.sectionTotal / overallResults.total) * 100 : 0;
 
   if (!draft) return null;
+
+  const handleExportSectionPdf = () => {
+    const now = new Date().toLocaleDateString("ar-SA");
+    const rowsHtml = draft.items.map((item, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${item.label}</td>
+        <td>${item.basis}</td>
+        <td>${fmtNum(item.qty)} ${item.unit}</td>
+        <td>${fmtNum(item.rate)} ${c.currency}</td>
+        <td>${fmtNum(item.total)} ${c.currency}</td>
+      </tr>
+    `).join("");
+    const assumptionsHtml = draft.assumptions.map((line) => `<li>${line}</li>`).join("");
+
+    const html = `
+      <!doctype html>
+      <html lang="ar" dir="rtl">
+        <head>
+          <meta charset="utf-8" />
+          <title>${draft.title}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 24px; color: #082555; direction: rtl; }
+            h1 { font-size: 22px; margin-bottom: 8px; }
+            .meta { color: #7b6c4a; margin-bottom: 20px; font-size: 13px; }
+            .summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
+            .summary-card { border: 1px solid #e2d8c4; border-radius: 14px; padding: 12px; background: #fcfbf8; }
+            .summary-card strong { display: block; margin-bottom: 6px; color: #9A8A6A; font-size: 12px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
+            th { background: #082555; color: #E8C97A; padding: 8px; text-align: right; }
+            td { padding: 8px; border-bottom: 1px solid #eee; }
+            .note { background: #F5EDD8; border: 1px solid #E2D8C4; border-radius: 16px; padding: 16px; }
+            ul { margin: 0; padding-right: 18px; }
+            @media print { button { display: none; } }
+          </style>
+        </head>
+        <body>
+          <h1>${draft.title}</h1>
+          <div class="meta">تقرير تفاصيل التخصص • ${now}</div>
+          <div class="summary">
+            <div class="summary-card"><strong>إجمالي التخصص</strong>${fmtNum(draft.sectionTotal)} ${c.currency}</div>
+            <div class="summary-card"><strong>سعر المتر</strong>${fmtNum(draft.unitPrice)} ${c.currency}</div>
+            <div class="summary-card"><strong>حصة التخصص</strong>${overallShare.toFixed(1)}%</div>
+            <div class="summary-card"><strong>المساحة الكلية</strong>${fmtNum(totalArea)} م²</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>البند</th>
+                <th>الأساس</th>
+                <th>الكمية</th>
+                <th>سعر الوحدة</th>
+                <th>الإجمالي</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+          <div class="note">
+            <strong>افتراضات هندسية مستخدمة</strong>
+            <ul>${assumptionsHtml}</ul>
+          </div>
+          <script>window.onload = () => window.print();</script>
+        </body>
+      </html>
+    `;
+
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+  };
 
   return (
     <div className="space-y-6 pb-12 animate-in fade-in slide-in-from-left-4 duration-500">
@@ -1074,6 +1152,34 @@ function AreaSectionDetailView({
               • {line}
             </div>
           ))}
+        </div>
+      </div>
+
+      <div className="rounded-3xl border-2 border-[#E2D8C4] bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-[16px] font-bold text-[#082555]" style={{ fontFamily: AR }}>إجراءات التخصص</h3>
+            <p className="mt-1 text-[12px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+              احفظ تفاصيل هذا التخصص في الحساب أو صدّرها كـ PDF بنفس القيم الحالية.
+            </p>
+          </div>
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F7F3EC] text-[22px]">
+            {draft.icon}
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={() => onSave?.()}
+            className="flex-1 min-h-[56px] rounded-2xl bg-[#C9A84C] text-[#082555] font-bold text-[15px] flex items-center justify-center gap-2 shadow-lg transition hover:bg-[#E8C97A] active:scale-[0.98]"
+          >
+            <SaveIcon className="h-5 w-5" /> حفظ في الحساب
+          </button>
+          <button
+            onClick={handleExportSectionPdf}
+            className="flex-1 min-h-[56px] rounded-2xl bg-white border-2 border-[#082555] text-[#082555] font-bold text-[15px] flex items-center justify-center gap-2 transition hover:bg-[#F5EDD8] active:scale-[0.98]"
+          >
+            <PrinterIcon className="h-5 w-5" /> تصدير PDF
+          </button>
         </div>
       </div>
 
@@ -1365,11 +1471,41 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
       unitPrice: effectiveAreaResults.unitPrice,
       totalArea: (Number(areaParams.area) || 0) * (Number(areaParams.floors) || 0),
       floors: Number(areaParams.floors) || 0,
+      finishId: areaParams.finish,
+      typeId: areaParams.type,
+      scopeId: areaParams.scope,
       typeLabel: BUILDING_TYPES.find((item) => item.id === areaParams.type)?.ar || areaParams.type,
       finishLabel: FINISH_LEVELS.find((item) => item.id === areaParams.finish)?.ar || areaParams.finish,
       scopeLabel: SCOPES.find((item) => item.id === areaParams.scope)?.ar || areaParams.scope,
     };
   }, [areaParams, effectiveAreaResults]);
+
+  const suggestedAreaScenario = useMemo(() => {
+    if (!currentAreaScenario || !areaParams || !effectiveAreaResults) return null;
+
+    const currentFinishIndex = FINISH_LEVELS.findIndex((item) => item.id === areaParams.finish);
+    const nextFinish = currentFinishIndex >= 0 ? FINISH_LEVELS[currentFinishIndex + 1] : null;
+    if (!nextFinish) return null;
+
+    const config = AREA_PRICING_BASE[country] || AREA_PRICING_BASE.sa;
+    const currentFactor = config.finishFactors[areaParams.finish] || 1;
+    const nextFactor = config.finishFactors[nextFinish.id] || currentFactor;
+    const ratio = currentFactor > 0 ? nextFactor / currentFactor : 1;
+
+    return {
+      id: `scenario-upgrade-${areaParams.type}-${areaParams.scope}-${nextFinish.id}-${areaParams.area}-${areaParams.floors}`,
+      total: roundTo(effectiveAreaResults.total * ratio),
+      unitPrice: roundTo(effectiveAreaResults.unitPrice * ratio),
+      totalArea: currentAreaScenario.totalArea,
+      floors: currentAreaScenario.floors,
+      finishId: nextFinish.id,
+      typeId: areaParams.type,
+      scopeId: areaParams.scope,
+      typeLabel: currentAreaScenario.typeLabel,
+      finishLabel: nextFinish.ar,
+      scopeLabel: currentAreaScenario.scopeLabel,
+    };
+  }, [areaParams, country, currentAreaScenario, effectiveAreaResults]);
 
   const handleCalculateArea = (params) => {
     const config = AREA_PRICING_BASE[country] || AREA_PRICING_BASE.sa;
@@ -2012,6 +2148,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             results={effectiveAreaResults}
             scenarios={areaScenarios}
             currentScenario={currentAreaScenario}
+            suggestedScenario={suggestedAreaScenario}
             onAddScenario={handleAddAreaScenario}
             onRemoveScenario={handleRemoveAreaScenario}
             onBack={() => setMode("area")}
@@ -2070,6 +2207,34 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             onBack={() => setMode("area-results")}
             onReset={handleResetAreaSection}
             onUpdateItem={handleUpdateAreaSectionItem}
+            onSave={() => {
+              const activeDraft = selectedAreaSection
+                ? areaSectionDrafts[selectedAreaSection] || buildAreaSectionDraft(selectedAreaSection, areaParams, areaResults)
+                : null;
+              if (!activeDraft) return;
+
+              onSaveAnalysis?.({
+                item: { ar: `تفاصيل تخصص (${activeDraft.title})`, num: `AREA-${activeDraft.sectionId}` },
+                resources: {},
+                results: {
+                  total: activeDraft.sectionTotal,
+                  unitPrice: activeDraft.unitPrice,
+                  overallShare:
+                    effectiveAreaResults?.total > 0
+                      ? (activeDraft.sectionTotal / effectiveAreaResults.total) * 100
+                      : 0,
+                },
+                params: {
+                  ...areaParams,
+                  sectionId: activeDraft.sectionId,
+                  sectionTitle: activeDraft.title,
+                  assumptions: activeDraft.assumptions,
+                  items: activeDraft.items,
+                },
+                mode: "area-section-detail",
+              });
+              showToast("تم حفظ تفاصيل التخصص بنجاح");
+            }}
             adBanner={areaSectionAdBanner}
             canManageAds={isAdminUnlocked}
             onManageAds={handleOpenAdEditor}
