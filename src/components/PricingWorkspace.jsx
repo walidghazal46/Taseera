@@ -2054,8 +2054,45 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
         </html>
       `;
 
-      // Open empty window first then write HTML — works on mobile browsers
-      // that block blob:// URLs (avoids "تعذر فتح التطبيق" error on Android/iOS)
+      // Build plain-text email body with all item data (used as fallback)
+      const emailRows = resourcesList.map(r =>
+        `  • ${r.type}: ${r.name} | الكمية: ${fmtNum(r.qty)} ${r.unit} | السعر: ${fmtNum(r.rate)} ${c.currency} | الإجمالي: ${fmtNum(r.total)} ${c.currency}`
+      ).join('\n');
+      const emailSubject = `تحليل بند ${selectedItem.num} — ${selectedItem.ar}`;
+      const emailBody = [
+        `تحليل بند المقاولات`,
+        `البند: ${selectedItem.num} — ${selectedItem.ar}`,
+        `القسم: ${selectedItem.divAr || ""}`,
+        `الوحدة: ${selectedItem.unit}`,
+        `التاريخ: ${now}`,
+        ``,
+        `📊 النتائج:`,
+        `سعر الوحدة النهائي: ${fmtNum(unitPrice)} ${c.currency}`,
+        `إجمالي العرض:       ${fmtNum(finalTotal)} ${c.currency}`,
+        `الكمية: ${fmtNum(q)} ${selectedItem.unit}`,
+        ``,
+        `💰 التفصيل:`,
+        `مواد:                ${fmtNum(matT)} ${c.currency}`,
+        `عمالة:               ${fmtNum(labT)} ${c.currency}`,
+        `معدات:               ${fmtNum(eqpT)} ${c.currency}`,
+        `إجمالي مباشر:        ${fmtNum(direct)} ${c.currency}`,
+        `أعباء غير مباشرة (${overhead}%): ${fmtNum(indirect)} ${c.currency}`,
+        `هامش ربح (${profit}%):  ${fmtNum(profitAmt)} ${c.currency}`,
+        `Factor: ${f}`,
+        ``,
+        `📋 الموارد التفصيلية:`,
+        emailRows,
+        ``,
+        `---`,
+        `تم التصدير من تطبيق Taseera — تسعيرة`,
+      ].join('\n');
+
+      const openEmailFallback = () => {
+        window.location.href = `mailto:?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+        showToast("جاري فتح البريد الإلكتروني مع البيانات...");
+      };
+
+      // Open empty window then write HTML — works on mobile (avoids blob:// issues)
       const printWin = window.open("", "_blank", "width=900,height=700");
       if (printWin) {
         printWin.document.open();
@@ -2066,18 +2103,13 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
           try { printWin.print(); } catch (_) {}
         }, 600);
         showToast("اختر «حفظ كـ PDF» من قائمة الطباعة");
+        // After 10 seconds: if window was closed without printing → email fallback
+        setTimeout(() => {
+          if (printWin.closed) openEmailFallback();
+        }, 10000);
       } else {
-        // Popup blocked — fallback: download as HTML file
-        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = blobUrl;
-        a.download = `تحليل_بند_${selectedItem.num.replace(/\s/g, "_")}.html`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-        showToast("تم تحميل ملف التقرير");
+        // Popup blocked (common on mobile) → immediate email fallback
+        openEmailFallback();
       }
     }
   }, [mode, country, areaParams, areaResults, effectiveAreaResults, selectedItem, resources, qty, overhead, profit, factor, showToast]);

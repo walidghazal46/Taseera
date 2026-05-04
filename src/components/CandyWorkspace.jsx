@@ -306,7 +306,7 @@ function AnalysisView({ item, division, country, onBack }) {
   const setA = (field, val) => setAssum(a => ({ ...a, [field]: val }));
   const reportFileBase = `${(item.num || "item").replace(/[^\w\u0600-\u06FF-]+/g, "_")}_${(item.ar || "analysis").replace(/[^\w\u0600-\u06FF-]+/g, "_")}`;
 
-  const openHtmlExport = useCallback(({ title, html, filename, autoPrint = false }) => {
+  const openHtmlExport = useCallback(({ title, html, filename, autoPrint = false, onEmailFallback }) => {
     // Open empty window then write HTML — avoids blob:// URL issues on mobile
     // (fixes "تعذر فتح التطبيق المطلوب" on Android/iOS browsers)
     const exportWin = window.open("", "_blank", "width=960,height=760");
@@ -321,19 +321,19 @@ function AnalysisView({ item, division, country, onBack }) {
           try { exportWin.print(); } catch (_) {}
         }, 600);
       }
+      // After 10 seconds: if window was closed without printing → email fallback
+      if (onEmailFallback) {
+        setTimeout(() => {
+          if (exportWin.closed) onEmailFallback();
+        }, 10000);
+      }
       return true;
     }
 
-    // Popup blocked — fallback: download as HTML file
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const blobUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = blobUrl;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+    // Popup blocked (common on mobile) → immediate email fallback
+    if (onEmailFallback) {
+      onEmailFallback();
+    }
     return false;
   }, []);
 
@@ -412,11 +412,52 @@ function AnalysisView({ item, division, country, onBack }) {
         </body>
       </html>`;
 
+    // Build plain-text email body (used when PDF export fails on mobile)
+    const fmtRow = (r) => `  • ${r.resource} | ${r.qty} ${r.unit} × ${fmt(r.rate, cur)} = ${fmt(r.qty * r.rate, cur)}`;
+    const emailSubject = `تحليل بند ${item.num} — ${item.ar}`;
+    const emailBody = [
+      `تحليل بند المقاولات`,
+      `البند: ${item.num} — ${item.ar}`,
+      `القسم: ${division.ar}`,
+      `الوحدة: ${item.unit}  |  الكمية: ${qty}`,
+      `التاريخ: ${new Date().toLocaleDateString("ar-SA")}`,
+      ``,
+      `📊 الملخص:`,
+      `سعر الوحدة النهائي: ${fmt(finalRate, cur)}`,
+      `إجمالي البند:        ${fmt(boqAmt, cur)}`,
+      ``,
+      `📋 المواد:`,
+      ...mats.map(fmtRow),
+      ``,
+      `👷 العمالة:`,
+      ...labs.map(fmtRow),
+      ``,
+      `🔧 المعدات:`,
+      ...plts.map(fmtRow),
+      ``,
+      `⚙️ الافتراضات:`,
+      `  هالك المواد: ${assum.waste}%`,
+      `  نقل لكل وحدة: ${fmt(transpAmt, cur)}`,
+      `  أعباء الموقع: ${assum.siteOH}%`,
+      `  الإدارة العامة: ${assum.hoOH}%`,
+      `  المخاطر: ${assum.risk}%`,
+      `  الربح: ${assum.profit}%`,
+      notes.trim() ? `\nملاحظات:\n${notes.trim()}` : ``,
+      ``,
+      `---`,
+      `تم التصدير من تطبيق Taseera — تسعيرة`,
+    ].join('\n');
+
+    const onEmailFallback = () => {
+      window.location.href = `mailto:?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
+    };
+
     openHtmlExport({
       title: `تحليل بند — ${item.ar}`,
       html,
       filename: `تحليل_بند_${reportFileBase}.html`,
       autoPrint: true,
+      onEmailFallback,
     });
   }, [assum.hoOH, assum.profit, assum.risk, assum.siteOH, assum.waste, boqAmt, cur, division.ar, finalRate, item.ar, item.num, item.unit, labs, mats, notes, openHtmlExport, plts, qty, reportFileBase, transpAmt]);
 
