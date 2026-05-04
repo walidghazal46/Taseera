@@ -180,6 +180,114 @@ function TrendChart({ today, week, month }) {
   );
 }
 
+// ── New KPI card with gradient background ─────────────────────────────────
+function KpiCard({ icon, label, value, sub, bg, border, valueColor, labelColor }) {
+  return (
+    <div
+      className="relative overflow-hidden rounded-2xl border p-4"
+      style={{ background: bg, borderColor: border }}
+    >
+      <div className="flex items-start justify-between gap-1">
+        <div className="min-w-0">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.12em]" style={{ color: labelColor }}>
+            {label}
+          </p>
+          <p className="mt-1 text-[26px] font-extrabold leading-none" style={{ color: valueColor }}>
+            {value}
+          </p>
+          {sub && (
+            <p className="mt-1 text-[10px]" style={{ color: labelColor }}>
+              {sub}
+            </p>
+          )}
+        </div>
+        <span className="shrink-0 text-[26px] opacity-[0.18]">{icon}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Area sparkline for new-user trend ─────────────────────────────────────
+function AreaSparkLine({ points, color, labels }) {
+  const vals = points.map((p) => p.value);
+  const max = Math.max(...vals, 1);
+  const W = 400; const H = 72;
+  const step = vals.length > 1 ? W / (vals.length - 1) : W;
+  const pts = vals.map((v, i) => [i * step, H - (v / max) * (H - 14) - 7]);
+  const linePath = pts.map((p, i) => (i === 0 ? `M${p[0]},${p[1]}` : `L${p[0]},${p[1]}`)).join(" ");
+  const areaPath = `${linePath} L${W},${H} L0,${H} Z`;
+  const uid = `spark${color.replace(/[^a-z0-9]/gi, "")}`;
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: "100%", height: "72px" }}>
+        <defs>
+          <linearGradient id={uid} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.28" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        <path d={areaPath} fill={`url(#${uid})`} />
+        <path d={linePath} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        {pts.map(([x, y], i) => (
+          <circle key={i} cx={x} cy={y} r="4.5" fill={color} stroke="white" strokeWidth="2" />
+        ))}
+      </svg>
+      {labels && (
+        <div
+          className="mt-2 grid text-center text-[10px] font-bold text-slate-500"
+          style={{ gridTemplateColumns: `repeat(${labels.length}, 1fr)` }}
+        >
+          {labels.map((l, i) => (
+            <span key={i}>{l}<br /><span style={{ color, fontSize: "13px", fontWeight: 800 }}>{vals[i]}</span></span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Pending-action feed item ───────────────────────────────────────────────
+function ActionFeedItem({ icon, title, name, color, onGo }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-[#e8edf4] bg-[#fafbfd] p-3">
+      <div
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[17px]"
+        style={{ background: `${color}18`, border: `1.5px solid ${color}40` }}
+      >
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{title}</p>
+        <p className="truncate text-[12px] font-semibold text-slate-800">{name || "—"}</p>
+      </div>
+      <button
+        type="button"
+        onClick={onGo}
+        className="shrink-0 rounded-lg px-3 py-1.5 text-[11px] font-extrabold transition-opacity hover:opacity-80"
+        style={{ background: `${color}18`, color, border: `1px solid ${color}40` }}
+      >
+        Review →
+      </button>
+    </div>
+  );
+}
+
+// ── Horizontal stacked bar ─────────────────────────────────────────────────
+function StackedBar({ segments }) {
+  const total = segments.reduce((s, x) => s + x.value, 0) || 1;
+  return (
+    <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
+      {segments.map((seg) => (
+        <div
+          key={seg.label}
+          style={{ width: `${(seg.value / total) * 100}%`, background: seg.hex }}
+          title={`${seg.label}: ${seg.value}`}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function AdminDashboard({ language = "ar", adminProfile, onToast, initialTab = "dashboard" }) {
   const isEn = language === "en";
   const t = useMemo(
@@ -667,6 +775,46 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
 
   const maxBar = Math.max(...summaryBars.map((i) => i.value), 1);
 
+  // ── Live data computed from always-active listeners ──────────────────────
+  const qsActive   = qsRequests.filter((r) => r.status === "active").length;
+  const qsPendingN = qsRequests.filter((r) => r.status === "pending").length;
+  const qsRejected = qsRequests.filter((r) => r.status === "rejected").length;
+  const qsDeacti   = qsRequests.filter((r) => r.status === "deactivated").length;
+
+  const allPendingFeed = [
+    ...cancelReqs.map((r) => ({
+      id: r.id,
+      icon: "🔄",
+      title: "Cancel Subscription",
+      name: r.name || r.email || r.id,
+      tab: "subscriptions",
+      color: "#f59e0b",
+    })),
+    ...deleteReqs.map((r) => ({
+      id: r.id,
+      icon: "🗑",
+      title: "Account Deletion",
+      name: r.name || r.email || r.id,
+      tab: "subscriptions",
+      color: "#ef4444",
+    })),
+    ...qsRequests
+      .filter((r) => r.status === "pending")
+      .map((r) => ({
+        id: r.id,
+        icon: "💎",
+        title: "QS Premium Request",
+        name: r.userName || r.userEmail || r.userId,
+        tab: "qspremium",
+        color: "#8b5cf6",
+      })),
+  ];
+
+  const freeUsers = Math.max(
+    0,
+    (dashboardStats?.totalUsers || 0) - (dashboardStats?.paidUsers || 0) - qsActive
+  );
+
   return (
     <div className="space-y-4" style={{ fontFamily: AR }}>
       <div className="overflow-hidden rounded-3xl border border-[#c7d2fe] bg-white shadow-sm">
@@ -685,6 +833,9 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                   : 0;
                 const subsBadge = item.id === "subscriptions" && activeTab !== "subscriptions"
                   ? cancelReqs.length + deleteReqs.length
+                  : 0;
+                const dashBadge = item.id === "dashboard" && activeTab !== "dashboard"
+                  ? allPendingFeed.length
                   : 0;
                 return (
                   <button
@@ -708,6 +859,11 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                         {subsBadge}
                       </span>
                     )}
+                    {dashBadge > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-extrabold text-white shadow">
+                        {dashBadge}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -716,56 +872,215 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
 
           <section className="min-w-0 p-3 sm:p-4">
             {activeTab === "dashboard" && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[15px] font-extrabold text-[#082555]">Overview</h3>
-                  <button type="button" onClick={loadStats} className="rounded-lg border border-[#dbe2ea] bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600">
-                    {t.refresh}
+              <div className="space-y-5">
+
+                {/* ── Header ───────────────────────────────────────────── */}
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-[16px] font-extrabold text-[#082555]">📊 Command Center</h3>
+                    <p className="text-[11px] text-slate-400">Real-time overview of all platform activity</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={loadStats}
+                    className="shrink-0 rounded-xl border border-[#dbe2ea] bg-white px-3 py-2 text-[11px] font-bold text-slate-600 shadow-sm hover:bg-slate-50"
+                  >
+                    🔄 {t.refresh}
                   </button>
                 </div>
 
                 {statsLoading ? (
-                  <p className="text-[12px] font-bold text-slate-500">{t.loading}</p>
+                  <div className="flex items-center gap-2 rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] p-6">
+                    <span className="animate-spin text-[20px]">⏳</span>
+                    <p className="text-[12px] font-bold text-slate-500">{t.loading}</p>
+                  </div>
                 ) : (
                   <>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                      <StatCard label="Total Users" value={dashboardStats?.totalUsers || 0} tone="blue" />
-                      <StatCard label="Active" value={dashboardStats?.activeUsers || 0} tone="green" />
-                      <StatCard label="Suspended" value={dashboardStats?.suspendedUsers || 0} tone="amber" />
-                      <StatCard label="Paid" value={dashboardStats?.paidUsers || 0} tone="blue" />
-                      <StatCard label="Pending Requests" value={dashboardStats?.pendingRequests || 0} tone="red" />
-                      <StatCard label="New (Today / Week / Month)" value={`${dashboardStats?.newToday || 0} / ${dashboardStats?.newWeek || 0} / ${dashboardStats?.newMonth || 0}`} tone="green" />
+                    {/* ── KPI Cards ──────────────────────────────────────── */}
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+                      <KpiCard
+                        icon="👥" label="Total Users"
+                        value={dashboardStats?.totalUsers || 0}
+                        sub="Registered"
+                        bg="linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%)"
+                        border="#bfdbfe" valueColor="#1e40af" labelColor="#3b82f6"
+                      />
+                      <KpiCard
+                        icon="✅" label="Active"
+                        value={dashboardStats?.activeUsers || 0}
+                        sub="Approved"
+                        bg="linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%)"
+                        border="#bbf7d0" valueColor="#166534" labelColor="#16a34a"
+                      />
+                      <KpiCard
+                        icon="⏸" label="Suspended"
+                        value={dashboardStats?.suspendedUsers || 0}
+                        sub="Blocked"
+                        bg="linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%)"
+                        border="#fde68a" valueColor="#92400e" labelColor="#d97706"
+                      />
+                      <KpiCard
+                        icon="💳" label="Taseera Pro"
+                        value={dashboardStats?.paidUsers || 0}
+                        sub="Active subs"
+                        bg="linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%)"
+                        border="#c7d2fe" valueColor="#3730a3" labelColor="#6366f1"
+                      />
+                      <KpiCard
+                        icon="💎" label="QS Premium"
+                        value={qsActive}
+                        sub="Active subs"
+                        bg="linear-gradient(135deg,#faf5ff 0%,#ede9fe 100%)"
+                        border="#ddd6fe" valueColor="#5b21b6" labelColor="#8b5cf6"
+                      />
+                      <KpiCard
+                        icon="🔔" label="Actions Needed"
+                        value={allPendingFeed.length}
+                        sub={allPendingFeed.length === 0 ? "All clear ✓" : "Requires review"}
+                        bg={allPendingFeed.length > 0
+                          ? "linear-gradient(135deg,#fff1f2 0%,#ffe4e6 100%)"
+                          : "linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%)"}
+                        border={allPendingFeed.length > 0 ? "#fecdd3" : "#bbf7d0"}
+                        valueColor={allPendingFeed.length > 0 ? "#9f1239" : "#166534"}
+                        labelColor={allPendingFeed.length > 0 ? "#f43f5e" : "#16a34a"}
+                      />
                     </div>
 
-                    <div className="rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] p-3">
-                      <p className="mb-3 text-[12px] font-bold text-[#0f172a]">Users Distribution Chart</p>
-                      <div className="space-y-2">
-                        {summaryBars.map((bar) => (
-                          <div key={bar.label} className="grid grid-cols-[72px_minmax(0,1fr)_34px] items-center gap-2">
-                            <span className="text-[10px] font-bold text-slate-600">{bar.label}</span>
-                            <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-                              <div className={`h-full ${bar.color}`} style={{ width: `${Math.max(4, (bar.value / maxBar) * 100)}%` }} />
-                            </div>
-                            <span className="text-[10px] font-bold text-slate-700">{bar.value}</span>
-                          </div>
-                        ))}
+                    {/* ── New Users Growth ───────────────────────────────── */}
+                    <div className="rounded-2xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+                      <div className="mb-3 flex items-center gap-2">
+                        <p className="text-[13px] font-extrabold text-[#0f172a]">📈 New Users Growth</p>
+                        <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-600">
+                          +{dashboardStats?.newMonth || 0} this month
+                        </span>
+                      </div>
+                      <AreaSparkLine
+                        points={[
+                          { value: dashboardStats?.newToday || 0 },
+                          { value: dashboardStats?.newWeek || 0 },
+                          { value: dashboardStats?.newMonth || 0 },
+                        ]}
+                        color="#2563eb"
+                        labels={["Today", "This Week", "This Month"]}
+                      />
+                    </div>
+
+                    {/* ── Donuts Row ────────────────────────────────────── */}
+                    <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                      <div className="rounded-2xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+                        <p className="mb-1 text-[13px] font-extrabold text-[#0f172a]">👥 User Status Mix</p>
+                        <StackedBar segments={[
+                          { label: "Active",    value: dashboardStats?.activeUsers    || 0, hex: "#10b981" },
+                          { label: "Suspended", value: dashboardStats?.suspendedUsers || 0, hex: "#f59e0b" },
+                          { label: "Pending",   value: dashboardStats?.pendingRequests || 0, hex: "#ef4444" },
+                        ]} />
+                        <DonutChart
+                          title=""
+                          items={[
+                            { label: "Active",    value: dashboardStats?.activeUsers    || 0, hex: "#10b981" },
+                            { label: "Suspended", value: dashboardStats?.suspendedUsers || 0, hex: "#f59e0b" },
+                            { label: "Pending",   value: dashboardStats?.pendingRequests || 0, hex: "#ef4444" },
+                          ]}
+                        />
+                      </div>
+                      <div className="rounded-2xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+                        <p className="mb-1 text-[13px] font-extrabold text-[#0f172a]">💳 Subscription Mix</p>
+                        <StackedBar segments={[
+                          { label: "Taseera Pro", value: dashboardStats?.paidUsers || 0, hex: "#4f46e5" },
+                          { label: "QS Premium",  value: qsActive,                       hex: "#8b5cf6" },
+                          { label: "Free",        value: freeUsers,                      hex: "#e2e8f0" },
+                        ]} />
+                        <DonutChart
+                          title=""
+                          items={[
+                            { label: "Taseera Pro", value: dashboardStats?.paidUsers || 0, hex: "#4f46e5" },
+                            { label: "QS Premium",  value: qsActive,                       hex: "#8b5cf6" },
+                            { label: "Free",        value: freeUsers,                      hex: "#cbd5e1" },
+                          ]}
+                        />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                      <DonutChart
-                        title="Users Status Mix"
-                        items={[
-                          { label: "Active", value: dashboardStats?.activeUsers || 0, hex: "#10b981" },
-                          { label: "Suspended", value: dashboardStats?.suspendedUsers || 0, hex: "#f59e0b" },
-                          { label: "Pending", value: dashboardStats?.pendingRequests || 0, hex: "#ef4444" },
-                        ]}
-                      />
-                      <TrendChart
-                        today={dashboardStats?.newToday || 0}
-                        week={dashboardStats?.newWeek || 0}
-                        month={dashboardStats?.newMonth || 0}
-                      />
+                    {/* ── QS Premium Breakdown ──────────────────────────── */}
+                    <div className="rounded-2xl border border-[#ede9fe] bg-white p-4 shadow-sm">
+                      <p className="mb-3 text-[13px] font-extrabold text-[#0f172a]">💎 QS Premium Breakdown</p>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        {[
+                          { label: "Active",      value: qsActive,   hex: "#10b981", bg: "#f0fdf4", border: "#bbf7d0" },
+                          { label: "Pending",     value: qsPendingN, hex: "#f59e0b", bg: "#fffbeb", border: "#fde68a" },
+                          { label: "Rejected",    value: qsRejected, hex: "#ef4444", bg: "#fff1f2", border: "#fecdd3" },
+                          { label: "Deactivated", value: qsDeacti,   hex: "#94a3b8", bg: "#f8fafc", border: "#e2e8f0" },
+                        ].map((item) => (
+                          <div
+                            key={item.label}
+                            className="rounded-xl p-3 text-center"
+                            style={{ background: item.bg, border: `1px solid ${item.border}` }}
+                          >
+                            <p className="text-[22px] font-extrabold" style={{ color: item.hex }}>{item.value}</p>
+                            <p className="text-[10px] font-bold text-slate-500">{item.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                      {qsPendingN > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab("qspremium")}
+                          className="mt-3 w-full rounded-xl border border-amber-200 bg-amber-50 py-2 text-[12px] font-bold text-amber-700 hover:bg-amber-100"
+                        >
+                          ⚡ Review {qsPendingN} pending QS Premium request{qsPendingN > 1 ? "s" : ""} →
+                        </button>
+                      )}
+                    </div>
+
+                    {/* ── Pending Actions Feed ──────────────────────────── */}
+                    <div className="rounded-2xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+                      <div className="mb-3 flex items-center gap-2">
+                        <p className="text-[13px] font-extrabold text-[#0f172a]">🔔 Pending Actions</p>
+                        {allPendingFeed.length > 0 && (
+                          <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-extrabold text-white shadow-sm">
+                            {allPendingFeed.length}
+                          </span>
+                        )}
+                      </div>
+                      {allPendingFeed.length === 0 ? (
+                        <div className="rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] p-5 text-center">
+                          <p className="text-[22px]">✅</p>
+                          <p className="mt-1 text-[13px] font-bold text-emerald-700">All clear — no pending actions</p>
+                          <p className="text-[11px] text-emerald-600 opacity-70">Everything is up to date</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {allPendingFeed.map((item) => (
+                            <ActionFeedItem
+                              key={`${item.tab}-${item.id}`}
+                              icon={item.icon}
+                              title={item.title}
+                              name={item.name}
+                              color={item.color}
+                              onGo={() => setActiveTab(item.tab)}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ── Users Distribution Bars ───────────────────────── */}
+                    <div className="rounded-2xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+                      <p className="mb-3 text-[13px] font-extrabold text-[#0f172a]">📊 Users Distribution</p>
+                      <div className="space-y-3">
+                        {summaryBars.map((bar) => (
+                          <div key={bar.label} className="grid grid-cols-[80px_1fr_40px] items-center gap-3">
+                            <span className="text-[11px] font-bold text-slate-600">{bar.label}</span>
+                            <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                              <div
+                                className={`h-full rounded-full ${bar.color}`}
+                                style={{ width: `${Math.max(4, (bar.value / maxBar) * 100)}%`, transition: "width 0.8s ease" }}
+                              />
+                            </div>
+                            <span className="text-right text-[12px] font-extrabold text-slate-700">{bar.value}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </>
                 )}
