@@ -304,6 +304,179 @@ function AnalysisView({ item, division, country, onBack }) {
   const boqAmt    = finalRate * qty;
 
   const setA = (field, val) => setAssum(a => ({ ...a, [field]: val }));
+  const reportFileBase = `${(item.num || "item").replace(/[^\w\u0600-\u06FF-]+/g, "_")}_${(item.ar || "analysis").replace(/[^\w\u0600-\u06FF-]+/g, "_")}`;
+
+  const openHtmlExport = useCallback(({ title, html, filename, autoPrint = false }) => {
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const blobUrl = URL.createObjectURL(blob);
+    const exportWin = window.open(blobUrl, "_blank", "width=960,height=760");
+
+    if (exportWin) {
+      if (autoPrint) {
+        exportWin.addEventListener("load", () => {
+          setTimeout(() => {
+            try {
+              exportWin.print();
+            } catch (_) {}
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+          }, 350);
+        });
+      } else {
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+      }
+      return true;
+    }
+
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+    return false;
+  }, []);
+
+  const handleExportPdf = useCallback(() => {
+    const rowsSection = (title, rows) => `
+      <h3>${title}</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>الوصف</th>
+            <th>الوحدة</th>
+            <th>الكمية</th>
+            <th>سعر الوحدة</th>
+            <th>الإجمالي</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((row) => `
+            <tr>
+              <td>${row.resource}</td>
+              <td>${row.unit}</td>
+              <td>${row.qty}</td>
+              <td>${fmt(row.rate, cur)}</td>
+              <td>${fmt(row.qty * row.rate, cur)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
+
+    const html = `<!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="utf-8" />
+          <title>تحليل بند — ${item.ar}</title>
+          <style>
+            body{font-family:Arial,sans-serif;padding:24px;color:#082555;direction:rtl}
+            h1{font-size:18px;margin:0 0 4px}
+            h2{font-size:14px;margin:0 0 18px;color:#64748b}
+            h3{font-size:14px;margin:18px 0 8px}
+            table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:12px}
+            th{background:#082555;color:#C9A84C;padding:8px;text-align:right}
+            td{padding:7px 8px;border-bottom:1px solid #e5e7eb}
+            .box{border:1px solid #dbe2f0;border-radius:12px;padding:14px 16px;margin-top:12px}
+            .summary{background:#082555;color:#fff}
+            .summary strong{color:#C9A84C}
+            ul{margin:8px 0 0;padding-right:18px}
+            li{margin-bottom:4px}
+            @media print{button{display:none} body{padding:12px}}
+          </style>
+        </head>
+        <body>
+          <h1>${item.num} — ${item.ar}</h1>
+          <h2>${division.ar} | ${new Date().toLocaleDateString("ar-SA")}</h2>
+          <div class="box summary">
+            <div><strong>سعر الوحدة النهائي:</strong> ${fmt(finalRate, cur)} لكل ${item.unit}</div>
+            <div style="margin-top:6px"><strong>إجمالي البند:</strong> ${fmt(boqAmt, cur)}</div>
+            <div style="margin-top:6px"><strong>الكمية:</strong> ${qty} ${item.unit}</div>
+          </div>
+          ${rowsSection("المواد", mats)}
+          ${rowsSection("العمالة", labs)}
+          ${rowsSection("المعدات", plts)}
+          <div class="box">
+            <strong>الافتراضات المستخدمة</strong>
+            <ul>
+              <li>هالك المواد: ${assum.waste}%</li>
+              <li>نقل لكل وحدة: ${fmt(transpAmt, cur)}</li>
+              <li>أعباء الموقع: ${assum.siteOH}%</li>
+              <li>الإدارة العامة: ${assum.hoOH}%</li>
+              <li>المخاطر: ${assum.risk}%</li>
+              <li>الربح: ${assum.profit}%</li>
+            </ul>
+          </div>
+          ${notes.trim() ? `<div class="box"><strong>ملاحظات</strong><p>${notes.trim().replace(/\n/g, "<br/>")}</p></div>` : ""}
+          <script>window.onload=function(){setTimeout(function(){window.print();},300)}</script>
+        </body>
+      </html>`;
+
+    openHtmlExport({
+      title: `تحليل بند — ${item.ar}`,
+      html,
+      filename: `تحليل_بند_${reportFileBase}.html`,
+      autoPrint: true,
+    });
+  }, [assum.hoOH, assum.profit, assum.risk, assum.siteOH, assum.waste, boqAmt, cur, division.ar, finalRate, item.ar, item.num, item.unit, labs, mats, notes, openHtmlExport, plts, qty, reportFileBase, transpAmt]);
+
+  const handleRequestQuote = useCallback(async () => {
+    const rfqText = [
+      "طلب عروض سعر",
+      `البند: ${item.num} — ${item.ar}`,
+      `القسم: ${division.ar}`,
+      `الوحدة: ${item.unit}`,
+      `الكمية المطلوبة: ${qty} ${item.unit}`,
+      `السعر التقديري الحالي: ${fmt(finalRate, cur)} لكل ${item.unit}`,
+      `إجمالي تقديري: ${fmt(boqAmt, cur)}`,
+      "",
+      "الرجاء تزويدي بعرض سعر لهذا البند شاملاً التوريد والتنفيذ حسب الحاجة.",
+      notes.trim() ? `ملاحظات: ${notes.trim()}` : "",
+    ].filter(Boolean).join("\n");
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(rfqText);
+      }
+    } catch (_) {}
+
+    const html = `<!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="utf-8" />
+          <title>طلب عروض — ${item.ar}</title>
+          <style>
+            body{font-family:Arial,sans-serif;padding:24px;color:#082555;direction:rtl}
+            h1{font-size:18px;margin:0 0 6px}
+            .sub{color:#64748b;font-size:12px;margin-bottom:14px}
+            .card{border:1px solid #dbe2f0;border-radius:12px;padding:14px 16px;margin-bottom:12px}
+            .hint{background:#fff8e7;border-color:#f6d78b}
+            .value{font-weight:700}
+          </style>
+        </head>
+        <body>
+          <h1>طلب عروض سعر</h1>
+          <p class="sub">تم إنشاء هذا النموذج من Taseera بتاريخ ${new Date().toLocaleDateString("ar-SA")}</p>
+          <div class="card">
+            <div><span class="value">البند:</span> ${item.num} — ${item.ar}</div>
+            <div style="margin-top:6px"><span class="value">القسم:</span> ${division.ar}</div>
+            <div style="margin-top:6px"><span class="value">الوحدة:</span> ${item.unit}</div>
+            <div style="margin-top:6px"><span class="value">الكمية المطلوبة:</span> ${qty} ${item.unit}</div>
+            <div style="margin-top:6px"><span class="value">السعر التقديري الحالي:</span> ${fmt(finalRate, cur)} لكل ${item.unit}</div>
+            <div style="margin-top:6px"><span class="value">الإجمالي التقديري:</span> ${fmt(boqAmt, cur)}</div>
+          </div>
+          ${notes.trim() ? `<div class="card"><div class="value">ملاحظات إضافية</div><div style="margin-top:8px">${notes.trim().replace(/\n/g, "<br/>")}</div></div>` : ""}
+          <div class="card hint">
+            تم نسخ نص طلب العروض للحافظة متى كان ذلك مدعومًا. يمكنك الآن مشاركة هذه الصفحة أو طباعتها أو إرسال النص مباشرة إلى المورد.
+          </div>
+        </body>
+      </html>`;
+
+    openHtmlExport({
+      title: `طلب عروض — ${item.ar}`,
+      html,
+      filename: `طلب_عروض_${reportFileBase}.html`,
+      autoPrint: false,
+    });
+  }, [boqAmt, cur, division.ar, finalRate, item.ar, item.num, item.unit, notes, openHtmlExport, qty, reportFileBase]);
 
   return (
     <div style={{ fontFamily: AR, direction: "rtl" }}>
@@ -387,7 +560,8 @@ function AnalysisView({ item, division, country, onBack }) {
 
       {/* ── Assumptions ── */}
       <Section title="الافتراضات — Assumptions" icon="📋" accent="#6366f1" defaultOpen={true}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+        <div style={{ overflowX: "auto", paddingBottom: 4 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(118px, 1fr))", gap: 8, minWidth: 370 }}>
           {[
             { label: "هالك %",        field: "waste",     suffix: "%" },
             { label: "نقل / وحدة",    field: "transport", suffix: cur },
@@ -400,21 +574,22 @@ function AnalysisView({ item, division, country, onBack }) {
               background: "#f5f3ff", borderRadius: 9, padding: "7px 9px",
               border: "1px solid #e0e7ff",
             }}>
-              <p style={{ fontSize: 10, color: "#6366f1", margin: "0 0 3px", fontWeight: 600 }}>{label}</p>
-              <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
+              <p style={{ fontSize: 10, color: "#6366f1", margin: "0 0 3px", fontWeight: 600, whiteSpace: "nowrap" }}>{label}</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 3, minWidth: 0 }}>
                 <input
                   type="number" min={0} step="any" value={assum[field]}
                   onChange={e => setA(field, parseFloat(e.target.value) || 0)}
                   style={{
-                    fontFamily: MONO, fontSize: 12, flex: 1,
+                    fontFamily: MONO, fontSize: 12, flex: 1, minWidth: 0,
                     background: "rgba(255,255,255,0.7)", border: "1px solid #c7d2fe",
                     borderRadius: 5, padding: "2px 5px", textAlign: "left", outline: "none",
                   }}
                 />
-                <span style={{ fontSize: 10, color: "#818cf8" }}>{suffix}</span>
+                <span style={{ fontSize: 10, color: "#818cf8", whiteSpace: "nowrap", flexShrink: 0 }}>{suffix}</span>
               </div>
             </div>
           ))}
+          </div>
         </div>
       </Section>
 
@@ -535,6 +710,72 @@ function AnalysisView({ item, division, country, onBack }) {
         }}>
           {qty} {item.unit} × {fmt(finalRate, cur)} = {fmt(boqAmt, cur)}
         </p>
+      </div>
+
+      <div style={{
+        background: "#ffffff",
+        border: "1.5px solid #dbe2f0",
+        borderRadius: 16,
+        padding: "14px",
+        marginBottom: 12,
+        boxShadow: "0 4px 16px rgba(8,37,85,0.08)",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
+          <div>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 800, color: "#082555" }}>التصدير وطلب العروض</p>
+            <p style={{ margin: "4px 0 0", fontSize: 11, color: "#64748b" }}>
+              تصدير سريع للتقرير أو إنشاء نموذج طلب عروض جاهز للمشاركة
+            </p>
+          </div>
+          <span style={{
+            background: "#eef4ff",
+            color: "#3658a7",
+            borderRadius: 999,
+            padding: "4px 10px",
+            fontSize: 10,
+            fontWeight: 700,
+            whiteSpace: "nowrap",
+          }}>
+            أسهل مسار تصدير
+          </span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+          <button
+            type="button"
+            onClick={handleExportPdf}
+            style={{
+              minHeight: 52,
+              borderRadius: 12,
+              border: "none",
+              background: "linear-gradient(135deg,#c9a84c,#e5c96a)",
+              color: "#082555",
+              fontFamily: AR,
+              fontSize: 13,
+              fontWeight: 800,
+              cursor: "pointer",
+              boxShadow: "0 6px 16px rgba(201,168,76,0.28)",
+            }}
+          >
+            حفظ / تصدير التحليل PDF
+          </button>
+          <button
+            type="button"
+            onClick={handleRequestQuote}
+            style={{
+              minHeight: 52,
+              borderRadius: 12,
+              border: "1px solid #d7dfef",
+              background: "#f8fbff",
+              color: "#082555",
+              fontFamily: AR,
+              fontSize: 13,
+              fontWeight: 800,
+              cursor: "pointer",
+            }}
+          >
+            إنشاء طلب عروض
+          </button>
+        </div>
       </div>
 
       {/* ── Notes ── */}
