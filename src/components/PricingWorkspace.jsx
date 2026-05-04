@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from 'xlsx';
+import AdSenseUnit from "./AdSenseUnit";
+import CandyWorkspace from "./CandyWorkspace";
 import { SaveIcon, TagIcon, BuildingsIcon, PricingIcon, ChevronLeftIcon, ArrowRightIcon, ShareIcon, PrinterIcon, FileIcon } from "./icons";
 import { CSI_DIVISIONS, COUNTRIES, CURRENCY_INFO, getDefaultResources, AREA_PRICING_BASE } from "../data/csiData";
 import usePersistentState from "../hooks/usePersistentState";
@@ -7,6 +9,8 @@ import useAdminSession from "../hooks/useAdminSession";
 import { AD_SLOT_IDS, DEFAULT_AD_BANNER, incrementUsageCounter, listenAdBanner, saveAdBanner } from "../services/subscriptionApi";
 import { SUPER_ADMIN_EMAIL } from "../constants/admin";
 import SubscriptionPanel from "./SubscriptionPanel";
+import QSPremiumGate from "./QSPremiumGate";
+import ScreenProtection from "./ScreenProtection";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
 const MONO = "'IBM Plex Mono',monospace";
@@ -120,75 +124,337 @@ function CountryModal({ onConfirm, current }) {
 }
 
 // --- Mode Selection Screen ---
-function ModeSelection({ onSelect, areaLocked = false, areaMessage = "", onOpenSubscription }) {
+/* ── Decorative SVG backgrounds ───────────────────────────────────────────── */
+function BlueprintBg() {
   return (
-    <div className="flex flex-col gap-3 py-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="mb-1 px-2">
-        <div className="inline-flex rounded-2xl bg-[#082555] px-4 py-3 shadow-lg shadow-[#082555]/15">
-          <div>
-            <h2 className="text-[18px] font-bold text-white" style={{ fontFamily: AR }}>مرحباً بك في محرك التسعير</h2>
-            <p className="mt-1 text-[13px] font-medium text-[#E2D8C4]" style={{ fontFamily: AR }}>اختر طريقة التسعير المناسبة لاحتياجك</p>
+    <svg className="absolute inset-0 h-full w-full" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <pattern id="bp-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.5"/>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#bp-grid)" />
+      {/* floor plan lines */}
+      <g stroke="rgba(212,168,67,0.18)" strokeWidth="1.2" fill="none">
+        <rect x="38%" y="12%" width="48%" height="76%" rx="2"/>
+        <line x1="38%" y1="45%" x2="86%" y2="45%"/>
+        <line x1="62%" y1="12%" x2="62%" y2="88%"/>
+        <rect x="43%" y="17%" width="17%" height="25%" rx="1"/>
+        <rect x="65%" y="17%" width="17%" height="25%" rx="1"/>
+        <rect x="43%" y="52%" width="38%" height="30%" rx="1"/>
+        <line x1="51%" y1="45%" x2="51%" y2="12%"/>
+        {/* dimension arrows */}
+        <line x1="38%" y1="96%" x2="86%" y2="96%"/>
+        <line x1="31%" y1="12%" x2="31%" y2="88%"/>
+        {/* circles */}
+        <circle cx="41%" cy="11%" r="5" opacity="0.5"/>
+        <circle cx="87%" cy="11%" r="5" opacity="0.5"/>
+      </g>
+      {/* dim text stubs */}
+      <g fill="rgba(212,168,67,0.22)" fontSize="7" fontFamily="monospace">
+        <text x="55%" y="99%">6000</text>
+        <text x="27%" y="52%">4500</text>
+        <text x="55%" y="94%">3000</text>
+        <text x="55%" y="75%">5000</text>
+      </g>
+    </svg>
+  );
+}
+
+function BuildingBg() {
+  return (
+    <svg className="absolute inset-0 h-full w-full" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+      <g stroke="rgba(15,36,68,0.18)" strokeWidth="1.4" fill="none">
+        {/* main building body */}
+        <rect x="22%" y="18%" width="52%" height="68%" rx="2"/>
+        {/* floors */}
+        {[32,46,60,74].map(y => <line key={y} x1="22%" y1={`${y}%`} x2="74%" y2={`${y}%`}/>)}
+        {/* columns */}
+        {[35,48,61].map(x => <line key={x} x1={`${x}%`} y1="18%" x2={`${x}%`} y2="86%"/>)}
+        {/* windows */}
+        {[20,34,48,62].map(y =>
+          [25,39,53,65].map(x =>
+            <rect key={`${x}-${y}`} x={`${x}%`} y={`${y}%`} width="8%" height="9%" rx="1" fill="rgba(15,36,68,0.08)"/>
+          )
+        )}
+        {/* entrance */}
+        <rect x="43%" y="72%" width="10%" height="14%" rx="1" fill="rgba(15,36,68,0.12)"/>
+        {/* roof line */}
+        <polyline points="18%,18% 48%,8% 78%,18%"/>
+        {/* ground */}
+        <line x1="15%" y1="86%" x2="85%" y2="86%"/>
+      </g>
+    </svg>
+  );
+}
+
+function IsometricBg() {
+  return (
+    <svg className="absolute inset-0 h-full w-full" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+      <g stroke="rgba(99,102,241,0.22)" strokeWidth="1.3" fill="none">
+        {/* isometric box top */}
+        <polygon points="48%,10% 78%,25% 48%,40% 18%,25%" fill="rgba(99,102,241,0.07)"/>
+        {/* left face */}
+        <polygon points="18%,25% 48%,40% 48%,78% 18%,63%" fill="rgba(99,102,241,0.05)"/>
+        {/* right face */}
+        <polygon points="78%,25% 48%,40% 48%,78% 78%,63%" fill="rgba(99,102,241,0.09)"/>
+        {/* inner grid lines on top */}
+        <line x1="33%"  y1="17.5%" x2="63%"  y2="32.5%"/>
+        <line x1="33%"  y1="25%"   x2="48%"  y2="17.5%"/>
+        <line x1="63%"  y1="25%"   x2="78%"  y2="32.5%"/>
+        {/* vertical edges */}
+        <line x1="48%"  y1="40%"   x2="48%"  y2="78%"/>
+        {/* small cube on top */}
+        <polygon points="48%,2% 60%,8% 48%,14% 36%,8%" fill="rgba(99,102,241,0.1)" stroke="rgba(99,102,241,0.3)"/>
+        <line x1="48%" y1="14%" x2="48%" y2="26%"/>
+        <line x1="36%" y1="8%"  x2="36%" y2="20%"/>
+        <line x1="60%" y1="8%"  x2="60%" y2="20%"/>
+        {/* floor grid */}
+        <line x1="15%" y1="80%" x2="85%" y2="80%" stroke="rgba(99,102,241,0.15)"/>
+        <ellipse cx="48%" cy="80%" rx="33%" ry="6%" stroke="rgba(99,102,241,0.1)"/>
+      </g>
+    </svg>
+  );
+}
+
+// ─── GUEST LOGIN MODAL (reusable) ──────────────────────────────────────────────
+function GuestLoginModal({ open, onClose, onOpenAuthScreen, subtitle }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-4 pb-8"
+      style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="w-full max-w-sm rounded-[24px] overflow-hidden animate-in slide-in-from-bottom-4 duration-300"
+        style={{
+          background: "linear-gradient(160deg,#1a0505 0%,#2d0a0a 100%)",
+          border: "1.5px solid rgba(220,38,38,0.5)",
+          boxShadow: "0 0 40px rgba(220,38,38,0.3), 0 20px 60px rgba(0,0,0,0.5)",
+        }}>
+        {/* Header */}
+        <div className="px-5 pt-5 pb-4 text-center" style={{ fontFamily: AR, direction: "rtl" }}>
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full"
+            style={{ background: "rgba(220,38,38,0.15)", border: "1.5px solid rgba(220,38,38,0.35)" }}>
+            <span className="text-2xl">🔐</span>
           </div>
+          <h3 className="text-[17px] font-black text-white mb-1">يجب تسجيل الدخول أولاً</h3>
+          <p className="text-[12px] text-white/55 leading-relaxed">
+            {subtitle || "سجّل دخولك أو أنشئ حساباً مجانياً للمتابعة"}
+          </p>
+        </div>
+        {/* Buttons */}
+        <div className="px-5 pb-5 flex flex-col gap-2.5" style={{ fontFamily: AR, direction: "rtl" }}>
+          <button type="button"
+            onClick={() => { onClose(); onOpenAuthScreen?.("login"); }}
+            className="w-full rounded-2xl py-3 text-[14px] font-black text-white transition-all active:scale-[0.97]"
+            style={{ background: "linear-gradient(130deg,#dc2626,#ef4444)", boxShadow: "0 0 20px rgba(220,38,38,0.4), 0 4px 16px rgba(220,38,38,0.3)" }}>
+            تسجيل الدخول
+          </button>
+          <button type="button"
+            onClick={() => { onClose(); onOpenAuthScreen?.("register"); }}
+            className="w-full rounded-2xl py-3 text-[14px] font-black transition-all active:scale-[0.97]"
+            style={{ background: "rgba(220,38,38,0.12)", border: "1.5px solid rgba(220,38,38,0.35)", color: "#fca5a5" }}>
+            إنشاء حساب جديد
+          </button>
+          <button type="button" onClick={onClose}
+            className="w-full rounded-2xl py-2.5 text-[12px] font-bold text-white/40 transition-all active:scale-[0.97]">
+            إلغاء
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── GUEST AREA WRAPPER ────────────────────────────────────────────────────────
+function GuestAreaWrapper({ isGuest, onOpenAuthScreen, children }) {
+  const [showPrompt, setShowPrompt] = useState(false);
+  if (!isGuest) return <>{children}</>;
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="relative select-none">
+        <div className="pointer-events-none opacity-80">{children}</div>
+        <div className="absolute inset-0 z-10 cursor-pointer" onClick={() => setShowPrompt(true)} />
+      </div>
+      <GuestLoginModal open={showPrompt} onClose={() => setShowPrompt(false)}
+        onOpenAuthScreen={onOpenAuthScreen}
+        subtitle="سجّل دخولك أو أنشئ حساباً مجانياً للمتابعة واستخدام تسعير المباني" />
+    </div>
+  );
+}
+
+// ─── TASEERA PRO GATE ──────────────────────────────────────────────────────────
+const TPRO_PRICES = {
+  sa: { label: "٢٠٠ ريال", labelEn: "200 SAR", flag: "🇸🇦" },
+  eg: { label: "٢,٨٠٠ جنيه", labelEn: "2,800 EGP", flag: "🇪🇬" },
+  ae: { label: "٢٠٠ درهم", labelEn: "200 AED", flag: "🇦🇪" },
+};
+const TPRO_FEATURES = [
+  "تسعير تكلفة بناء كامل بدقة",
+  "حساب المساحة × الأدوار × التشطيب",
+  "تفاصيل تكلفة كل تخصص (هيكل، ميكانيكا، كهرباء...)",
+  "مقارنة سيناريوهات متعددة",
+  "تصدير وحفظ التسعير",
+];
+
+function TaseeraProGate({ country, isGuest, onOpenSubscription, onOpenAuthScreen }) {
+  const priceInfo = TPRO_PRICES[(country || "sa").toLowerCase()] || TPRO_PRICES.sa;
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ fontFamily: AR, direction: "rtl" }}>
+      {/* Hero */}
+      <div className="rounded-[24px] overflow-hidden mb-4"
+        style={{ background: "linear-gradient(135deg,#c8941a 0%,#d4a843 50%,#e8c060 100%)" }}>
+        <div className="px-5 pt-6 pb-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ring-1 ring-[#0d2545]/20"
+              style={{ background: "linear-gradient(145deg,#b8821a,#8a5e10)" }}>
+              <BuildingsIcon className="h-7 w-7 text-[#f5d060]" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-[#0d2545]/60 uppercase tracking-widest">Taseera Pro Package</p>
+              <h2 className="text-[20px] font-black text-[#0d2545] leading-tight">باقة بنود المقايسات الكاملة</h2>
+            </div>
+          </div>
+          {/* Price pill */}
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#0d2545]/20 bg-[#0d2545]/10 px-4 py-2">
+            <span className="text-[22px] font-black text-[#0d2545]">{priceInfo.label}</span>
+            <span className="text-[12px] text-[#0d2545]/60">مرة واحدة</span>
+          </div>
+        </div>
+        {/* Features */}
+        <div className="bg-[#0d2545]/8 px-5 py-4">
+          <ul className="space-y-2">
+            {TPRO_FEATURES.map((f, i) => (
+              <li key={i} className="flex items-center gap-2.5 text-[13px] font-bold text-[#0d2545]">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#0d2545] text-[#d4a843] text-[10px]">✓</span>
+                {f}
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
 
-      <button onClick={() => onSelect("items")}
-        className="group relative overflow-hidden rounded-3xl bg-[#162e52] border-2 border-white/5 p-6 text-right transition-all hover:border-[#d4a843]/50 hover:shadow-xl active:scale-[0.98]">
-        <div className="absolute top-0 left-0 w-2 h-full bg-[#d4a843] opacity-0 group-hover:opacity-100 transition-opacity" />
-        <div className="flex items-start gap-5">
-          <div className="h-14 w-14 rounded-2xl bg-[#0d2545] text-[#d4a843] flex items-center justify-center shrink-0 shadow-inner">
-             <PricingIcon className="h-8 w-8" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-[17px] font-bold text-white mb-2" style={{ fontFamily: AR }}>بنود أعمال المقاولات</h3>
-            <p className="text-[13px] text-gray-400 leading-relaxed" style={{ fontFamily: AR }}>
-              تحليل مفصل لكل بند (مواد، عمالة، معدات) بناءً على أكواد CSI MasterFormat. مثالي للمقاولين والمهندسين.
-            </p>
-          </div>
-          <ChevronLeftIcon className="h-6 w-6 text-white/20 group-hover:text-[#d4a843] self-center transition-colors" />
-        </div>
-      </button>
-
-      <button onClick={() => !areaLocked && onSelect("area")}
-        disabled={areaLocked}
-        className="group relative overflow-hidden rounded-3xl bg-[#d4a843] p-6 text-right transition-all hover:shadow-2xl hover:shadow-[#d4a843]/20 active:scale-[0.98]">
-        <div className="absolute top-0 left-0 w-2 h-full bg-[#0d2545]/20" />
-        <div className="flex items-start gap-5">
-          <div className="h-14 w-14 rounded-2xl bg-[#0d2545] text-[#d4a843] flex items-center justify-center shrink-0 shadow-lg">
-             <BuildingsIcon className="h-8 w-8" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-[17px] font-bold text-[#0d2545] mb-2" style={{ fontFamily: AR }}>تسعير مبني</h3>
-            <p className="text-[13px] text-[#0d2545]/70 leading-relaxed font-bold" style={{ fontFamily: AR }}>
-              حساب تقديري سريع لتكلفة بناء كامل بناءً على المساحة، عدد الأدوار، ومستوى التشطيب. مثالي للملاك والمستثمرين.
-            </p>
-          </div>
-          <ChevronLeftIcon className="h-6 w-6 text-[#0d2545]/30 group-hover:text-[#0d2545] self-center transition-colors" />
-        </div>
-      </button>
-
-      {areaLocked && (
-        <div className="overflow-hidden rounded-2xl border border-[#E2D8C4] bg-white shadow-sm">
-          <div className="border-b border-[#F0E8D8] bg-amber-50 px-4 py-2.5">
-            <p className="text-[11px] font-bold text-amber-800" style={{ fontFamily: AR }}>🔒 {areaMessage}</p>
-          </div>
-          <div className="p-3">
-            <button
-              type="button"
-              onClick={onOpenSubscription}
-              className="w-full h-10 rounded-xl bg-gradient-to-r from-[#082555] to-[#0d3070] text-[12px] font-bold text-[#E8C97A] shadow-md transition-all duration-150 hover:shadow-lg active:scale-[0.98]"
-            >
-              الاشتراك الآن
-            </button>
-          </div>
-        </div>
+      {/* CTA */}
+      {!isGuest ? (
+        <button type="button" onClick={onOpenSubscription}
+          className="w-full rounded-2xl py-3.5 text-[15px] font-black text-[#082555] shadow-lg active:scale-[0.98] transition-all"
+          style={{ background: "linear-gradient(130deg,#d4a843,#e8c060)" }}>
+          طلب الاشتراك في الباقة ←
+        </button>
+      ) : (
+        <button type="button" onClick={() => onOpenAuthScreen?.()}
+          className="w-full rounded-2xl py-3.5 text-[15px] font-black text-white shadow-lg active:scale-[0.98] transition-all"
+          style={{ background: "linear-gradient(130deg,#dc2626,#ef4444)", boxShadow: "0 0 20px rgba(220,38,38,0.35)" }}>
+          🔐 سجّل دخولك أولاً لطلب الاشتراك
+        </button>
       )}
 
-      <div className="mt-2 rounded-xl border border-dashed border-white/10 bg-white/4 p-4 text-center">
-        <p className="text-[11px] text-gray-500 leading-relaxed" style={{ fontFamily: AR }}>
-          جميع الحسابات تقديرية وتعتمد على متوسطات السوق الحالية في الدولة المختارة.
-        </p>
+      <p className="mt-3 text-center text-[11px] text-slate-400">
+        ♻ استرداد جزئي خلال فترة التجربة المجانية
+      </p>
+    </div>
+  );
+}
+
+function ModeSelection({ onSelect, areaLocked = false, areaMessage = "", onOpenSubscription }) {
+  return (
+    <div className="flex flex-col gap-4 py-2 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ fontFamily: AR }}>
+
+      {/* Header */}
+      <div className="px-1">
+        <h2 className="text-[18px] font-bold text-[#0d2545]" style={{ fontFamily: AR }}>مرحباً بك في محرك التسعير</h2>
+        <p className="mt-0.5 text-[13px] text-slate-500" style={{ fontFamily: AR }}>اختر طريقة التسعير المناسبة لاحتياجك</p>
       </div>
+
+      {/* ── Card 1: دليل بنود الأعمال (navy) ── */}
+      <button
+        onClick={() => onSelect("items")}
+        className="group relative overflow-hidden rounded-[22px] active:scale-[0.98] transition-transform duration-150"
+        style={{ background: "linear-gradient(130deg,#0d2545 0%,#162e52 60%,#1a3870 100%)", minHeight: 120 }}
+      >
+        <BlueprintBg />
+        <div className="relative flex items-center gap-4 px-5 py-6">
+          {/* Arrow circle */}
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20 transition-all group-hover:bg-[#d4a843]/20 group-hover:ring-[#d4a843]/50">
+            <ChevronLeftIcon className="h-5 w-5 text-white/60 group-hover:text-[#d4a843] transition-colors" />
+          </div>
+          {/* Text */}
+          <div className="flex-1 text-right">
+            <h3 className="text-[18px] font-bold text-white leading-tight">دليل بنود الأعمال</h3>
+            <p className="mt-1.5 text-[15px] leading-relaxed text-white">
+              تحليل مفصل لكل بند (مواد، عمالة، معدات) بناءً على أكواد CSI MasterFormat.<br/>مثالي للمقاولين والمهندسين.
+            </p>
+          </div>
+          {/* Icon box */}
+          <div className="flex h-[62px] w-[62px] shrink-0 items-center justify-center rounded-2xl ring-1 ring-[#d4a843]/40"
+            style={{ background: "linear-gradient(145deg,#1e3d72,#0d2545)", boxShadow: "inset 0 1px 0 rgba(212,168,67,0.2), 0 4px 16px rgba(0,0,0,0.3)" }}>
+            <PricingIcon className="h-8 w-8 text-[#d4a843]" />
+          </div>
+        </div>
+      </button>
+
+      {/* ── Card 2: تسعير مبني (gold) ── */}
+      <button
+        onClick={() => onSelect("area")}
+        className="group relative overflow-hidden rounded-[22px] active:scale-[0.98] transition-transform duration-150"
+        style={{ background: "linear-gradient(130deg,#c8941a 0%,#d4a843 45%,#e8c060 100%)", minHeight: 120 }}
+      >
+        <BuildingBg />
+        <div className="relative flex items-center gap-4 px-5 py-6">
+          {/* Arrow circle */}
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full ring-1 ring-[#0d2545]/20 transition-all group-hover:ring-[#0d2545]/40"
+            style={{ background: "rgba(13,37,69,0.15)" }}>
+            <ChevronLeftIcon className="h-5 w-5 text-[#0d2545]/70 group-hover:text-[#0d2545] transition-colors" />
+          </div>
+          {/* Text */}
+          <div className="flex-1 text-right">
+            <h3 className="text-[20px] font-black text-[#0d2545] leading-tight">تسعير مبني</h3>
+            <p className="mt-1.5 text-[15px] leading-relaxed text-white">
+              حساب تقديري سريع لتكلفة بناء كامل بناءً على المساحة، عدد الأدوار،<br/>ومستوى التشطيب. مثالي للملاك والمستثمرين.
+            </p>
+          </div>
+          {/* Icon box */}
+          <div className="flex h-[62px] w-[62px] shrink-0 items-center justify-center rounded-2xl ring-1 ring-[#0d2545]/20"
+            style={{ background: "linear-gradient(145deg,#b8821a,#8a5e10)", boxShadow: "inset 0 1px 0 rgba(255,220,100,0.3), 0 4px 16px rgba(0,0,0,0.2)" }}>
+            <BuildingsIcon className="h-8 w-8 text-[#f5d060]" />
+          </div>
+        </div>
+      </button>
+
+      {/* ── Card 3: تسعير تفصيلي للبنود (purple) ── */}
+      <button
+        onClick={() => onSelect("candy")}
+        className="group relative overflow-hidden rounded-[22px] active:scale-[0.98] transition-transform duration-150"
+        style={{ background: "linear-gradient(130deg,#3730a3 0%,#4f46e5 55%,#6d28d9 100%)", minHeight: 120 }}
+      >
+        <IsometricBg />
+        <div className="relative flex items-center gap-4 px-5 py-6">
+          {/* Arrow circle */}
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full ring-1 ring-[#6366f1]/25 transition-all group-hover:bg-[#6366f1]/10 group-hover:ring-[#6366f1]/50"
+            style={{ background: "rgba(99,102,241,0.08)" }}>
+            <ChevronLeftIcon className="h-5 w-5 text-[#6366f1]/50 group-hover:text-[#6366f1] transition-colors" />
+          </div>
+          {/* Text — same structure as cards 1 & 2 so title aligns identically */}
+          <div className="flex-1 text-right">
+            <h3 className="text-[18px] font-black text-white leading-tight">تسعير تفصيلي للبنود</h3>
+            <span className="inline-flex mt-1 rounded-full px-2.5 py-0.5 text-[9px] font-bold text-white"
+              style={{ background: "#4f46e5", fontFamily: "'IBM Plex Mono',monospace", letterSpacing: "0.05em" }}>
+              RESOURCE-BASED
+            </span>
+            <p className="mt-1 text-[15px] leading-relaxed text-white">
+              بناء سعر الوحدة من الموارد — مواد + عمالة + معدات + أعباء + ربح.<br/>أسلوب First Principle المتقدم لتحليل المقايسات.
+            </p>
+          </div>
+          {/* Icon box */}
+          <div className="flex h-[62px] w-[62px] shrink-0 items-center justify-center rounded-2xl text-[28px] ring-1 ring-[#6366f1]/30"
+            style={{ background: "linear-gradient(145deg,#4f46e5,#7c3aed)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 16px rgba(79,70,229,0.35)" }}>
+            🧮
+          </div>
+        </div>
+      </button>
+
+      <p className="text-center text-[11px] text-slate-400 mt-1" style={{ fontFamily: AR }}>
+        جميع الحسابات تقديرية وتعتمد على متوسطات السوق الحالية في الدولة المختارة.
+      </p>
     </div>
   );
 }
@@ -592,9 +858,10 @@ function HistoryInsightGraphic({ savedAnalyses }) {
   );
 }
 
-function AreaScenarioCompare({ scenarios, currentScenario, currency, onAddCurrent, onRemove }) {
+function AreaScenarioCompare({ scenarios, currentScenario, suggestedScenario, currency, onAddCurrent, onRemove }) {
   const mergedScenarios = [
     ...(currentScenario ? [{ ...currentScenario, id: "__current__", live: true }] : []),
+    ...(suggestedScenario ? [{ ...suggestedScenario, id: "__suggested__", suggested: true }] : []),
     ...scenarios,
   ];
 
@@ -632,17 +899,20 @@ function AreaScenarioCompare({ scenarios, currentScenario, currency, onAddCurren
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
                   <div className="text-[13px] font-bold text-[#082555]" style={{ fontFamily: AR }}>
-                    {scenario.live ? "السيناريو الحالي" : `سيناريو ${index}`}
+                    {scenario.live ? "السيناريو الحالي" : scenario.suggested ? "سيناريو أعلى" : `سيناريو ${index}`}
                   </div>
                   <div className="mt-1 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
                     {scenario.typeLabel} · {scenario.finishLabel}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {scenario.suggested && (
+                    <span className="rounded-full bg-[#C9A84C] px-2 py-1 text-[10px] font-bold text-[#082555]">ترقية</span>
+                  )}
                   {isBest && (
                     <span className="rounded-full bg-[#082555] px-2 py-1 text-[10px] font-bold text-[#C9A84C]">الأوفر</span>
                   )}
-                  {!scenario.live && (
+                  {!scenario.live && !scenario.suggested && (
                     <button type="button" onClick={() => onRemove(scenario.id)} className="text-[12px] font-bold text-[#9A8A6A]">
                       حذف
                     </button>
@@ -800,7 +1070,7 @@ function AreaPricingForm({ country, onCalculate, adBanner, canManageAds = false,
   );
 }
 
-function AreaResultsView({ country, params, results, onBack, onExport, onSave, onOpenSection, scenarios, currentScenario, onAddScenario, onRemoveScenario, adBanner, canManageAds = false, onManageAds, onToggleAdVisibility, onRemoveAd }) {
+function AreaResultsView({ country, params, results, onBack, onExport, onSave, onOpenSection, scenarios, currentScenario, suggestedScenario, onAddScenario, onRemoveScenario, adBanner, canManageAds = false, onManageAds, onToggleAdVisibility, onRemoveAd }) {
   const c = COUNTRIES[country] || COUNTRIES.sa;
   const finishLabel = FINISH_LEVELS.find(f => f.id === params.finish)?.ar;
   const typeLabel = BUILDING_TYPES.find(t => t.id === params.type)?.ar;
@@ -875,6 +1145,7 @@ function AreaResultsView({ country, params, results, onBack, onExport, onSave, o
       <AreaScenarioCompare
         scenarios={scenarios}
         currentScenario={currentScenario}
+        suggestedScenario={suggestedScenario}
         currency={c.currency}
         onAddCurrent={onAddScenario}
         onRemove={onRemoveScenario}
@@ -948,6 +1219,7 @@ function AreaSectionDetailView({
   onBack,
   onReset,
   onUpdateItem,
+  onSave,
   adBanner,
   canManageAds = false,
   onManageAds,
@@ -959,6 +1231,78 @@ function AreaSectionDetailView({
   const overallShare = overallResults?.total > 0 ? (draft.sectionTotal / overallResults.total) * 100 : 0;
 
   if (!draft) return null;
+
+  const handleExportSectionPdf = () => {
+    const now = new Date().toLocaleDateString("ar-SA");
+    const rowsHtml = draft.items.map((item, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${item.label}</td>
+        <td>${item.basis}</td>
+        <td>${fmtNum(item.qty)} ${item.unit}</td>
+        <td>${fmtNum(item.rate)} ${c.currency}</td>
+        <td>${fmtNum(item.total)} ${c.currency}</td>
+      </tr>
+    `).join("");
+    const assumptionsHtml = draft.assumptions.map((line) => `<li>${line}</li>`).join("");
+
+    const html = `
+      <!doctype html>
+      <html lang="ar" dir="rtl">
+        <head>
+          <meta charset="utf-8" />
+          <title>${draft.title}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 24px; color: #082555; direction: rtl; }
+            h1 { font-size: 22px; margin-bottom: 8px; }
+            .meta { color: #7b6c4a; margin-bottom: 20px; font-size: 13px; }
+            .summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
+            .summary-card { border: 1px solid #e2d8c4; border-radius: 14px; padding: 12px; background: #fcfbf8; }
+            .summary-card strong { display: block; margin-bottom: 6px; color: #9A8A6A; font-size: 12px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
+            th { background: #082555; color: #E8C97A; padding: 8px; text-align: right; }
+            td { padding: 8px; border-bottom: 1px solid #eee; }
+            .note { background: #F5EDD8; border: 1px solid #E2D8C4; border-radius: 16px; padding: 16px; }
+            ul { margin: 0; padding-right: 18px; }
+            @media print { button { display: none; } }
+          </style>
+        </head>
+        <body>
+          <h1>${draft.title}</h1>
+          <div class="meta">تقرير تفاصيل التخصص • ${now}</div>
+          <div class="summary">
+            <div class="summary-card"><strong>إجمالي التخصص</strong>${fmtNum(draft.sectionTotal)} ${c.currency}</div>
+            <div class="summary-card"><strong>سعر المتر</strong>${fmtNum(draft.unitPrice)} ${c.currency}</div>
+            <div class="summary-card"><strong>حصة التخصص</strong>${overallShare.toFixed(1)}%</div>
+            <div class="summary-card"><strong>المساحة الكلية</strong>${fmtNum(totalArea)} م²</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>البند</th>
+                <th>الأساس</th>
+                <th>الكمية</th>
+                <th>سعر الوحدة</th>
+                <th>الإجمالي</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+          <div class="note">
+            <strong>افتراضات هندسية مستخدمة</strong>
+            <ul>${assumptionsHtml}</ul>
+          </div>
+          <script>window.onload = () => window.print();</script>
+        </body>
+      </html>
+    `;
+
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+  };
 
   return (
     <div className="space-y-6 pb-12 animate-in fade-in slide-in-from-left-4 duration-500">
@@ -1077,6 +1421,34 @@ function AreaSectionDetailView({
         </div>
       </div>
 
+      <div className="rounded-3xl border-2 border-[#E2D8C4] bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-[16px] font-bold text-[#082555]" style={{ fontFamily: AR }}>إجراءات التخصص</h3>
+            <p className="mt-1 text-[12px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+              احفظ تفاصيل هذا التخصص في الحساب أو صدّرها كـ PDF بنفس القيم الحالية.
+            </p>
+          </div>
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F7F3EC] text-[22px]">
+            {draft.icon}
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={() => onSave?.()}
+            className="flex-1 min-h-[56px] rounded-2xl bg-[#C9A84C] text-[#082555] font-bold text-[15px] flex items-center justify-center gap-2 shadow-lg transition hover:bg-[#E8C97A] active:scale-[0.98]"
+          >
+            <SaveIcon className="h-5 w-5" /> حفظ في الحساب
+          </button>
+          <button
+            onClick={handleExportSectionPdf}
+            className="flex-1 min-h-[56px] rounded-2xl bg-white border-2 border-[#082555] text-[#082555] font-bold text-[15px] flex items-center justify-center gap-2 transition hover:bg-[#F5EDD8] active:scale-[0.98]"
+          >
+            <PrinterIcon className="h-5 w-5" /> تصدير PDF
+          </button>
+        </div>
+      </div>
+
       <AnalysisAdBanner
         adBanner={{ ...(adBanner || {}), slotId: AD_SLOT_IDS.areaSectionAfterAssumptions }}
         canManageAds={canManageAds}
@@ -1091,7 +1463,7 @@ function AreaSectionDetailView({
 
 // --- Main Pricing Workspace Component ---
 
-export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings, sessionMeta, onOpenSubscription, onOpenAuthScreen, onShowStatus }) {
+export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings, sessionMeta, onOpenSubscription, onOpenAuthScreen, onShowStatus, systemBridge }) {
   // initialCountry comes from the CountryPicker on PricingPage; always override persisted value
   const [country, setCountry] = useState(initialCountry || "sa");
   const [mode, setMode] = useState("selection"); // selection, items, area, area-results
@@ -1126,6 +1498,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   const [areaFormAdBanner, setAreaFormAdBanner] = useState(null);
   const [areaResultsAdBanner, setAreaResultsAdBanner] = useState(null);
   const [areaSectionAdBanner, setAreaSectionAdBanner] = useState(null);
+  const [csiAfterDiv28AdBanner, setCsiAfterDiv28AdBanner] = useState(null);
   const [adEditor, setAdEditor] = useState({
     open: false,
     slotId: AD_SLOT_IDS.analysisPreResult,
@@ -1147,6 +1520,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     const unsubscribeAreaForm = listenAdBanner((data) => setAreaFormAdBanner(data), AD_SLOT_IDS.areaFormAfterCard);
     const unsubscribeAreaResults = listenAdBanner((data) => setAreaResultsAdBanner(data), AD_SLOT_IDS.areaResultsAfterNote);
     const unsubscribeAreaSection = listenAdBanner((data) => setAreaSectionAdBanner(data), AD_SLOT_IDS.areaSectionAfterAssumptions);
+    const unsubscribeCsiDiv28 = listenAdBanner((data) => setCsiAfterDiv28AdBanner(data), AD_SLOT_IDS.csiAfterDiv28);
     return () => {
       unsubscribeTop?.();
       unsubscribeActions?.();
@@ -1154,6 +1528,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
       unsubscribeAreaForm?.();
       unsubscribeAreaResults?.();
       unsubscribeAreaSection?.();
+      unsubscribeCsiDiv28?.();
     };
   }, []);
 
@@ -1365,13 +1740,49 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
       unitPrice: effectiveAreaResults.unitPrice,
       totalArea: (Number(areaParams.area) || 0) * (Number(areaParams.floors) || 0),
       floors: Number(areaParams.floors) || 0,
+      finishId: areaParams.finish,
+      typeId: areaParams.type,
+      scopeId: areaParams.scope,
       typeLabel: BUILDING_TYPES.find((item) => item.id === areaParams.type)?.ar || areaParams.type,
       finishLabel: FINISH_LEVELS.find((item) => item.id === areaParams.finish)?.ar || areaParams.finish,
       scopeLabel: SCOPES.find((item) => item.id === areaParams.scope)?.ar || areaParams.scope,
     };
   }, [areaParams, effectiveAreaResults]);
 
-  const handleCalculateArea = (params) => {
+  const suggestedAreaScenario = useMemo(() => {
+    if (!currentAreaScenario || !areaParams || !effectiveAreaResults) return null;
+
+    const currentFinishIndex = FINISH_LEVELS.findIndex((item) => item.id === areaParams.finish);
+    const nextFinish = currentFinishIndex >= 0 ? FINISH_LEVELS[currentFinishIndex + 1] : null;
+    if (!nextFinish) return null;
+
+    const config = AREA_PRICING_BASE[country] || AREA_PRICING_BASE.sa;
+    const currentFactor = config.finishFactors[areaParams.finish] || 1;
+    const nextFactor = config.finishFactors[nextFinish.id] || currentFactor;
+    const ratio = currentFactor > 0 ? nextFactor / currentFactor : 1;
+
+    return {
+      id: `scenario-upgrade-${areaParams.type}-${areaParams.scope}-${nextFinish.id}-${areaParams.area}-${areaParams.floors}`,
+      total: roundTo(effectiveAreaResults.total * ratio),
+      unitPrice: roundTo(effectiveAreaResults.unitPrice * ratio),
+      totalArea: currentAreaScenario.totalArea,
+      floors: currentAreaScenario.floors,
+      finishId: nextFinish.id,
+      typeId: areaParams.type,
+      scopeId: areaParams.scope,
+      typeLabel: currentAreaScenario.typeLabel,
+      finishLabel: nextFinish.ar,
+      scopeLabel: currentAreaScenario.scopeLabel,
+    };
+  }, [areaParams, country, currentAreaScenario, effectiveAreaResults]);
+
+  const handleCalculateArea = async (params) => {
+    const allowed = await consumeAccess("area");
+    if (!allowed) {
+      openSubscriptionScreen();
+      return;
+    }
+
     const config = AREA_PRICING_BASE[country] || AREA_PRICING_BASE.sa;
     let rate = config.baseRate;
     rate *= config.finishFactors[params.finish] || 1;
@@ -1643,22 +2054,28 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
         </html>
       `;
 
-      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-      const blobUrl = URL.createObjectURL(blob);
-      const printWin = window.open(blobUrl, "_blank", "width=900,height=700");
+      // Open empty window first then write HTML — works on mobile browsers
+      // that block blob:// URLs (avoids "تعذر فتح التطبيق" error on Android/iOS)
+      const printWin = window.open("", "_blank", "width=900,height=700");
       if (printWin) {
-        printWin.addEventListener("load", () => {
-          setTimeout(() => {
-            printWin.print();
-            setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-          }, 300);
-        });
+        printWin.document.open();
+        printWin.document.write(html);
+        printWin.document.close();
+        printWin.focus();
+        setTimeout(() => {
+          try { printWin.print(); } catch (_) {}
+        }, 600);
         showToast("اختر «حفظ كـ PDF» من قائمة الطباعة");
       } else {
+        // Popup blocked — fallback: download as HTML file
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        const blobUrl = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = blobUrl;
         a.download = `تحليل_بند_${selectedItem.num.replace(/\s/g, "_")}.html`;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
         showToast("تم تحميل ملف التقرير");
       }
@@ -1668,8 +2085,14 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
   const openSubscriptionScreen = useCallback(() => {
-    setShowSubscriptionModal(true);
-  }, []);
+    if (isGuest) {
+      // Store intent so the app opens subscription automatically after login
+      sessionStorage.setItem("pendingSubscriptionAfterLogin", "1");
+      onOpenAuthScreen?.();
+    } else {
+      setShowSubscriptionModal(true);
+    }
+  }, [isGuest, onOpenAuthScreen]);
 
   const itemLockMessage = isGuest
     ? "لقد وصلت للحد المجاني للبنود. يرجى تسجيل الدخول والاشتراك لفتح جميع البنود."
@@ -1804,14 +2227,6 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   }
 
   async function handleModeChange(nextMode) {
-    if (nextMode === "area") {
-      const allowed = await consumeAccess("area");
-      if (!allowed) {
-        openSubscriptionScreen();
-        return;
-      }
-    }
-
     if (mode === "items" && tab === "analysis") {
       const canLeave = confirmDiscardAnalysisChanges(() => setMode(nextMode));
       if (!canLeave) return;
@@ -1919,6 +2334,27 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
           />
         )}
 
+        {mode === "candy" && (
+          <QSPremiumGate
+            country={country}
+            userId={sessionMeta?.uid}
+            userEmail={sessionMeta?.email}
+            userName={sessionMeta?.displayName}
+            onOpenAuthScreen={onOpenAuthScreen}
+            systemBridge={systemBridge}
+            isAdminUnlocked={isAdminUnlocked}
+          >
+            <ScreenProtection enabled={true}>
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <CandyWorkspace
+                  country={country}
+                  onBack={() => handleModeChange("selection")}
+                />
+              </div>
+            </ScreenProtection>
+          </QSPremiumGate>
+        )}
+
         {mode === "items" && (
           <div className="animate-in fade-in slide-in-from-left-4 duration-500">
             <div className="mb-5 w-full overflow-hidden rounded-2xl bg-gradient-to-br from-[#082555] to-[#0d3070] p-1.5 shadow-[0_8px_24px_rgba(8,37,85,0.22)]">
@@ -1945,6 +2381,9 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 itemLocked={itemLocked}
                 itemRemaining={itemRemaining}
                 onOpenSubscription={openSubscriptionScreen}
+                afterDiv28AdBanner={csiAfterDiv28AdBanner}
+                isGuest={isGuest}
+                onOpenAuthScreen={onOpenAuthScreen}
               />
             )}
             {tab === "history" && (
@@ -1994,15 +2433,27 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
         )}
 
         {mode === "area" && (
-          <AreaPricingForm
-            country={country}
-            onCalculate={handleCalculateArea}
-            adBanner={areaFormAdBanner}
-            canManageAds={isAdminUnlocked}
-            onManageAds={handleOpenAdEditor}
-            onToggleAdVisibility={handleToggleAdVisibility}
-            onRemoveAd={handleRemoveAd}
-          />
+          /* Registered user who used up their trial → full gate */
+          (areaLocked && !isGuest) ? (
+            <TaseeraProGate
+              country={country}
+              isGuest={false}
+              onOpenSubscription={openSubscriptionScreen}
+              onOpenAuthScreen={onOpenAuthScreen}
+            />
+          ) : (
+            <GuestAreaWrapper isGuest={isGuest} onOpenAuthScreen={onOpenAuthScreen}>
+              <AreaPricingForm
+                country={country}
+                onCalculate={handleCalculateArea}
+                adBanner={areaFormAdBanner}
+                canManageAds={isAdminUnlocked}
+                onManageAds={handleOpenAdEditor}
+                onToggleAdVisibility={handleToggleAdVisibility}
+                onRemoveAd={handleRemoveAd}
+              />
+            </GuestAreaWrapper>
+          )
         )}
 
         {mode === "area-results" && (
@@ -2012,6 +2463,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             results={effectiveAreaResults}
             scenarios={areaScenarios}
             currentScenario={currentAreaScenario}
+            suggestedScenario={suggestedAreaScenario}
             onAddScenario={handleAddAreaScenario}
             onRemoveScenario={handleRemoveAreaScenario}
             onBack={() => setMode("area")}
@@ -2070,6 +2522,34 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             onBack={() => setMode("area-results")}
             onReset={handleResetAreaSection}
             onUpdateItem={handleUpdateAreaSectionItem}
+            onSave={() => {
+              const activeDraft = selectedAreaSection
+                ? areaSectionDrafts[selectedAreaSection] || buildAreaSectionDraft(selectedAreaSection, areaParams, areaResults)
+                : null;
+              if (!activeDraft) return;
+
+              onSaveAnalysis?.({
+                item: { ar: `تفاصيل تخصص (${activeDraft.title})`, num: `AREA-${activeDraft.sectionId}` },
+                resources: {},
+                results: {
+                  total: activeDraft.sectionTotal,
+                  unitPrice: activeDraft.unitPrice,
+                  overallShare:
+                    effectiveAreaResults?.total > 0
+                      ? (activeDraft.sectionTotal / effectiveAreaResults.total) * 100
+                      : 0,
+                },
+                params: {
+                  ...areaParams,
+                  sectionId: activeDraft.sectionId,
+                  sectionTitle: activeDraft.title,
+                  assumptions: activeDraft.assumptions,
+                  items: activeDraft.items,
+                },
+                mode: "area-section-detail",
+              });
+              showToast("تم حفظ تفاصيل التخصص بنجاح");
+            }}
             adBanner={areaSectionAdBanner}
             canManageAds={isAdminUnlocked}
             onManageAds={handleOpenAdEditor}
@@ -2433,10 +2913,12 @@ function SelfPricingAdBanner({ adBanner, canManageAds, adminProfile }) {
           </button>
           {adBanner.title && <p className="mt-2 text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>{adBanner.title}</p>}
         </>
-      ) : (
+      ) : canManageAds ? (
         <div className="mx-auto flex h-[230px] w-full max-w-[608px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#d4a843]/35 bg-[#fff9ec] px-4 py-5 text-center">
           <p className="text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>مساحة إعلانية</p>
         </div>
+      ) : (
+        <AdSenseUnit />
       )}
     </div>
   );
@@ -2522,9 +3004,10 @@ function HistoryScreen({ savedAnalyses, onView }) {
   );
 }
 
-function CSIScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, itemRemaining = null, onOpenSubscription }) {
+function CSIScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, itemRemaining = null, onOpenSubscription, afterDiv28AdBanner, isGuest = false, onOpenAuthScreen }) {
   const [search, setSearch] = useState("");
   const [openDiv, setOpenDiv] = useState(null);
+  const [showGuestPrompt, setShowGuestPrompt] = useState(false);
   const c = COUNTRIES[country] || COUNTRIES.sa;
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -2560,14 +3043,20 @@ function CSIScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, ite
             <p className="text-[12px] leading-6 text-[#5A4E38]" style={{ fontFamily: AR }}>
               اشترك للوصول الكامل لجميع البنود وتسعير المباني بدون حدود.
             </p>
-            <button type="button" onClick={onOpenSubscription}
+            <button type="button"
+              onClick={isGuest ? () => setShowGuestPrompt(true) : onOpenSubscription}
               className="mt-3 w-full rounded-xl bg-gradient-to-r from-[#C9A84C] to-[#E8C97A] py-2.5 text-[13px] font-bold text-[#082555] shadow-md transition-all hover:shadow-lg active:scale-[0.98]"
               style={{ fontFamily: AR }}>
-              فتح صفحة الاشتراك ←
+              {isGuest ? "سجّل دخولك ثم اشترك ←" : "فتح صفحة الاشتراك ←"}
             </button>
           </div>
         </div>
       )}
+
+      {/* Guest login modal */}
+      <GuestLoginModal open={showGuestPrompt} onClose={() => setShowGuestPrompt(false)}
+        onOpenAuthScreen={onOpenAuthScreen}
+        subtitle="سجّل دخولك أو أنشئ حساباً للوصول لجميع البنود وتسعير المباني" />
 
       {/* Search card */}
       <div className="overflow-hidden rounded-2xl border border-[#E2D8C4] bg-white shadow-sm">
@@ -2608,7 +3097,7 @@ function CSIScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, ite
         {filtered.map((div) => {
           const isOpen = isSearching || openDiv === div.num;
           const price = c?.rates?.[div.rateKey] > 0 ? c.rates[div.rateKey] : null;
-          return (
+          const card = (
             <div key={div.num}
               className="overflow-hidden rounded-2xl border border-[#E2D8C4] bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-px">
 
@@ -2659,15 +3148,15 @@ function CSIScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, ite
                         <span className="rounded-lg border border-[#E2D8C4] bg-[#F7F3EC] px-2.5 py-1 text-[10px] font-bold text-[#9A8A6A]">
                           {item.unit}
                         </span>
-                        <button type="button" onClick={() => onSelfPrice(item, div)}
-                          disabled={itemLocked}
-                          className="flex-1 sm:flex-none min-h-[36px] rounded-xl border border-[#082555]/20 bg-white px-3 text-[11px] font-bold text-[#082555] shadow-sm transition-all duration-150 hover:border-[#082555] hover:bg-[#F5EDD8] hover:shadow-md active:scale-[0.96] disabled:opacity-40"
+                        <button type="button"
+                          onClick={itemLocked ? (isGuest ? () => setShowGuestPrompt(true) : () => onOpenSubscription?.()) : () => onSelfPrice(item, div)}
+                          className="flex-1 sm:flex-none min-h-[36px] rounded-xl border border-[#082555]/20 bg-white px-3 text-[11px] font-bold text-[#082555] shadow-sm transition-all duration-150 hover:border-[#082555] hover:bg-[#F5EDD8] hover:shadow-md active:scale-[0.96]"
                           style={{ fontFamily: AR }}>
                           {itemLocked ? "🔒 مقفول" : "💡 سعر بنفسك"}
                         </button>
-                        <button type="button" onClick={() => onSelectItem(item, div)}
-                          disabled={itemLocked}
-                          className="flex-1 sm:flex-none min-h-[36px] rounded-xl bg-[#C9A84C] px-4 text-[12px] font-bold text-[#082555] shadow-sm transition-all duration-150 hover:bg-[#E8C97A] hover:shadow-md active:scale-[0.96] disabled:opacity-40"
+                        <button type="button"
+                          onClick={itemLocked ? (isGuest ? () => setShowGuestPrompt(true) : () => onOpenSubscription?.()) : () => onSelectItem(item, div)}
+                          className="flex-1 sm:flex-none min-h-[36px] rounded-xl bg-[#C9A84C] px-4 text-[12px] font-bold text-[#082555] shadow-sm transition-all duration-150 hover:bg-[#E8C97A] hover:shadow-md active:scale-[0.96]"
                           style={{ fontFamily: AR }}>
                           {itemLocked ? "🔒" : "اختر"}
                         </button>
@@ -2678,6 +3167,22 @@ function CSIScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, ite
               )}
             </div>
           );
+
+          /* ── AdSense after division 28 ── */
+          if (div.num === "28") {
+            return (
+              <div key={`${div.num}-wrap`}>
+                {card}
+                {(!afterDiv28AdBanner || afterDiv28AdBanner.enabled !== false) && (
+                  <div className="mt-2 overflow-hidden rounded-2xl border border-[#E2D8C4] bg-white shadow-sm">
+                    <AdSenseUnit className="min-h-[100px]" />
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          return card;
         })}
       </div>
 
@@ -2888,7 +3393,7 @@ function AnalysisAdBanner({ adBanner, canManageAds = false, onManageAds, onToggl
             </p>
           ) : null}
         </>
-      ) : (
+      ) : canManageAds ? (
         <div className="mx-auto flex h-[230px] w-full max-w-[608px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#d4a843]/40 bg-[#fff9ec] px-4 py-5 text-center">
           <span className="mb-2 rounded-full bg-[#C9A84C]/12 px-3 py-1 text-[10px] font-bold text-[#8B6A1F]" style={{ fontFamily: AR }}>
             مساحة إعلانية
@@ -2897,9 +3402,11 @@ function AnalysisAdBanner({ adBanner, canManageAds = false, onManageAds, onToggl
             {isEnabled ? "الإعلان مفعّل لكن بدون صورة حالية" : "لا توجد صورة إعلان مفعلة لهذا المكان"}
           </p>
           <p className="mt-1 text-[10px] text-[#9A8A6A]" style={{ fontFamily: AR }}>
-            {canManageAds ? "اضغط تعديل الإعلان لإضافة الصورة والرابط" : "ستظهر اللوحة هنا تلقائيًا عند إضافة الإعلان"}
+            اضغط تعديل الإعلان لإضافة الصورة والرابط
           </p>
         </div>
+      ) : (
+        <AdSenseUnit />
       )}
     </div>
   );

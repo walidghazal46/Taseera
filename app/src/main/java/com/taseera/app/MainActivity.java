@@ -274,6 +274,8 @@ public class MainActivity extends AppCompatActivity {
                 GoogleSignInAccount account = task.getResult(ApiException.class);
                 if (account != null && account.getIdToken() != null) {
                     authenticateWithFirebase(account.getIdToken(), account.getDisplayName(), account.getEmail());
+                } else {
+                    emitGoogleSignInError("Google account data is incomplete");
                 }
             } catch (ApiException e) {
                 Log.w(TAG, "Google sign in failed, code: " + e.getStatusCode(), e);
@@ -311,21 +313,34 @@ public class MainActivity extends AppCompatActivity {
         firebaseAuth.signInWithCredential(credential)
             .addOnCompleteListener(this, task -> {
                 if (task.isSuccessful()) {
-                    emitGoogleSignInSuccess(displayName, email);
+                    String uid = task.getResult() != null && task.getResult().getUser() != null
+                        ? task.getResult().getUser().getUid()
+                        : "";
+                    String resolvedName = task.getResult() != null && task.getResult().getUser() != null
+                        ? task.getResult().getUser().getDisplayName()
+                        : displayName;
+                    String resolvedEmail = task.getResult() != null && task.getResult().getUser() != null
+                        ? task.getResult().getUser().getEmail()
+                        : email;
+                    emitGoogleSignInSuccess(uid, resolvedName, resolvedEmail);
                 } else {
                     Log.w(TAG, "signInWithCredential:failure", task.getException());
-                    emitGoogleSignInError("Firebase authentication failed");
+                    String message = task.getException() != null && task.getException().getMessage() != null
+                        ? task.getException().getMessage()
+                        : "Firebase authentication failed";
+                    emitGoogleSignInError(message);
                 }
             });
     }
 
-    private void emitGoogleSignInSuccess(String displayName, String email) {
+    private void emitGoogleSignInSuccess(String uid, String displayName, String email) {
         if (webView == null) {
             return;
         }
 
         try {
             JSONObject data = new JSONObject();
+            data.put("uid", uid != null ? uid : "");
             data.put("displayName", displayName != null ? displayName : "");
             data.put("email", email != null ? email : "");
             String payload = data.toString();
@@ -492,8 +507,18 @@ public class MainActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public void signInWithGoogle() {
-            Intent signInIntent = googleSignInClient.getSignInIntent();
-            startActivityForResult(signInIntent, REQUEST_GOOGLE_SIGN_IN);
+            runOnUiThread(() -> {
+                try {
+                    googleSignInClient.signOut().addOnCompleteListener(task -> {
+                        Intent signInIntent = googleSignInClient.getSignInIntent();
+                        startActivityForResult(signInIntent, REQUEST_GOOGLE_SIGN_IN);
+                    });
+                } catch (Exception exception) {
+                    emitGoogleSignInError(
+                        exception.getMessage() != null ? exception.getMessage() : "Unable to open Google sign-in"
+                    );
+                }
+            });
         }
 
         @JavascriptInterface

@@ -15,13 +15,15 @@ export default function SuppliersPage(props) {
 
   if (!selectedCountry) {
     return (
-      <CountryPicker
-        language={props.settings?.language}
-        onSelect={handleSelectCountry}
-        sessionMeta={props.sessionMeta}
-        authMode={props.authMode}
-        section="suppliers"
-      />
+      <div style={{ margin: "-1.5rem -1rem 0" }}>
+        <CountryPicker
+          language={props.settings?.language}
+          onSelect={handleSelectCountry}
+          sessionMeta={props.sessionMeta}
+          authMode={props.authMode}
+          section="suppliers"
+        />
+      </div>
     );
   }
 

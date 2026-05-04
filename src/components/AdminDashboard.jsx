@@ -27,6 +27,15 @@ import {
   saveAdBanner,
   savePaymentSettings,
 } from "../services/subscriptionApi";
+import {
+  listenAllQSPremiumRequests,
+  adminApproveQSPremium,
+  adminRejectQSPremium,
+  adminDeactivateQSPremium,
+  adminReactivateQSPremium,
+  adminDeleteQSPremium,
+  adminHandleRefund,
+} from "../services/qsPremiumApi";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
 
@@ -38,6 +47,7 @@ const MENU = [
   { id: "admins", labelAr: "Admins", labelEn: "Admins" },
   { id: "logs", labelAr: "Logs", labelEn: "Logs" },
   { id: "settings", labelAr: "Settings", labelEn: "Settings" },
+  { id: "qspremium", labelAr: "QS Premium", labelEn: "QS Premium" },
 ];
 
 function fmtDate(value) {
@@ -249,6 +259,15 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
   const [pendingRejectRequest, setPendingRejectRequest] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
 
+  // QS Premium state
+  const [qsRequests, setQsRequests] = useState([]);
+  const [qsLoading, setQsLoading] = useState(false);
+  const [qsRefundModal, setQsRefundModal] = useState(null);
+  const [qsRejectModal, setQsRejectModal] = useState(null);
+  const [qsRejectReason, setQsRejectReason] = useState("");
+  const [qsRefundNotes, setQsRefundNotes] = useState("");
+  const [qsFilter, setQsFilter] = useState("all");
+
   useEffect(() => {
     const hasMenuTab = MENU.some((tab) => tab.id === initialTab);
     if (hasMenuTab) {
@@ -449,6 +468,29 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
     if (activeTab === "admins") loadAdmins();
     if (activeTab === "logs") loadLogs();
   }, [activeTab, adminProfile?.canAccessAdmin, loadAdmins, loadLogs, loadPayments, loadUsers]);
+
+  // QS Premium real-time listener (debounced against StrictMode double-invoke)
+  useEffect(() => {
+    if (!adminProfile?.canAccessAdmin) return;
+    if (activeTab !== "qspremium") return;
+    setQsLoading(true);
+    let active = true;
+    let unsubFn = null;
+    const timer = setTimeout(() => {
+      if (!active) return;
+      unsubFn = listenAllQSPremiumRequests((items) => {
+        if (active) {
+          setQsRequests(items);
+          setQsLoading(false);
+        }
+      });
+    }, 100);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      if (unsubFn) unsubFn();
+    };
+  }, [activeTab, adminProfile?.canAccessAdmin]);
 
   useEffect(() => {
     if (activeTab === "users") {
@@ -1110,6 +1152,176 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
               </div>
             )}
 
+            {activeTab === "qspremium" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[15px] font-extrabold text-[#082555]">QS Premium Subscriptions</h3>
+                  {qsLoading && <span className="text-[11px] text-slate-500">Loading...</span>}
+                </div>
+
+                {/* Stats row */}
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <StatCard label="Total" value={qsRequests.length} tone="blue" />
+                  <StatCard label="Pending" value={qsRequests.filter((r) => r.status === "pending").length} tone="amber" />
+                  <StatCard label="Active" value={qsRequests.filter((r) => r.status === "active").length} tone="green" />
+                  <StatCard label="Rejected" value={qsRequests.filter((r) => r.status === "rejected").length} tone="red" />
+                </div>
+
+                {/* Filter tabs */}
+                <div className="flex flex-wrap gap-2">
+                  {["all", "pending", "active", "rejected", "deactivated"].map((f) => (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => setQsFilter(f)}
+                      className={`rounded-lg border px-3 py-1.5 text-[11px] font-bold transition ${
+                        qsFilter === f
+                          ? "border-[#1d4ed8] bg-[#dbeafe] text-[#1e3a8a]"
+                          : "border-[#dbe2ea] bg-white text-slate-600"
+                      }`}
+                    >
+                      {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Requests list */}
+                <div className="space-y-2">
+                  {qsRequests
+                    .filter((r) => qsFilter === "all" || r.status === qsFilter)
+                    .sort((a, b) => {
+                      const aT = a.requestedAt?.toMillis?.() || 0;
+                      const bT = b.requestedAt?.toMillis?.() || 0;
+                      return bT - aT;
+                    })
+                    .map((req) => {
+                      const statusColors = {
+                        pending: "bg-amber-100 text-amber-700 border-amber-200",
+                        active: "bg-emerald-100 text-emerald-700 border-emerald-200",
+                        rejected: "bg-rose-100 text-rose-700 border-rose-200",
+                        deactivated: "bg-slate-100 text-slate-600 border-slate-200",
+                      };
+                      const statusColor = statusColors[req.status] || statusColors.pending;
+                      return (
+                        <div key={req.id} className="rounded-2xl border border-[#e2e8f0] bg-white p-3 shadow-sm">
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-[13px] font-bold text-[#0f172a]">{req.userName || req.userEmail}</p>
+                                <span className={`rounded-lg border px-2 py-0.5 text-[10px] font-bold ${statusColor}`}>
+                                  {req.status}
+                                </span>
+                                {req.refundRequest?.status === "pending_review" && (
+                                  <span className="rounded-lg border border-orange-200 bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700">
+                                    Refund Pending
+                                  </span>
+                                )}
+                              </div>
+                              <p className="mt-0.5 text-[11px] text-slate-500">{req.userEmail}</p>
+                              <div className="mt-1 flex flex-wrap gap-3 text-[10px] text-slate-500">
+                                <span>Country: <strong>{(req.country || "").toUpperCase()}</strong></span>
+                                <span>Price: <strong>{req.price} {req.currency}</strong></span>
+                                <span>Requested: <strong>{fmtDate(req.requestedAt)}</strong></span>
+                                {req.activatedAt && <span>Activated: <strong>{fmtDate(req.activatedAt)}</strong></span>}
+                                {req.trialEndsAt && <span>Trial ends: <strong>{fmtDate(req.trialEndsAt)}</strong></span>}
+                                <span>Trial items: <strong>{(req.trialItemsUsed || []).length}/10</strong></span>
+                              </div>
+                              {req.rejectionReason && (
+                                <p className="mt-1 text-[10px] text-rose-600">Rejection: {req.rejectionReason}</p>
+                              )}
+                            </div>
+
+                            {/* Action buttons */}
+                            <div className="flex flex-col gap-1.5 shrink-0">
+                              <div className="flex flex-wrap gap-1.5">
+                              {req.status === "pending" && (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white"
+                                    onClick={async () => {
+                                      try {
+                                        await adminApproveQSPremium(adminProfile, req.id);
+                                        onToast?.("Approved", "success");
+                                      } catch (e) { onToast?.(e.message, "warning"); }
+                                    }}
+                                  >
+                                    ✓ Approve
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="rounded-lg bg-rose-600 px-3 py-1.5 text-[11px] font-bold text-white"
+                                    onClick={() => { setQsRejectModal(req.id); setQsRejectReason(""); }}
+                                  >
+                                    ✗ Reject
+                                  </button>
+                                </>
+                              )}
+                              {req.status === "active" && (
+                                <button
+                                  type="button"
+                                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-bold text-slate-700"
+                                  onClick={async () => {
+                                    try {
+                                      await adminDeactivateQSPremium(adminProfile, req.id);
+                                      onToast?.("Deactivated", "success");
+                                    } catch (e) { onToast?.(e.message, "warning"); }
+                                  }}
+                                >
+                                  ⊘ Deactivate
+                                </button>
+                              )}
+                              {(req.status === "deactivated" || req.status === "rejected") && (
+                                <button
+                                  type="button"
+                                  className="rounded-lg bg-indigo-600 px-3 py-1.5 text-[11px] font-bold text-white"
+                                  onClick={async () => {
+                                    try {
+                                      await adminReactivateQSPremium(adminProfile, req.id);
+                                      onToast?.("Reactivated", "success");
+                                    } catch (e) { onToast?.(e.message, "warning"); }
+                                  }}
+                                >
+                                  ↺ Reactivate
+                                </button>
+                              )}
+                              {req.refundRequest?.status === "pending_review" && (
+                                <button
+                                  type="button"
+                                  className="rounded-lg bg-orange-500 px-3 py-1.5 text-[11px] font-bold text-white"
+                                  onClick={() => { setQsRefundModal(req.id); setQsRefundNotes(""); }}
+                                >
+                                  💰 Review Refund
+                                </button>
+                              )}
+                              </div>
+                              <button
+                                type="button"
+                                className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-[11px] font-bold text-rose-700"
+                                onClick={async () => {
+                                  try {
+                                    await adminDeleteQSPremium(adminProfile, req.id);
+                                    onToast?.("Request deleted", "success");
+                                  } catch (e) { onToast?.(e.message, "warning"); }
+                                }}
+                              >
+                                🗑 Delete request
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                  {!qsLoading && qsRequests.filter((r) => qsFilter === "all" || r.status === qsFilter).length === 0 && (
+                    <p className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-3 text-[12px] font-bold text-slate-500">
+                      No records found.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
             {activeTab === "settings" && (
               <div className="space-y-3">
                 <div className="rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] overflow-hidden">
@@ -1672,6 +1884,106 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                 Cancel
               </button>
             </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* QS Premium — Reject modal */}
+      {qsRejectModal && (
+        <Modal title="Reject QS Premium Request" onClose={() => { setQsRejectModal(null); setQsRejectReason(""); }}>
+          <div className="space-y-3 text-[12px]">
+            <p className="font-bold text-slate-700">Provide a rejection reason.</p>
+            <textarea
+              value={qsRejectReason}
+              onChange={(e) => setQsRejectReason(e.target.value)}
+              className="min-h-[80px] w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:border-rose-400"
+              placeholder="Reason..."
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="flex-1 rounded-xl bg-rose-600 px-3 py-2 font-bold text-white"
+                onClick={async () => {
+                  try {
+                    await adminRejectQSPremium(adminProfile, qsRejectModal, qsRejectReason.trim() || "No reason provided");
+                    onToast?.("Request rejected", "success");
+                    setQsRejectModal(null);
+                    setQsRejectReason("");
+                  } catch (e) { onToast?.(e.message, "warning"); }
+                }}
+              >
+                Reject
+              </button>
+              <button type="button" className="flex-1 rounded-xl border border-slate-300 px-3 py-2 font-bold" onClick={() => { setQsRejectModal(null); setQsRejectReason(""); }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* QS Premium — Refund review modal */}
+      {qsRefundModal && (
+        <Modal title="Review Refund Request" onClose={() => { setQsRefundModal(null); setQsRefundNotes(""); }}>
+          <div className="space-y-3 text-[12px]">
+            <p className="font-bold text-slate-700">
+              Review refund for user{" "}
+              <span className="text-[#1d4ed8]">
+                {qsRequests.find((r) => r.id === qsRefundModal)?.userEmail || qsRefundModal}
+              </span>.
+            </p>
+            {(() => {
+              const req = qsRequests.find((r) => r.id === qsRefundModal);
+              return req?.refundRequest?.reason ? (
+                <div className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-3">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">User reason</p>
+                  <p>{req.refundRequest.reason}</p>
+                </div>
+              ) : null;
+            })()}
+            <textarea
+              value={qsRefundNotes}
+              onChange={(e) => setQsRefundNotes(e.target.value)}
+              className="min-h-[72px] w-full rounded-xl border border-slate-300 px-3 py-2 outline-none focus:border-indigo-400"
+              placeholder="Admin notes (optional)..."
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="flex-1 rounded-xl bg-emerald-600 px-3 py-2 font-bold text-white"
+                onClick={async () => {
+                  try {
+                    await adminHandleRefund(adminProfile, qsRefundModal, true, qsRefundNotes.trim());
+                    onToast?.("Refund approved", "success");
+                    setQsRefundModal(null);
+                    setQsRefundNotes("");
+                  } catch (e) { onToast?.(e.message, "warning"); }
+                }}
+              >
+                ✓ Approve Refund
+              </button>
+              <button
+                type="button"
+                className="flex-1 rounded-xl bg-rose-600 px-3 py-2 font-bold text-white"
+                onClick={async () => {
+                  try {
+                    await adminHandleRefund(adminProfile, qsRefundModal, false, qsRefundNotes.trim());
+                    onToast?.("Refund rejected", "success");
+                    setQsRefundModal(null);
+                    setQsRefundNotes("");
+                  } catch (e) { onToast?.(e.message, "warning"); }
+                }}
+              >
+                ✗ Reject Refund
+              </button>
+            </div>
+            <button
+              type="button"
+              className="w-full rounded-xl border border-slate-300 px-3 py-2 font-bold mt-1"
+              onClick={() => { setQsRefundModal(null); setQsRefundNotes(""); }}
+            >
+              Cancel
+            </button>
           </div>
         </Modal>
       )}

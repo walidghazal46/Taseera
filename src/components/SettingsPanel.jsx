@@ -761,7 +761,7 @@ function AccountTab({
             {text.settings.version} {settings.appVersion}
           </p>
           <div className="my-3 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-          <p className="text-[9px] text-white/25 leading-relaxed" style={{ fontFamily: F }}>
+          <p className="text-[9px] text-white leading-relaxed" style={{ fontFamily: F }}>
             {text.settings.disclaimer}
           </p>
         </div>
@@ -779,7 +779,7 @@ const TABS = [
 export default function SettingsPanel({
   settings, authMode, onLogout, onUpdateSetting, onSettingsAction,
   systemBridge, savedAnalyses, rfqRequests, navigationBridge,
-  onOpenAuthScreen, sessionMeta, companies, suppliers, onShowStatus,
+  onOpenAuthScreen, sessionMeta, companies, suppliers, onShowStatus, onNavigate,
 }) {
   const copy = getSettingsCopy(settings.language);
   const isGuest = authMode === "guest";
@@ -854,6 +854,7 @@ export default function SettingsPanel({
           isSubscribed={isSubscribed}
           onOpenAuthScreen={onOpenAuthScreen}
           onShowStatus={onShowStatus}
+          onGoToPricing={() => onNavigate?.("pricing")}
         />
       ) : (
         <AccountTab

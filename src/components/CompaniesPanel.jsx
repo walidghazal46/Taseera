@@ -4,6 +4,7 @@ import useBackStack from "../hooks/useBackStack";
 import useAdminSession from "../hooks/useAdminSession";
 import { SUPER_ADMIN_EMAIL } from "../constants/admin";
 import { AD_SLOT_IDS, DEFAULT_AD_BANNER, listenAdBanner, saveAdBanner } from "../services/subscriptionApi";
+import AdSenseUnit from "./AdSenseUnit";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
 const MONO = "'IBM Plex Mono',monospace";
@@ -398,12 +399,14 @@ function InlineAdBanner({ adBanner, canManageAds = false, onEdit, onToggleVisibi
             </p>
           ) : null}
         </>
-      ) : (
+      ) : canManageAds ? (
         <div className="mx-auto flex h-[230px] w-full max-w-[608px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#d4a843]/35 bg-[#fff9ec] px-4 py-5 text-center">
           <p className="text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
             مساحة إعلانية
           </p>
         </div>
+      ) : (
+        <AdSenseUnit />
       )}
     </div>
   );

@@ -15,18 +15,20 @@ export default function CompaniesPage(props) {
 
   if (!selectedCountry) {
     return (
-      <CountryPicker
-        language={props.settings?.language}
-        icon="🏢"
-        titleAr="اختر دولة العمل"
-        titleEn="Select Work Country"
-        subtitleAr="ابدأ من الدولة المناسبة ثم تابع إلى دليل الشركات والمشاريع"
-        subtitleEn="Start with your country then browse companies and projects"
-        onSelect={handleSelectCountry}
-        sessionMeta={props.sessionMeta}
-        authMode={props.authMode}
-        section="companies"
-      />
+      <div style={{ margin: "-1.5rem -1rem 0" }}>
+        <CountryPicker
+          language={props.settings?.language}
+          icon="🏢"
+          titleAr="اختر دولة العمل"
+          titleEn="Select Work Country"
+          subtitleAr="ابدأ من الدولة المناسبة ثم تابع إلى دليل الشركات والمشاريع"
+          subtitleEn="Start with your country then browse companies and projects"
+          onSelect={handleSelectCountry}
+          sessionMeta={props.sessionMeta}
+          authMode={props.authMode}
+          section="companies"
+        />
+      </div>
     );
   }
 

@@ -117,6 +117,17 @@ export const COUNTRIES = {
 
 export const CSI_DIVISIONS = [
   {
+    num: "01", ar: "المتطلبات العامة", en: "General Requirements", rateKey: "general", unit: "م²",
+    items: [
+      { num: "01 50 13", ar: "مكتب مقاول مؤقت (كرفان مجهز بالأثاث)", unit: "بند" },
+      { num: "01 51 10", ar: "سياج موقع مؤقت (ألواح ألمنيوم معدني)", unit: "م.ط" },
+      { num: "01 52 10", ar: "لوحة معلومات المشروع (مطبوعة UV)", unit: "عدد" },
+      { num: "01 74 10", ar: "تنظيف موقع دوري وإزالة مخلفات البناء", unit: "م²" },
+      { num: "01 35 10", ar: "خطة إدارة جودة وسلامة (QA/HSE Plan)", unit: "بند" },
+      { num: "01 56 10", ar: "متطلبات السلامة والتصاريح الحكومية", unit: "بند" },
+    ],
+  },
+  {
     num: "02", ar: "أعمال الموقع والتربة", en: "Sitework / Earthwork", rateKey: "earthwork", unit: "م³",
     items: [
       { num: "02 20 10", ar: "تسوية موقع وتشكيل رقاب (Grading)", unit: "م²" },
@@ -345,6 +356,26 @@ export const CSI_DIVISIONS = [
       { num: "28 31 10", ar: "نظام إنذار حريق — كاشف دخان كهروضوئي", unit: "عدد" },
       { num: "28 31 20", ar: "نظام إنذار حريق — كاشف متعدد دخان وحراري", unit: "عدد" },
       { num: "28 32 10", ar: "نظام إنذار حريق — كاسر زجاجي مقاوم للعوامل الجوية", unit: "عدد" },
+    ],
+  },
+  {
+    num: "27", ar: "الاتصالات", en: "Communications", rateKey: "comms", unit: "نقطة",
+    items: [
+      { num: "27 15 10", ar: "نقطة شبكة بيانات Cat6 شاملة Patch Panel", unit: "نقطة" },
+      { num: "27 51 10", ar: "نقطة تلفزيون مركزي MATV (مورد ومركب)", unit: "نقطة" },
+      { num: "27 41 10", ar: "نظام صوتيات ومكبرات صوت للمبنى (PA System)", unit: "بند" },
+      { num: "27 21 10", ar: "نظام هاتف داخلي IP مع مركزية PABX", unit: "بند" },
+      { num: "27 52 10", ar: "نظام مؤتمرات ويب Video Conferencing", unit: "بند" },
+    ],
+  },
+  {
+    num: "28", ar: "الأمن والمراقبة الإلكترونية", en: "Electronic Safety & Security", rateKey: "security", unit: "عدد",
+    items: [
+      { num: "28 23 10", ar: "كاميرا مراقبة CCTV IP دقة 4K مع حامل", unit: "عدد" },
+      { num: "28 23 20", ar: "مسجل شبكي NVR 16 قناة مع أقراص تخزين", unit: "عدد" },
+      { num: "28 13 10", ar: "نقطة تحكم دخول ببطاقة Access Control", unit: "باب" },
+      { num: "28 16 10", ar: "نظام إنذار سرقة مغناطيسي مع لوحة تحكم", unit: "نقطة" },
+      { num: "28 46 10", ar: "نظام إدارة غرف GRMS (للفنادق والمكاتب)", unit: "نقطة" },
     ],
   },
 ];
@@ -1027,6 +1058,128 @@ export function getDefaultResources(item, div, mktRates, countryCode = "sa") {
         { name: "عامل مساعد MEP", qty: 0.15, unit: "يومية", rate: p.lab_site, badge: "lab", icon: "👷" }
       ],
       معدات: [{ name: "أدوات قياس واختبار", qty: 1, unit: "بند", rate: r(mkt * 0.05), badge: "eqp", icon: "🧪" }],
+    };
+  }
+
+  // 01 GENERAL REQUIREMENTS
+  if (div.rateKey === "general") {
+    if (name.includes("مكتب") || name.includes("كرفان")) {
+      return {
+        مواد: [{ name: "كرفان مكتبي مجهز (إيجار / مصنوع)", qty: 1, unit: "بند", rate: r(mkt * 18), badge: "mat", icon: "🏠" }],
+        عمالة: [{ name: "عمال توصيل وتجهيز كرفان", qty: 0.5, unit: "يومية", rate: p.lab_site, badge: "lab", icon: "👷" }],
+        معدات: [{ name: "شاحنة نقل", qty: 0.1, unit: "ساعة", rate: p.eq_dump_hr, badge: "eqp", icon: "🚛" }],
+      };
+    }
+    if (name.includes("سياج")) {
+      return {
+        مواد: [
+          { name: "ألواح سياج ألمنيوم + قواعد معدنية", qty: 1, unit: "م.ط", rate: r(mkt * 5.5), badge: "mat", icon: "🔲" },
+          { name: "دهان وملصقات السلامة والتوجيه", qty: 1, unit: "بند", rate: r(mkt * 0.3), badge: "mat", icon: "🎨" },
+        ],
+        عمالة: [{ name: "فريق تركيب سياج", qty: 0.05, unit: "يومية", rate: p.lab_mason, badge: "lab", icon: "👷" }],
+        معدات: [{ name: "أدوات يدوية وكهربائية", qty: 1, unit: "بند", rate: r(mkt * 0.1), badge: "eqp", icon: "🛠️" }],
+      };
+    }
+    return {
+      مواد: [{ name: "مواد عامة (لوحات+لوازم+معدات سلامة+طفايات)", qty: 1, unit: "بند", rate: r(mkt * 0.5), badge: "mat", icon: "📋" }],
+      عمالة: [
+        { name: "مشرف موقع عام (overhead)", qty: 0.05, unit: "يومية", rate: p.lab_mason, badge: "lab", icon: "👷" },
+        { name: "عامل تنظيف وصيانة مؤقتة", qty: 0.05, unit: "يومية", rate: p.lab_site, badge: "lab", icon: "👷" },
+      ],
+      معدات: [{ name: "آليات نقل داخلي موقع", qty: 0.02, unit: "ساعة", rate: p.eq_dump_hr, badge: "eqp", icon: "🚛" }],
+    };
+  }
+
+  // 06 WOOD, PLASTICS & COMPOSITES
+  if (div.rateKey === "wood") {
+    return {
+      مواد: [
+        { name: "خشب / ألواح MDF / PVC (توريد)", qty: 1.08, unit: "م²", rate: r(mkt * 0.62), badge: "mat", icon: "🪵" },
+        { name: "غراء + برغي تثبيت + حافات تشطيب", qty: 1, unit: "بند", rate: r(mkt * 0.05), badge: "mat", icon: "🔩" },
+      ],
+      عمالة: [
+        { name: "نجار ديكور متخصص", qty: 0.12, unit: "يومية", rate: p.lab_carpenter, badge: "lab", icon: "👷" },
+        { name: "عامل مساعد تركيب", qty: 0.08, unit: "يومية", rate: p.lab_site, badge: "lab", icon: "👷" },
+      ],
+      معدات: [{ name: "ماكينة قص وتشطيب خشب + لوازم", qty: 1, unit: "بند", rate: r(mkt * 0.04), badge: "eqp", icon: "✂️" }],
+    };
+  }
+
+  // 10 SPECIALTIES
+  if (div.rateKey === "specialties") {
+    return {
+      مواد: [{ name: "المنتج الثابت (توريد كامل من المورد)", qty: 1, unit: unit, rate: r(mkt * 0.78), badge: "mat", icon: "📦" }],
+      عمالة: [{ name: "فني تركيب متخصص", qty: 0.2, unit: "يومية", rate: p.lab_finisher, badge: "lab", icon: "👷" }],
+      معدات: [{ name: "أدوات تركيب وحفر + مسمار كيماوي", qty: 1, unit: "بند", rate: r(mkt * 0.04), badge: "eqp", icon: "🛠️" }],
+    };
+  }
+
+  // 11 EQUIPMENT
+  if (div.rateKey === "equipment") {
+    return {
+      مواد: [{ name: "المعدة / الجهاز (توريد وتوصيل من الوكيل المعتمد)", qty: 1, unit: "بند", rate: r(mkt * 0.88), badge: "mat", icon: "🏭" }],
+      عمالة: [{ name: "فني توصيل وتشغيل أولي (commissioning)", qty: 0.3, unit: "يومية", rate: p.lab_electrician, badge: "lab", icon: "👷" }],
+      معدات: [{ name: "رافعة / ونش للتركيب الميداني", qty: 0.05, unit: "يوم", rate: p.eq_crane_day, badge: "eqp", icon: "🏗️" }],
+    };
+  }
+
+  // 14 CONVEYING EQUIPMENT
+  if (div.rateKey === "conveying") {
+    return {
+      مواد: [
+        { name: "المصعد / السلم الكهربائي (توريد + شحن)", qty: 1, unit: "بند", rate: r(mkt * 0.72), badge: "mat", icon: "🛗" },
+        { name: "أعمال مدنية (ردم + خرسانة + تشطيب بئر)", qty: 1, unit: "بند", rate: r(mkt * 0.08), badge: "mat", icon: "🧱" },
+      ],
+      عمالة: [
+        { name: "فريق تركيب المصعد (تقني معتمد من الشركة)", qty: 2, unit: "يومية", rate: p.lab_electrician, badge: "lab", icon: "👷" },
+        { name: "فني كهرباء توصيلات لوحة التحكم", qty: 1, unit: "يومية", rate: p.lab_electrician, badge: "lab", icon: "👷" },
+      ],
+      معدات: [{ name: "معدات رفع وتركيب ميدانية + اختبار", qty: 1, unit: "بند", rate: r(mkt * 0.06), badge: "eqp", icon: "🏗️" }],
+    };
+  }
+
+  // 21 FIRE SUPPRESSION
+  if (div.rateKey === "fire_supp") {
+    return {
+      مواد: [
+        { name: "مواسير GI حريق + وصلات + رشاشات UL/FM", qty: 1, unit: "بند", rate: r(mkt * 0.62), badge: "mat", icon: "🔥" },
+        { name: "مضخة حريق + خزان طوارئ + لوحة تحكم", qty: 1, unit: "بند", rate: r(mkt * 0.08), badge: "mat", icon: "💧" },
+      ],
+      عمالة: [
+        { name: "فني تمديد أنابيب حريق معتمد", qty: 0.12, unit: "يومية", rate: p.lab_plumber, badge: "lab", icon: "👷" },
+        { name: "فني اختبار ومعايرة نظام الحريق", qty: 0.03, unit: "يومية", rate: p.lab_electrician, badge: "lab", icon: "👷" },
+      ],
+      معدات: [{ name: "أدوات قص ولحام مواسير + اختبار ضغط هيدروستاتيكي", qty: 1, unit: "بند", rate: r(mkt * 0.05), badge: "eqp", icon: "🛠️" }],
+    };
+  }
+
+  // 27 COMMUNICATIONS
+  if (div.rateKey === "comms") {
+    return {
+      مواد: [
+        { name: "كابلات Cat6 / Coax + مقابس + Patch Panel", qty: 1, unit: "بند", rate: r(mkt * 0.58), badge: "mat", icon: "📡" },
+        { name: "أجهزة شبكة (Switch / Router / Access Point)", qty: 1, unit: "بند", rate: r(mkt * 0.12), badge: "mat", icon: "📶" },
+      ],
+      عمالة: [
+        { name: "فني تمديد كابلات ووصلات", qty: 0.1, unit: "يومية", rate: p.lab_electrician, badge: "lab", icon: "👷" },
+        { name: "فني اختبار وقياس شبكة (Fluke Tester)", qty: 0.05, unit: "يومية", rate: p.lab_electrician, badge: "lab", icon: "👷" },
+      ],
+      معدات: [{ name: "أدوات تمديد + جهاز اختبار معتمد", qty: 1, unit: "بند", rate: r(mkt * 0.05), badge: "eqp", icon: "🧪" }],
+    };
+  }
+
+  // 28 ELECTRONIC SAFETY & SECURITY
+  if (div.rateKey === "security") {
+    return {
+      مواد: [
+        { name: "كاميرات / أجهزة أمن (توريد من الوكيل)", qty: 1, unit: unit, rate: r(mkt * 0.65), badge: "mat", icon: "📷" },
+        { name: "كابلات Cat6 / Coax + مقابس + حوامل", qty: 1, unit: "بند", rate: r(mkt * 0.10), badge: "mat", icon: "🔌" },
+      ],
+      عمالة: [
+        { name: "فني تركيب أنظمة أمن ومراقبة", qty: 0.15, unit: "يومية", rate: p.lab_electrician, badge: "lab", icon: "👷" },
+        { name: "فني برمجة وضبط الأنظمة", qty: 0.10, unit: "يومية", rate: p.lab_electrician, badge: "lab", icon: "👷" },
+      ],
+      معدات: [{ name: "أدوات تركيب + لابتوب برمجة", qty: 1, unit: "بند", rate: r(mkt * 0.04), badge: "eqp", icon: "🛠️" }],
     };
   }
 
