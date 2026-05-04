@@ -902,6 +902,54 @@ export default function QSPremiumGate({
     );
   }
 
+  // -- Free Trial --
+  if (inFreeTrial) {
+    const remaining = FREE_TRIAL_LIMIT - freeTrialCount;
+    return (
+      <QSPremiumContext.Provider value={contextValue}>
+        <div style={styles.root}>
+          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+          {/* Free trial banner */}
+          <div style={{
+            background: "linear-gradient(135deg, rgba(16,185,129,0.18) 0%, rgba(5,150,105,0.12) 100%)",
+            border: "1px solid rgba(16,185,129,0.35)",
+            borderRadius: "14px",
+            padding: "12px 16px",
+            marginBottom: "14px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "10px",
+            flexWrap: "wrap",
+            fontFamily: AR,
+            fontSize: "13px",
+            color: "#6ee7b7",
+            direction: "rtl",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "16px" }}>🎁</span>
+              <span style={{ fontWeight: "700" }}>التجربة المجانية</span>
+              <span style={{ opacity: 0.8 }}>— وصول كامل لجميع البنود والباقتين</span>
+            </div>
+            <div style={{
+              background: "rgba(16,185,129,0.20)",
+              border: "1px solid rgba(16,185,129,0.40)",
+              borderRadius: "20px",
+              padding: "4px 12px",
+              fontSize: "12px",
+              fontWeight: "700",
+              color: "#a7f3d0",
+              whiteSpace: "nowrap",
+            }}>
+              {remaining} / {FREE_TRIAL_LIMIT} بنود متبقية
+            </div>
+          </div>
+          {children}
+        </div>
+      </QSPremiumContext.Provider>
+    );
+  }
+
   // -- Paywall (none / rejected / deactivated) --
   return (
     <div style={styles.root}>
