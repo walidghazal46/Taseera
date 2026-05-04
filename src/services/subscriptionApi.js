@@ -56,6 +56,7 @@ export const AD_SLOT_IDS = {
   companiesAfterPagination: "companies_after_pagination_banner",
   suppliersAfterPagination: "suppliers_after_pagination_banner",
   selfPricingAfterActions: "self_pricing_after_actions_banner",
+  csiAfterDiv28: "csi_after_div28_banner",
 };
 
 function formatOrderId(year, seq) {

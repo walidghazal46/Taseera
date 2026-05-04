@@ -512,6 +512,7 @@ export default function App() {
     onSelectPricingItem: setSelectedPricingItemId, onSelectCompany: selectCompany, onSelectProject: selectProject, onAddCompany: addCompany, onAddProject: addProject, onAddSupplier: addSupplier, onUpdateSetting: updateSetting, onLogout: handleLogout, onShowStatus: showStatus, onSaveAnalysis: handleSaveAnalysis, onCreateRfq: handleCreateRfq, onContactSupplier: handleContactSupplier, onSettingsAction: handleSettingsAction, onOpenAuthScreen: openAuthScreen, sessionMeta: authSession,
     onOpenSubscription: handleOpenSubscription,
     onOpenAdSettings: handleOpenAdSettings,
+    onNavigate: handleNavigate,
   };
 
   const renderedPage = {

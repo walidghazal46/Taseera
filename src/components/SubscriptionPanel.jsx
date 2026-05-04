@@ -5,14 +5,15 @@ import {
   listMyPaymentRequests,
   listenPaymentSettings,
 } from "../services/subscriptionApi";
+import { listenQSPremiumStatus } from "../services/qsPremiumApi";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
 
 export function getSubscriptionCopy(language) {
   return language === "en"
     ? {
-        subscriptionTitle: "Full Access Subscription",
-        subscriptionHint: "Unlock all pricing items and unlimited building pricing.",
+        subscriptionTitle: "Taseera Pro Package",
+        subscriptionHint: "Full access to all BOQ items and unlimited building area pricing.",
         basePrice: "Price",
         paymentMethod: "Payment method",
         paymentReference: "Transfer reference",
@@ -44,8 +45,8 @@ export function getSubscriptionCopy(language) {
         subscribedNow: "Subscribed",
       }
     : {
-        subscriptionTitle: "اشتراك الوصول الكامل",
-        subscriptionHint: "افتح كل البنود وتسعير المباني بدون حدود.",
+        subscriptionTitle: "Taseera Pro Package",
+        subscriptionHint: "وصول كامل لجميع بنود المقايسات وتسعير المباني بدون حدود.",
         basePrice: "السعر",
         paymentMethod: "طريقة الدفع",
         paymentReference: "مرجع التحويل",
@@ -127,6 +128,242 @@ function StatusBadge({ status, copy }) {
   );
 }
 
+/* ─── QS Premium Card (mirrors Taseera Pro layout) ─────────────────────── */
+function fmtTs(ts) {
+  if (!ts) return "—";
+  try { return (typeof ts.toDate === "function" ? ts.toDate() : new Date(ts)).toLocaleDateString("ar-EG"); }
+  catch { return "—"; }
+}
+function daysBetween(ts) {
+  if (!ts) return 0;
+  const d = typeof ts.toDate === "function" ? ts.toDate() : new Date(ts);
+  return Math.max(0, Math.ceil((d - Date.now()) / 86400000));
+}
+
+const QS_FEATURES_AR = [
+  "تحليل التكلفة بأسلوب First Principle",
+  "جميع أقسام CSI (18 قسم، 300+ بند)",
+  "مواد + عمالة + معدات قابلة للتعديل",
+  "افتراضات التكلفة الغير المباشرة",
+  "سعر الوحدة النهائي بالتفصيل",
+  "تصدير التحليل وحفظه في الحساب",
+];
+const QS_FEATURES_EN = [
+  "First Principle cost analysis",
+  "All 18 CSI divisions (300+ items)",
+  "Editable materials, labour & plant",
+  "Indirect cost assumptions",
+  "Detailed final unit rate",
+  "Export & save to account",
+];
+const QS_PRICES = { sa: { amt: "200", cur: "SAR" }, eg: { amt: "2,800", cur: "EGP" }, ae: { amt: "200", cur: "AED" } };
+
+function QSPremiumStatusCard({ uid, language, onGoToPricing }) {
+  const isAr = language !== "en";
+  const [sub, setSub] = useState(undefined);
+
+  useEffect(() => {
+    if (!uid) { setSub(null); return; }
+    let active = true; let unsubFn = null;
+    const t = setTimeout(() => {
+      if (!active) return;
+      unsubFn = listenQSPremiumStatus(uid, (d) => { if (active) setSub(d); });
+    }, 120);
+    return () => { active = false; clearTimeout(t); unsubFn?.(); };
+  }, [uid]);
+
+  const status   = sub?.status || null;
+  const isActive = status === "active";
+  const isPending= status === "pending";
+  const isRejected = status === "rejected";
+  const isTrial  = isActive && sub?.trialEndsAt
+    ? (typeof sub.trialEndsAt.toDate === "function" ? sub.trialEndsAt.toDate() : new Date(sub.trialEndsAt)) > Date.now()
+    : false;
+  const daysLeft  = isTrial ? daysBetween(sub?.trialEndsAt) : 0;
+  const itemsUsed = (sub?.trialItemsUsed || []).length;
+
+  const priceInfo = QS_PRICES[sub?.country] || QS_PRICES.sa;
+  const features  = isAr ? QS_FEATURES_AR : QS_FEATURES_EN;
+
+  // ── colour theme ──
+  // active → green (same as Taseera Pro)
+  // pending → amber
+  // rejected / deactivated / none → red
+  const theme = isActive
+    ? {
+        outer:    "border border-emerald-300/60 shadow-[0_0_0_1px_rgba(16,185,129,0.18),0_14px_40px_rgba(16,185,129,0.22)]",
+        hero:     "bg-gradient-to-br from-[#0c503f] via-[#0e6b52] to-[#148060]",
+        badge:    "bg-emerald-500 shadow-[0_0_18px_rgba(16,185,129,0.45)]",
+        badgeTxt: isActive && !isTrial ? (isAr ? "مفعّل" : "Active") : (isAr ? `تجربة · ${daysLeft}ي` : `Trial · ${daysLeft}d`),
+        icon:     "bg-emerald-200/20 ring-1 ring-emerald-200/30",
+        iconEmoji:"✅",
+        priceClr: "text-emerald-200",
+        feat:     "border-emerald-200/10 bg-gradient-to-b from-[#0d5d49] to-[#11765b]",
+        featDot:  "bg-emerald-200/20 text-emerald-100",
+        note:     "border-emerald-200/10 bg-[#11765b]/85",
+        cta:      "border-emerald-200/10 bg-[#11765b]",
+      }
+    : isPending
+    ? {
+        outer:    "border border-amber-400/40 shadow-[0_0_0_1px_rgba(251,191,36,0.15),0_14px_40px_rgba(180,120,0,0.2)]",
+        hero:     "bg-gradient-to-br from-[#4a2e00] via-[#5c3a00] to-[#6b4500]",
+        badge:    "bg-amber-500",
+        badgeTxt: isAr ? "قيد المراجعة" : "Under Review",
+        icon:     "bg-amber-400/20",
+        iconEmoji:"⏳",
+        priceClr: "text-amber-300",
+        feat:     "border-amber-400/10 bg-gradient-to-b from-[#5c3a00] to-[#6b4500]",
+        featDot:  "bg-amber-400/25 text-amber-200",
+        note:     "border-amber-400/10 bg-[#5c3a00]/80",
+        cta:      "border-amber-400/10 bg-[#5c3a00]",
+      }
+    : {
+        // none / rejected / deactivated → red
+        outer:    "shadow-[0_12px_40px_rgba(80,0,0,0.3)]",
+        hero:     "bg-gradient-to-br from-[#4a0f0f] via-[#5c1414] to-[#6b1a1a]",
+        badge:    isRejected ? "bg-rose-700" : "bg-[#c0392b]",
+        badgeTxt: isRejected ? (isAr ? "مرفوض" : "Rejected") : status === "deactivated" ? (isAr ? "موقوف" : "Deactivated") : (isAr ? "باقة جديدة" : "New Package"),
+        icon:     "bg-red-400/20",
+        iconEmoji: isRejected ? "✕" : status === "deactivated" ? "⊘" : "🏆",
+        priceClr: "text-red-300",
+        feat:     "border-red-300/10 bg-gradient-to-b from-[#5c1414] to-[#6b1a1a]",
+        featDot:  "bg-red-400/25 text-red-200",
+        note:     "border-red-300/10 bg-[#5c1414]/85",
+        cta:      "border-red-300/10 bg-[#5c1414]",
+      };
+
+  if (sub === undefined) {
+    return (
+      <div className="flex items-center justify-center gap-2 rounded-3xl bg-slate-100 py-6 text-slate-400 text-[12px]" style={{ fontFamily: AR }}>
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#d4a843] border-t-transparent" />
+        {isAr ? "جاري التحميل..." : "Loading..."}
+      </div>
+    );
+  }
+
+  return (
+    <div className={`overflow-hidden rounded-3xl ${theme.outer}`}>
+
+      {/* ── Hero ── */}
+      <div className={`relative px-5 pt-6 pb-5 ${theme.hero}`}>
+        {/* Badge */}
+        <div
+          className={`absolute top-4 rounded-full px-3 py-1 text-[9px] font-bold text-white shadow-lg ${theme.badge}`}
+          style={{ left: "1rem" }}
+        >
+          {theme.badgeTxt}
+        </div>
+
+        <div className="text-center">
+          <div className={`mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl text-3xl shadow-inner ${theme.icon}`}>
+            {theme.iconEmoji}
+          </div>
+
+          <p className="text-[17px] font-bold text-white">QS Premium Package</p>
+          <p className="text-[11px] text-white/50 mt-0.5">باقة التسعير الاحترافية</p>
+
+          {/* Status line */}
+          <p className="mt-1.5 text-[11px] text-white/60 leading-relaxed">
+            {isActive && !isTrial && (isAr ? "وصول كامل غير محدود" : "Full unlimited access")}
+            {isActive && isTrial  && (isAr ? `فترة التجربة · ${daysLeft} أيام · ${itemsUsed}/10 بنود` : `Trial · ${daysLeft} days · ${itemsUsed}/10 items`)}
+            {isPending && (isAr ? "في انتظار موافقة الإدارة (24–48 ساعة)" : "Awaiting admin approval (24–48h)")}
+            {isRejected && (isAr ? (sub?.rejectionReason || "تم رفض الطلب") : (sub?.rejectionReason || "Request rejected"))}
+            {status === "deactivated" && (isAr ? "تم إيقاف الباقة من الإدارة" : "Deactivated by admin")}
+            {!status && (isAr ? "اشترك للوصول لتحليل تكاليف First Principle" : "Subscribe for First Principle cost analysis")}
+          </p>
+
+          {/* Price */}
+          <div className="mt-5 flex items-baseline justify-center gap-1">
+            <span className={`text-[40px] font-bold leading-none ${theme.priceClr}`}>
+              {isActive && sub?.price ? sub.price : priceInfo.amt}
+            </span>
+            <div className="flex flex-col items-start">
+              <span className="text-[14px] font-bold text-white/80">
+                {isActive && sub?.currency ? sub.currency : priceInfo.cur}
+              </span>
+              <span className="text-[10px] text-white/40">{isAr ? "دفعة واحدة" : "one-time"}</span>
+            </div>
+          </div>
+
+          {/* Order ID if exists */}
+          {sub?.orderId && (
+            <p className="mt-2 text-[10px] text-white/30 font-mono"># {sub.orderId}</p>
+          )}
+        </div>
+      </div>
+
+      {/* ── Features ── */}
+      <div className={`border-t px-5 py-4 ${theme.feat}`}>
+        <div className="space-y-2.5">
+          {features.map((f, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${theme.featDot}`}>✓</span>
+              <p className="text-[11px] text-white/75">{f}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Refund notice (during trial) ── */}
+      {isActive && isTrial && (
+        <div className={`border-t px-5 py-3 ${theme.note}`}>
+          <p className="text-[10px] text-white/50 leading-relaxed">
+            {isAr
+              ? `يمكنك طلب استرداد المبلغ خلال ${daysLeft} أيام. سيُخصم 5 دولار رسوم إدارية.`
+              : `You can request a refund within ${daysLeft} days. $5 admin fee applies.`}
+          </p>
+        </div>
+      )}
+
+      {/* Refund request status */}
+      {sub?.refundRequest && (
+        <div className={`border-t px-5 py-3 ${theme.note}`}>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] text-white/60">{isAr ? "طلب استرداد:" : "Refund:"} {sub.refundRequest.reason}</p>
+            <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${
+              sub.refundRequest.status === "approved" ? "bg-emerald-400/20 text-emerald-200" :
+              sub.refundRequest.status === "rejected" ? "bg-rose-400/20 text-rose-200" :
+              "bg-amber-400/20 text-amber-200"
+            }`}>
+              {sub.refundRequest.status === "approved" ? (isAr?"موافق":"Approved") :
+               sub.refundRequest.status === "rejected" ? (isAr?"مرفوض":"Rejected") :
+               (isAr?"قيد المراجعة":"Reviewing")}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ── CTA ── */}
+      <div className={`border-t px-5 pb-5 pt-4 ${theme.cta}`}>
+        {isActive ? (
+          <button
+            type="button"
+            onClick={onGoToPricing}
+            className="w-full rounded-2xl bg-emerald-500 py-3.5 text-[13px] font-bold text-white shadow-[0_0_0_1px_rgba(167,243,208,0.28),0_8px_24px_rgba(16,185,129,0.35)] transition hover:bg-emerald-400 active:scale-[0.98]"
+          >
+            {isAr ? "فتح تسعير بالموارد ←" : "Open Resource Pricing ←"}
+          </button>
+        ) : isPending ? (
+          <div className="flex items-center justify-center gap-2 py-2 text-amber-200 text-[12px]" style={{ fontFamily: AR }}>
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-amber-300 border-t-transparent" />
+            {isAr ? "في انتظار موافقة الإدارة..." : "Awaiting admin approval..."}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onGoToPricing}
+            className="w-full rounded-2xl bg-[#c0392b] py-3.5 text-[13px] font-bold text-white shadow-[0_4px_16px_rgba(192,57,43,0.45)] transition hover:bg-[#a93226] active:scale-[0.98]"
+          >
+            {isRejected || status === "deactivated"
+              ? (isAr ? "إعادة طلب الاشتراك" : "Re-apply")
+              : (isAr ? "اشترك في QS Premium" : "Subscribe to QS Premium")}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function SubscriptionPanel({
   language = "ar",
   authMode,
@@ -135,6 +372,7 @@ export default function SubscriptionPanel({
   isSubscribed = false,
   onOpenAuthScreen,
   onShowStatus,
+  onGoToPricing,
 }) {
   const copy = getSubscriptionCopy(language);
   const isAr = language === "ar";
@@ -308,6 +546,7 @@ export default function SubscriptionPanel({
               {subscriptionActive ? "✅" : "💎"}
             </div>
             <p className="text-[17px] font-bold text-white">{copy.subscriptionTitle}</p>
+            <p className="text-[11px] text-white/50 mt-0.5">باقة بنود المقايسات الكاملة</p>
             <p className="mt-1.5 text-[11px] text-white/60 leading-relaxed">
               {subscriptionActive ? copy.subscriptionActive : copy.subscriptionHint}
             </p>
@@ -458,6 +697,13 @@ export default function SubscriptionPanel({
           </div>
         </div>
       )}
+
+      {/* ── QS Premium Package status ── */}
+      <QSPremiumStatusCard
+        uid={sessionMeta?.uid}
+        language={language}
+        onGoToPricing={onGoToPricing}
+      />
 
       {/* My Requests Board */}
       <div className="overflow-hidden rounded-2xl border border-[#e8dcc8] bg-white shadow-[0_2px_12px_rgba(0,0,0,0.06)]">

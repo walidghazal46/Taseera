@@ -779,7 +779,7 @@ const TABS = [
 export default function SettingsPanel({
   settings, authMode, onLogout, onUpdateSetting, onSettingsAction,
   systemBridge, savedAnalyses, rfqRequests, navigationBridge,
-  onOpenAuthScreen, sessionMeta, companies, suppliers, onShowStatus,
+  onOpenAuthScreen, sessionMeta, companies, suppliers, onShowStatus, onNavigate,
 }) {
   const copy = getSettingsCopy(settings.language);
   const isGuest = authMode === "guest";
@@ -854,6 +854,7 @@ export default function SettingsPanel({
           isSubscribed={isSubscribed}
           onOpenAuthScreen={onOpenAuthScreen}
           onShowStatus={onShowStatus}
+          onGoToPricing={() => onNavigate?.("pricing")}
         />
       ) : (
         <AccountTab

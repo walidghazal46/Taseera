@@ -135,6 +135,24 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /qsPremiumSubscriptions/{userId} {
+      allow read: if isSelf(userId) || isAdmin();
+      allow create: if isSelf(userId) &&
+        request.resource.data.userId == authUid() &&
+        request.resource.data.status == "pending";
+      allow update: if isSelf(userId) &&
+        request.resource.data.userId == resource.data.userId &&
+        (
+          request.resource.data.status == resource.data.status ||
+          (
+            resource.data.status in ["rejected", "deactivated"] &&
+            request.resource.data.status == "pending"
+          )
+        )
+        || isAdmin() && hasPermission("approvePayments");
+      allow delete: if isSuperAdmin() || (isAdmin() && hasPermission("approvePayments"));
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
