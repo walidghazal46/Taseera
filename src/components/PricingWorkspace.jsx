@@ -1,8 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from 'xlsx';
+import AdSenseUnit from "./AdSenseUnit";
+import CandyWorkspace from "./CandyWorkspace";
 import { SaveIcon, TagIcon, BuildingsIcon, PricingIcon, ChevronLeftIcon, ArrowRightIcon, ShareIcon, PrinterIcon, FileIcon } from "./icons";
-import { CSI_DIVISIONS, COUNTRIES, getDefaultResources, AREA_PRICING_BASE, CURRENCY_INFO } from "../data/csiData";
+import { CSI_DIVISIONS, COUNTRIES, CURRENCY_INFO, getDefaultResources, AREA_PRICING_BASE } from "../data/csiData";
 import usePersistentState from "../hooks/usePersistentState";
+import useAdminSession from "../hooks/useAdminSession";
+import { AD_SLOT_IDS, DEFAULT_AD_BANNER, incrementUsageCounter, listenAdBanner, saveAdBanner } from "../services/subscriptionApi";
+import { SUPER_ADMIN_EMAIL } from "../constants/admin";
+import SubscriptionPanel from "./SubscriptionPanel";
+import QSPremiumGate from "./QSPremiumGate";
+import ScreenProtection from "./ScreenProtection";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
 const MONO = "'IBM Plex Mono',monospace";
@@ -29,6 +37,10 @@ function useToast() {
     timerRef.current = setTimeout(() => setVisible(false), 2500);
   }, []);
   return { msg, visible, show };
+}
+
+function getCurrencySymbol(countryCode) {
+  return COUNTRIES[countryCode]?.currency || CURRENCY_INFO[countryCode]?.symbol || CURRENCY_INFO.sa.symbol;
 }
 
 function Flag({ code, mini = false }) {
@@ -112,57 +124,337 @@ function CountryModal({ onConfirm, current }) {
 }
 
 // --- Mode Selection Screen ---
-function ModeSelection({ onSelect }) {
+/* ── Decorative SVG backgrounds ───────────────────────────────────────────── */
+function BlueprintBg() {
   return (
-    <div className="flex flex-col gap-3 py-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="mb-1 px-2">
-        <div className="inline-flex rounded-2xl bg-[#082555] px-4 py-3 shadow-lg shadow-[#082555]/15">
-          <div>
-            <h2 className="text-[18px] font-bold text-white" style={{ fontFamily: AR }}>مرحباً بك في محرك التسعير</h2>
-            <p className="mt-1 text-[13px] font-medium text-[#E2D8C4]" style={{ fontFamily: AR }}>اختر طريقة التسعير المناسبة لاحتياجك</p>
+    <svg className="absolute inset-0 h-full w-full" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <pattern id="bp-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.5"/>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#bp-grid)" />
+      {/* floor plan lines */}
+      <g stroke="rgba(212,168,67,0.18)" strokeWidth="1.2" fill="none">
+        <rect x="38%" y="12%" width="48%" height="76%" rx="2"/>
+        <line x1="38%" y1="45%" x2="86%" y2="45%"/>
+        <line x1="62%" y1="12%" x2="62%" y2="88%"/>
+        <rect x="43%" y="17%" width="17%" height="25%" rx="1"/>
+        <rect x="65%" y="17%" width="17%" height="25%" rx="1"/>
+        <rect x="43%" y="52%" width="38%" height="30%" rx="1"/>
+        <line x1="51%" y1="45%" x2="51%" y2="12%"/>
+        {/* dimension arrows */}
+        <line x1="38%" y1="96%" x2="86%" y2="96%"/>
+        <line x1="31%" y1="12%" x2="31%" y2="88%"/>
+        {/* circles */}
+        <circle cx="41%" cy="11%" r="5" opacity="0.5"/>
+        <circle cx="87%" cy="11%" r="5" opacity="0.5"/>
+      </g>
+      {/* dim text stubs */}
+      <g fill="rgba(212,168,67,0.22)" fontSize="7" fontFamily="monospace">
+        <text x="55%" y="99%">6000</text>
+        <text x="27%" y="52%">4500</text>
+        <text x="55%" y="94%">3000</text>
+        <text x="55%" y="75%">5000</text>
+      </g>
+    </svg>
+  );
+}
+
+function BuildingBg() {
+  return (
+    <svg className="absolute inset-0 h-full w-full" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+      <g stroke="rgba(15,36,68,0.18)" strokeWidth="1.4" fill="none">
+        {/* main building body */}
+        <rect x="22%" y="18%" width="52%" height="68%" rx="2"/>
+        {/* floors */}
+        {[32,46,60,74].map(y => <line key={y} x1="22%" y1={`${y}%`} x2="74%" y2={`${y}%`}/>)}
+        {/* columns */}
+        {[35,48,61].map(x => <line key={x} x1={`${x}%`} y1="18%" x2={`${x}%`} y2="86%"/>)}
+        {/* windows */}
+        {[20,34,48,62].map(y =>
+          [25,39,53,65].map(x =>
+            <rect key={`${x}-${y}`} x={`${x}%`} y={`${y}%`} width="8%" height="9%" rx="1" fill="rgba(15,36,68,0.08)"/>
+          )
+        )}
+        {/* entrance */}
+        <rect x="43%" y="72%" width="10%" height="14%" rx="1" fill="rgba(15,36,68,0.12)"/>
+        {/* roof line */}
+        <polyline points="18%,18% 48%,8% 78%,18%"/>
+        {/* ground */}
+        <line x1="15%" y1="86%" x2="85%" y2="86%"/>
+      </g>
+    </svg>
+  );
+}
+
+function IsometricBg() {
+  return (
+    <svg className="absolute inset-0 h-full w-full" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
+      <g stroke="rgba(99,102,241,0.22)" strokeWidth="1.3" fill="none">
+        {/* isometric box top */}
+        <polygon points="48%,10% 78%,25% 48%,40% 18%,25%" fill="rgba(99,102,241,0.07)"/>
+        {/* left face */}
+        <polygon points="18%,25% 48%,40% 48%,78% 18%,63%" fill="rgba(99,102,241,0.05)"/>
+        {/* right face */}
+        <polygon points="78%,25% 48%,40% 48%,78% 78%,63%" fill="rgba(99,102,241,0.09)"/>
+        {/* inner grid lines on top */}
+        <line x1="33%"  y1="17.5%" x2="63%"  y2="32.5%"/>
+        <line x1="33%"  y1="25%"   x2="48%"  y2="17.5%"/>
+        <line x1="63%"  y1="25%"   x2="78%"  y2="32.5%"/>
+        {/* vertical edges */}
+        <line x1="48%"  y1="40%"   x2="48%"  y2="78%"/>
+        {/* small cube on top */}
+        <polygon points="48%,2% 60%,8% 48%,14% 36%,8%" fill="rgba(99,102,241,0.1)" stroke="rgba(99,102,241,0.3)"/>
+        <line x1="48%" y1="14%" x2="48%" y2="26%"/>
+        <line x1="36%" y1="8%"  x2="36%" y2="20%"/>
+        <line x1="60%" y1="8%"  x2="60%" y2="20%"/>
+        {/* floor grid */}
+        <line x1="15%" y1="80%" x2="85%" y2="80%" stroke="rgba(99,102,241,0.15)"/>
+        <ellipse cx="48%" cy="80%" rx="33%" ry="6%" stroke="rgba(99,102,241,0.1)"/>
+      </g>
+    </svg>
+  );
+}
+
+// ─── GUEST LOGIN MODAL (reusable) ──────────────────────────────────────────────
+function GuestLoginModal({ open, onClose, onOpenAuthScreen, subtitle }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-4 pb-8"
+      style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="w-full max-w-sm rounded-[24px] overflow-hidden animate-in slide-in-from-bottom-4 duration-300"
+        style={{
+          background: "linear-gradient(160deg,#1a0505 0%,#2d0a0a 100%)",
+          border: "1.5px solid rgba(220,38,38,0.5)",
+          boxShadow: "0 0 40px rgba(220,38,38,0.3), 0 20px 60px rgba(0,0,0,0.5)",
+        }}>
+        {/* Header */}
+        <div className="px-5 pt-5 pb-4 text-center" style={{ fontFamily: AR, direction: "rtl" }}>
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full"
+            style={{ background: "rgba(220,38,38,0.15)", border: "1.5px solid rgba(220,38,38,0.35)" }}>
+            <span className="text-2xl">🔐</span>
           </div>
+          <h3 className="text-[17px] font-black text-white mb-1">يجب تسجيل الدخول أولاً</h3>
+          <p className="text-[12px] text-white/55 leading-relaxed">
+            {subtitle || "سجّل دخولك أو أنشئ حساباً مجانياً للمتابعة"}
+          </p>
+        </div>
+        {/* Buttons */}
+        <div className="px-5 pb-5 flex flex-col gap-2.5" style={{ fontFamily: AR, direction: "rtl" }}>
+          <button type="button"
+            onClick={() => { onClose(); onOpenAuthScreen?.("login"); }}
+            className="w-full rounded-2xl py-3 text-[14px] font-black text-white transition-all active:scale-[0.97]"
+            style={{ background: "linear-gradient(130deg,#dc2626,#ef4444)", boxShadow: "0 0 20px rgba(220,38,38,0.4), 0 4px 16px rgba(220,38,38,0.3)" }}>
+            تسجيل الدخول
+          </button>
+          <button type="button"
+            onClick={() => { onClose(); onOpenAuthScreen?.("register"); }}
+            className="w-full rounded-2xl py-3 text-[14px] font-black transition-all active:scale-[0.97]"
+            style={{ background: "rgba(220,38,38,0.12)", border: "1.5px solid rgba(220,38,38,0.35)", color: "#fca5a5" }}>
+            إنشاء حساب جديد
+          </button>
+          <button type="button" onClick={onClose}
+            className="w-full rounded-2xl py-2.5 text-[12px] font-bold text-white/40 transition-all active:scale-[0.97]">
+            إلغاء
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── GUEST AREA WRAPPER ────────────────────────────────────────────────────────
+function GuestAreaWrapper({ isGuest, onOpenAuthScreen, children }) {
+  const [showPrompt, setShowPrompt] = useState(false);
+  if (!isGuest) return <>{children}</>;
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="relative select-none">
+        <div className="pointer-events-none opacity-80">{children}</div>
+        <div className="absolute inset-0 z-10 cursor-pointer" onClick={() => setShowPrompt(true)} />
+      </div>
+      <GuestLoginModal open={showPrompt} onClose={() => setShowPrompt(false)}
+        onOpenAuthScreen={onOpenAuthScreen}
+        subtitle="سجّل دخولك أو أنشئ حساباً مجانياً للمتابعة واستخدام تسعير المباني" />
+    </div>
+  );
+}
+
+// ─── TASEERA PRO GATE ──────────────────────────────────────────────────────────
+const TPRO_PRICES = {
+  sa: { label: "٢٠٠ ريال", labelEn: "200 SAR", flag: "🇸🇦" },
+  eg: { label: "٢,٨٠٠ جنيه", labelEn: "2,800 EGP", flag: "🇪🇬" },
+  ae: { label: "٢٠٠ درهم", labelEn: "200 AED", flag: "🇦🇪" },
+};
+const TPRO_FEATURES = [
+  "تسعير تكلفة بناء كامل بدقة",
+  "حساب المساحة × الأدوار × التشطيب",
+  "تفاصيل تكلفة كل تخصص (هيكل، ميكانيكا، كهرباء...)",
+  "مقارنة سيناريوهات متعددة",
+  "تصدير وحفظ التسعير",
+];
+
+function TaseeraProGate({ country, isGuest, onOpenSubscription, onOpenAuthScreen }) {
+  const priceInfo = TPRO_PRICES[(country || "sa").toLowerCase()] || TPRO_PRICES.sa;
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ fontFamily: AR, direction: "rtl" }}>
+      {/* Hero */}
+      <div className="rounded-[24px] overflow-hidden mb-4"
+        style={{ background: "linear-gradient(135deg,#c8941a 0%,#d4a843 50%,#e8c060 100%)" }}>
+        <div className="px-5 pt-6 pb-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ring-1 ring-[#0d2545]/20"
+              style={{ background: "linear-gradient(145deg,#b8821a,#8a5e10)" }}>
+              <BuildingsIcon className="h-7 w-7 text-[#f5d060]" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-[#0d2545]/60 uppercase tracking-widest">Taseera Pro Package</p>
+              <h2 className="text-[20px] font-black text-[#0d2545] leading-tight">باقة بنود المقايسات الكاملة</h2>
+            </div>
+          </div>
+          {/* Price pill */}
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#0d2545]/20 bg-[#0d2545]/10 px-4 py-2">
+            <span className="text-[22px] font-black text-[#0d2545]">{priceInfo.label}</span>
+            <span className="text-[12px] text-[#0d2545]/60">مرة واحدة</span>
+          </div>
+        </div>
+        {/* Features */}
+        <div className="bg-[#0d2545]/8 px-5 py-4">
+          <ul className="space-y-2">
+            {TPRO_FEATURES.map((f, i) => (
+              <li key={i} className="flex items-center gap-2.5 text-[13px] font-bold text-[#0d2545]">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#0d2545] text-[#d4a843] text-[10px]">✓</span>
+                {f}
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
 
-      <button onClick={() => onSelect("items")}
-        className="group relative overflow-hidden rounded-3xl bg-[#162e52] border-2 border-white/5 p-6 text-right transition-all hover:border-[#d4a843]/50 hover:shadow-xl active:scale-[0.98]">
-        <div className="absolute top-0 left-0 w-2 h-full bg-[#d4a843] opacity-0 group-hover:opacity-100 transition-opacity" />
-        <div className="flex items-start gap-5">
-          <div className="h-14 w-14 rounded-2xl bg-[#0d2545] text-[#d4a843] flex items-center justify-center shrink-0 shadow-inner">
-             <PricingIcon className="h-8 w-8" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-[17px] font-bold text-white mb-2" style={{ fontFamily: AR }}>بنود أعمال المقاولات</h3>
-            <p className="text-[13px] text-gray-400 leading-relaxed" style={{ fontFamily: AR }}>
-              تحليل مفصل لكل بند (مواد، عمالة، معدات) بناءً على أكواد CSI MasterFormat. مثالي للمقاولين والمهندسين.
-            </p>
-          </div>
-          <ChevronLeftIcon className="h-6 w-6 text-white/20 group-hover:text-[#d4a843] self-center transition-colors" />
-        </div>
-      </button>
+      {/* CTA */}
+      {!isGuest ? (
+        <button type="button" onClick={onOpenSubscription}
+          className="w-full rounded-2xl py-3.5 text-[15px] font-black text-[#082555] shadow-lg active:scale-[0.98] transition-all"
+          style={{ background: "linear-gradient(130deg,#d4a843,#e8c060)" }}>
+          طلب الاشتراك في الباقة ←
+        </button>
+      ) : (
+        <button type="button" onClick={() => onOpenAuthScreen?.()}
+          className="w-full rounded-2xl py-3.5 text-[15px] font-black text-white shadow-lg active:scale-[0.98] transition-all"
+          style={{ background: "linear-gradient(130deg,#dc2626,#ef4444)", boxShadow: "0 0 20px rgba(220,38,38,0.35)" }}>
+          🔐 سجّل دخولك أولاً لطلب الاشتراك
+        </button>
+      )}
 
-      <button onClick={() => onSelect("area")}
-        className="group relative overflow-hidden rounded-3xl bg-[#d4a843] p-6 text-right transition-all hover:shadow-2xl hover:shadow-[#d4a843]/20 active:scale-[0.98]">
-        <div className="absolute top-0 left-0 w-2 h-full bg-[#0d2545]/20" />
-        <div className="flex items-start gap-5">
-          <div className="h-14 w-14 rounded-2xl bg-[#0d2545] text-[#d4a843] flex items-center justify-center shrink-0 shadow-lg">
-             <BuildingsIcon className="h-8 w-8" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-[17px] font-bold text-[#0d2545] mb-2" style={{ fontFamily: AR }}>تسعير مبني</h3>
-            <p className="text-[13px] text-[#0d2545]/70 leading-relaxed font-bold" style={{ fontFamily: AR }}>
-              حساب تقديري سريع لتكلفة بناء كامل بناءً على المساحة، عدد الأدوار، ومستوى التشطيب. مثالي للملاك والمستثمرين.
-            </p>
-          </div>
-          <ChevronLeftIcon className="h-6 w-6 text-[#0d2545]/30 group-hover:text-[#0d2545] self-center transition-colors" />
-        </div>
-      </button>
+      <p className="mt-3 text-center text-[11px] text-slate-400">
+        ♻ استرداد جزئي خلال فترة التجربة المجانية
+      </p>
+    </div>
+  );
+}
 
-      <div className="mt-4 rounded-2xl bg-white/5 border-2 border-dashed border-white/10 p-5 text-center">
-         <p className="text-[12px] font-bold text-gray-500 leading-relaxed" style={{ fontFamily: AR }}>
-           جميع الحسابات تقديرية وتعتمد على متوسطات السوق الحالية في الدولة المختارة.
-         </p>
+function ModeSelection({ onSelect, areaLocked = false, areaMessage = "", onOpenSubscription }) {
+  return (
+    <div className="flex flex-col gap-4 py-2 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ fontFamily: AR }}>
+
+      {/* Header */}
+      <div className="px-1">
+        <h2 className="text-[18px] font-bold text-[#0d2545]" style={{ fontFamily: AR }}>مرحباً بك في محرك التسعير</h2>
+        <p className="mt-0.5 text-[13px] text-slate-500" style={{ fontFamily: AR }}>اختر طريقة التسعير المناسبة لاحتياجك</p>
       </div>
+
+      {/* ── Card 1: دليل بنود الأعمال (navy) ── */}
+      <button
+        onClick={() => onSelect("items")}
+        className="group relative overflow-hidden rounded-[22px] active:scale-[0.98] transition-transform duration-150"
+        style={{ background: "linear-gradient(130deg,#0d2545 0%,#162e52 60%,#1a3870 100%)", minHeight: 120 }}
+      >
+        <BlueprintBg />
+        <div className="relative flex items-center gap-4 px-5 py-6">
+          {/* Arrow circle */}
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20 transition-all group-hover:bg-[#d4a843]/20 group-hover:ring-[#d4a843]/50">
+            <ChevronLeftIcon className="h-5 w-5 text-white/60 group-hover:text-[#d4a843] transition-colors" />
+          </div>
+          {/* Text */}
+          <div className="flex-1 text-right">
+            <h3 className="text-[18px] font-bold text-white leading-tight">دليل بنود الأعمال</h3>
+            <p className="mt-1.5 text-[15px] leading-relaxed text-white">
+              تحليل مفصل لكل بند (مواد، عمالة، معدات) بناءً على أكواد CSI MasterFormat.<br/>مثالي للمقاولين والمهندسين.
+            </p>
+          </div>
+          {/* Icon box */}
+          <div className="flex h-[62px] w-[62px] shrink-0 items-center justify-center rounded-2xl ring-1 ring-[#d4a843]/40"
+            style={{ background: "linear-gradient(145deg,#1e3d72,#0d2545)", boxShadow: "inset 0 1px 0 rgba(212,168,67,0.2), 0 4px 16px rgba(0,0,0,0.3)" }}>
+            <PricingIcon className="h-8 w-8 text-[#d4a843]" />
+          </div>
+        </div>
+      </button>
+
+      {/* ── Card 2: تسعير مبني (gold) ── */}
+      <button
+        onClick={() => onSelect("area")}
+        className="group relative overflow-hidden rounded-[22px] active:scale-[0.98] transition-transform duration-150"
+        style={{ background: "linear-gradient(130deg,#c8941a 0%,#d4a843 45%,#e8c060 100%)", minHeight: 120 }}
+      >
+        <BuildingBg />
+        <div className="relative flex items-center gap-4 px-5 py-6">
+          {/* Arrow circle */}
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full ring-1 ring-[#0d2545]/20 transition-all group-hover:ring-[#0d2545]/40"
+            style={{ background: "rgba(13,37,69,0.15)" }}>
+            <ChevronLeftIcon className="h-5 w-5 text-[#0d2545]/70 group-hover:text-[#0d2545] transition-colors" />
+          </div>
+          {/* Text */}
+          <div className="flex-1 text-right">
+            <h3 className="text-[20px] font-black text-[#0d2545] leading-tight">تسعير مبني</h3>
+            <p className="mt-1.5 text-[15px] leading-relaxed text-white">
+              حساب تقديري سريع لتكلفة بناء كامل بناءً على المساحة، عدد الأدوار،<br/>ومستوى التشطيب. مثالي للملاك والمستثمرين.
+            </p>
+          </div>
+          {/* Icon box */}
+          <div className="flex h-[62px] w-[62px] shrink-0 items-center justify-center rounded-2xl ring-1 ring-[#0d2545]/20"
+            style={{ background: "linear-gradient(145deg,#b8821a,#8a5e10)", boxShadow: "inset 0 1px 0 rgba(255,220,100,0.3), 0 4px 16px rgba(0,0,0,0.2)" }}>
+            <BuildingsIcon className="h-8 w-8 text-[#f5d060]" />
+          </div>
+        </div>
+      </button>
+
+      {/* ── Card 3: تسعير تفصيلي للبنود (purple) ── */}
+      <button
+        onClick={() => onSelect("candy")}
+        className="group relative overflow-hidden rounded-[22px] active:scale-[0.98] transition-transform duration-150"
+        style={{ background: "linear-gradient(130deg,#3730a3 0%,#4f46e5 55%,#6d28d9 100%)", minHeight: 120 }}
+      >
+        <IsometricBg />
+        <div className="relative flex items-center gap-4 px-5 py-6">
+          {/* Arrow circle */}
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full ring-1 ring-[#6366f1]/25 transition-all group-hover:bg-[#6366f1]/10 group-hover:ring-[#6366f1]/50"
+            style={{ background: "rgba(99,102,241,0.08)" }}>
+            <ChevronLeftIcon className="h-5 w-5 text-[#6366f1]/50 group-hover:text-[#6366f1] transition-colors" />
+          </div>
+          {/* Text — same structure as cards 1 & 2 so title aligns identically */}
+          <div className="flex-1 text-right">
+            <h3 className="text-[18px] font-black text-white leading-tight">تسعير تفصيلي للبنود</h3>
+            <span className="inline-flex mt-1 rounded-full px-2.5 py-0.5 text-[9px] font-bold text-white"
+              style={{ background: "#4f46e5", fontFamily: "'IBM Plex Mono',monospace", letterSpacing: "0.05em" }}>
+              RESOURCE-BASED
+            </span>
+            <p className="mt-1 text-[15px] leading-relaxed text-white">
+              بناء سعر الوحدة من الموارد — مواد + عمالة + معدات + أعباء + ربح.<br/>أسلوب First Principle المتقدم لتحليل المقايسات.
+            </p>
+          </div>
+          {/* Icon box */}
+          <div className="flex h-[62px] w-[62px] shrink-0 items-center justify-center rounded-2xl text-[28px] ring-1 ring-[#6366f1]/30"
+            style={{ background: "linear-gradient(145deg,#4f46e5,#7c3aed)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 16px rgba(79,70,229,0.35)" }}>
+            🧮
+          </div>
+        </div>
+      </button>
+
+      <p className="text-center text-[11px] text-slate-400 mt-1" style={{ fontFamily: AR }}>
+        جميع الحسابات تقديرية وتعتمد على متوسطات السوق الحالية في الدولة المختارة.
+      </p>
     </div>
   );
 }
@@ -338,74 +630,42 @@ function BuildingEstimatorGraphic({ country, area, floors, finish, type, scope }
   const scopeLabel = SCOPES.find((item) => item.id === scope)?.ar || "تسعير المبنى";
   const finishLabel = FINISH_LEVELS.find((item) => item.id === finish)?.ar || "متوسط";
   const typeLabel = BUILDING_TYPES.find((item) => item.id === type)?.ar || "سكني";
-  const graphicFloors = Math.min(6, Math.max(2, numericFloors));
-  const windows = Array.from({ length: graphicFloors * 3 }, (_, index) => index);
-
   return (
-    <div className="relative overflow-hidden rounded-[28px] bg-[#082555] p-5 shadow-2xl border border-[#C9A84C]/20">
+    <div className="relative overflow-hidden rounded-[28px] border border-[#C9A84C]/20 bg-[#082555] p-4 shadow-2xl sm:p-5">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(201,168,76,0.18),transparent_40%)] pointer-events-none" />
       <div className="absolute inset-y-0 left-0 w-32 bg-[linear-gradient(90deg,rgba(201,168,76,0.06),transparent)] pointer-events-none" />
 
-      <div className="relative grid grid-cols-[1.15fr_0.85fr] gap-4 items-center">
-        <div className="space-y-4">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-bold text-[#C9A84C] uppercase tracking-[0.18em]">
-            <span>Building Pricing Snapshot</span>
+      <div className="relative mx-auto max-w-[720px] space-y-4 text-right">
+        <div>
+          <div className="text-[20px] font-bold leading-tight text-white sm:text-[23px]" style={{ fontFamily: AR }}>
+            {typeLabel}
           </div>
-          <div>
-            <div className="text-[23px] font-bold text-white leading-tight" style={{ fontFamily: AR }}>
-              {typeLabel}
-            </div>
-            <div className="mt-1 text-[12px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
-              {scopeLabel} · تشطيب {finishLabel}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { label: "الدور", value: `${fmtNum(numericArea)} م²` },
-              { label: "الأدوار", value: fmtNum(numericFloors) },
-              { label: "الإجمالي", value: `${fmtNum(totalArea)} م²` },
-            ].map((card) => (
-              <div key={card.label} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-center">
-                <div className="text-[9px] font-bold uppercase tracking-widest text-[#9A8A6A] mb-1">{card.label}</div>
-                <div className="text-[13px] font-bold text-white" style={{ fontFamily: MONO }}>{card.value}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="rounded-2xl border border-[#C9A84C]/20 bg-[#C9A84C]/10 px-4 py-3">
-            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#9A8A6A] mb-2">Preview Range</div>
-            <div className="flex items-end gap-2">
-              <div className="text-[26px] font-bold text-[#E8C97A] leading-none" style={{ fontFamily: MONO }}>{fmtNum(previewTotal)}</div>
-              <div className="pb-1 text-[11px] font-bold text-[#9A8A6A]">{COUNTRIES[country]?.currency}</div>
-            </div>
-            <div className="mt-2 text-[11px] font-bold text-white/70" style={{ fontFamily: AR }}>
-              سعر متر تقديري {fmtNum(previewUnit)} {COUNTRIES[country]?.currency}
-            </div>
+          <div className="mt-1 text-[11px] font-bold leading-relaxed text-[#9A8A6A] sm:text-[12px]" style={{ fontFamily: AR }}>
+            {scopeLabel} · تشطيب {finishLabel}
           </div>
         </div>
 
-        <div className="relative flex items-end justify-center min-h-[240px]">
-          <div className="absolute bottom-0 h-24 w-24 rounded-full bg-[#C9A84C]/15 blur-2xl" />
-          <div className="relative flex flex-col items-center">
-            <div className="mb-3 flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-bold text-white/75">
-              <span>{finishLabel}</span>
-              <span className="h-1 w-1 rounded-full bg-[#C9A84C]" />
-              <span>{scopeLabel}</span>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: "الدور", value: `${fmtNum(numericArea)} م²` },
+            { label: "الأدوار", value: fmtNum(numericFloors) },
+            { label: "الإجمالي", value: `${fmtNum(totalArea)} م²` },
+          ].map((card) => (
+            <div key={card.label} className="rounded-2xl border border-white/10 bg-white/5 px-2 py-2.5 text-center sm:px-3 sm:py-3">
+              <div className="mb-1 text-[8px] font-bold uppercase tracking-wide text-[#9A8A6A] sm:text-[9px]">{card.label}</div>
+              <div className="text-[11px] font-bold text-white sm:text-[13px]" style={{ fontFamily: MONO }}>{card.value}</div>
             </div>
-            <div className="relative w-[150px] rounded-t-[28px] border border-white/10 bg-[linear-gradient(180deg,#244b81_0%,#0c2241_100%)] px-4 pt-5 pb-4 shadow-[0_18px_50px_rgba(2,12,27,0.45)]">
-              <div className="absolute inset-x-4 top-3 h-[1px] bg-white/10" />
-              <div className="grid grid-cols-3 gap-2">
-                {windows.map((windowIndex) => (
-                  <div
-                    key={windowIndex}
-                    className="h-4 rounded-md border border-[#C9A84C]/20 bg-[linear-gradient(180deg,rgba(245,237,216,0.95),rgba(201,168,76,0.55))] shadow-[0_0_10px_rgba(201,168,76,0.15)]"
-                  />
-                ))}
-              </div>
-              <div className="mt-3 h-7 rounded-xl border border-white/10 bg-[#06172e]" />
-            </div>
-            <div className="mt-2 h-2 w-[180px] rounded-full bg-white/10" />
+          ))}
+        </div>
+
+        <div className="rounded-2xl border border-[#C9A84C]/20 bg-[#C9A84C]/10 px-4 py-3">
+          <div className="mb-2 text-[9px] font-bold uppercase tracking-[0.16em] text-[#9A8A6A] sm:text-[10px]">Preview Range</div>
+          <div className="flex flex-wrap items-end justify-end gap-x-2 gap-y-1">
+            <div className="text-[22px] font-bold leading-none text-[#E8C97A] sm:text-[26px]" style={{ fontFamily: MONO }}>{fmtNum(previewTotal)}</div>
+            <div className="pb-1 text-[10px] font-bold text-[#9A8A6A] sm:text-[11px]">{COUNTRIES[country]?.currency}</div>
+          </div>
+          <div className="mt-2 text-[10px] font-bold text-white/70 sm:text-[11px]" style={{ fontFamily: AR }}>
+            سعر متر تقديري {fmtNum(previewUnit)} {COUNTRIES[country]?.currency}
           </div>
         </div>
       </div>
@@ -443,7 +703,7 @@ function CostDistributionGraphic({ sections, total, currency }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {sections.map((section) => (
           <div key={section.id} className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] p-3">
             <div className="mb-2 flex items-center justify-between gap-3">
@@ -491,7 +751,7 @@ function SectionDetailGraphic({ draft, totalArea, overallShare, currency }) {
         </div>
       </div>
 
-      <div className="mb-5 grid grid-cols-3 gap-3">
+      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
         {[
           { label: "إجمالي التخصص", value: `${fmtNum(draft.sectionTotal)} ${currency}` },
           { label: "متوسط / م²", value: `${fmtNum(draft.unitPrice)} ${currency}` },
@@ -561,7 +821,7 @@ function HistoryInsightGraphic({ savedAnalyses }) {
           </div>
         </div>
 
-        <div className="mb-4 grid grid-cols-3 gap-3">
+        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
           {[
             { label: "الكل", value: savedAnalyses.length, color: "#E8C97A" },
             { label: "مباني", value: areaCount, color: "#6FCF97" },
@@ -598,9 +858,10 @@ function HistoryInsightGraphic({ savedAnalyses }) {
   );
 }
 
-function AreaScenarioCompare({ scenarios, currentScenario, currency, onAddCurrent, onRemove }) {
+function AreaScenarioCompare({ scenarios, currentScenario, suggestedScenario, currency, onAddCurrent, onRemove }) {
   const mergedScenarios = [
     ...(currentScenario ? [{ ...currentScenario, id: "__current__", live: true }] : []),
+    ...(suggestedScenario ? [{ ...suggestedScenario, id: "__suggested__", suggested: true }] : []),
     ...scenarios,
   ];
 
@@ -638,17 +899,20 @@ function AreaScenarioCompare({ scenarios, currentScenario, currency, onAddCurren
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
                   <div className="text-[13px] font-bold text-[#082555]" style={{ fontFamily: AR }}>
-                    {scenario.live ? "السيناريو الحالي" : `سيناريو ${index}`}
+                    {scenario.live ? "السيناريو الحالي" : scenario.suggested ? "سيناريو أعلى" : `سيناريو ${index}`}
                   </div>
                   <div className="mt-1 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
                     {scenario.typeLabel} · {scenario.finishLabel}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  {scenario.suggested && (
+                    <span className="rounded-full bg-[#C9A84C] px-2 py-1 text-[10px] font-bold text-[#082555]">ترقية</span>
+                  )}
                   {isBest && (
                     <span className="rounded-full bg-[#082555] px-2 py-1 text-[10px] font-bold text-[#C9A84C]">الأوفر</span>
                   )}
-                  {!scenario.live && (
+                  {!scenario.live && !scenario.suggested && (
                     <button type="button" onClick={() => onRemove(scenario.id)} className="text-[12px] font-bold text-[#9A8A6A]">
                       حذف
                     </button>
@@ -656,7 +920,7 @@ function AreaScenarioCompare({ scenarios, currentScenario, currency, onAddCurren
                 </div>
               </div>
 
-              <div className="mb-3 grid grid-cols-2 gap-3">
+              <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-white/60 bg-white px-3 py-3">
                   <div className="text-[9px] font-bold text-[#9A8A6A] uppercase">Total</div>
                   <div className="mt-1 text-[16px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>
@@ -683,7 +947,7 @@ function AreaScenarioCompare({ scenarios, currentScenario, currency, onAddCurren
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="grid grid-cols-1 gap-2 text-center sm:grid-cols-3">
                 {[
                   { label: "المسطح", value: `${fmtNum(scenario.totalArea)} م²` },
                   { label: "الأدوار", value: fmtNum(scenario.floors) },
@@ -703,7 +967,7 @@ function AreaScenarioCompare({ scenarios, currentScenario, currency, onAddCurren
   );
 }
 
-function AreaPricingForm({ country, onCalculate }) {
+function AreaPricingForm({ country, onCalculate, adBanner, canManageAds = false, onManageAds, onToggleAdVisibility, onRemoveAd }) {
   const [area, setArea] = useState(100);
   const [floors, setFloors] = useState(1);
   const [finish, setFinish] = useState("economic");
@@ -722,7 +986,7 @@ function AreaPricingForm({ country, onCalculate }) {
       />
 
       <div className="rounded-3xl bg-white border-2 border-[#E2D8C4] p-6 shadow-sm">
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <label className="text-[12px] font-bold text-[#082555] pr-1" style={{ fontFamily: AR }}>مساحة الدور (م²)</label>
             <input type="number" value={area} onChange={(e) => setArea(e.target.value)}
@@ -739,7 +1003,7 @@ function AreaPricingForm({ country, onCalculate }) {
 
         <div className="space-y-3 mb-6">
           <label className="text-[12px] font-bold text-[#082555] pr-1" style={{ fontFamily: AR }}>نوع المبنى</label>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {BUILDING_TYPES.map(t => (
               <button key={t.id} onClick={() => setType(t.id)}
                 className={`flex items-center gap-3 p-3 rounded-2xl border-2 transition-all ${type === t.id ? "border-[#C9A84C] bg-[#F5EDD8] font-bold" : "border-[#E2D8C4] bg-white text-[#9A8A6A]"}`}>
@@ -753,36 +1017,35 @@ function AreaPricingForm({ country, onCalculate }) {
         <div className="space-y-3 mb-6">
           <label className="text-[12px] font-bold text-[#082555] pr-1" style={{ fontFamily: AR }}>نطاق الأعمال</label>
           <div className="flex flex-col gap-2">
-            {SCOPES.map(s => (
+            {SCOPES.map((s) => (
               <button key={s.id} onClick={() => setScope(s.id)}
-                className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${scope === s.id ? "border-[#C9A84C] bg-[#F5EDD8] font-bold" : "border-[#E2D8C4] bg-white text-[#9A8A6A]"}`}>
-                <div className={`h-10 w-10 rounded-xl flex items-center justify-center text-xl ${scope === s.id ? "bg-[#C9A84C] text-[#082555]" : "bg-[#F7F3EC]"}`}>
-                  {s.icon}
+                className={`flex items-center gap-4 rounded-2xl border-2 p-4 text-right transition-all ${scope === s.id ? "border-[#C9A84C] bg-[#F5EDD8] font-bold" : "border-[#E2D8C4] bg-white text-[#9A8A6A]"}`}>
+                <span className="text-2xl">{s.icon}</span>
+                <div className="flex-1">
+                  <div className="text-[14px] text-[#082555]" style={{ fontFamily: AR }}>{s.ar}</div>
+                  <div className="mt-0.5 text-[10px] text-[#9A8A6A]">{s.desc}</div>
                 </div>
-                <span className="text-[14px]" style={{ fontFamily: AR }}>{s.ar}</span>
-                <div className="flex-1 text-left">
-                   <div className={`h-5 w-5 rounded-full border-2 inline-flex items-center justify-center text-[10px] ${scope === s.id ? "border-[#C9A84C] bg-[#C9A84C] text-[#082555]" : "border-[#E2D8C4]"}`}>
-                     {scope === s.id && "✓"}
-                   </div>
+                <div className={`flex h-5 w-5 items-center justify-center rounded-full border-2 text-[10px] ${scope === s.id ? "border-[#C9A84C] bg-[#C9A84C] text-[#082555]" : "border-[#E2D8C4]"}`}>
+                  {scope === s.id ? "✓" : ""}
                 </div>
               </button>
             ))}
           </div>
         </div>
 
-        <div className="space-y-3 mb-8">
+        <div className="space-y-3 mb-6">
           <label className="text-[12px] font-bold text-[#082555] pr-1" style={{ fontFamily: AR }}>مستوى التشطيب</label>
           <div className="flex flex-col gap-2">
-            {FINISH_LEVELS.map(f => (
+            {FINISH_LEVELS.map((f) => (
               <button key={f.id} onClick={() => setFinish(f.id)}
-                className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${finish === f.id ? "border-[#C9A84C] bg-[#F5EDD8] font-bold" : "border-[#E2D8C4] bg-white text-[#9A8A6A]"}`}>
+                className={`flex items-center gap-4 rounded-2xl border-2 p-4 text-right transition-all ${finish === f.id ? "border-[#C9A84C] bg-[#F5EDD8] font-bold" : "border-[#E2D8C4] bg-white text-[#9A8A6A]"}`}>
                 <span className="text-2xl">{f.icon}</span>
-                <div className="text-right flex-1">
+                <div className="flex-1">
                   <div className="text-[14px] text-[#082555]" style={{ fontFamily: AR }}>{f.ar}</div>
-                  <div className="text-[10px] text-[#9A8A6A] mt-0.5">{f.desc}</div>
+                  <div className="mt-0.5 text-[10px] text-[#9A8A6A]">{f.desc}</div>
                 </div>
-                <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center text-[10px] ${finish === f.id ? "border-[#C9A84C] bg-[#C9A84C] text-[#082555]" : "border-[#E2D8C4]"}`}>
-                  {finish === f.id && "✓"}
+                <div className={`flex h-5 w-5 items-center justify-center rounded-full border-2 text-[10px] ${finish === f.id ? "border-[#C9A84C] bg-[#C9A84C] text-[#082555]" : "border-[#E2D8C4]"}`}>
+                  {finish === f.id ? "✓" : ""}
                 </div>
               </button>
             ))}
@@ -795,11 +1058,19 @@ function AreaPricingForm({ country, onCalculate }) {
           <PricingIcon className="h-6 w-6" /> إظهار تفاصيل تسعير المبنى
         </button>
       </div>
+
+      <AnalysisAdBanner
+        adBanner={{ ...(adBanner || {}), slotId: AD_SLOT_IDS.areaFormAfterCard }}
+        canManageAds={canManageAds}
+        onManageAds={onManageAds}
+        onToggleVisibility={onToggleAdVisibility}
+        onRemove={onRemoveAd}
+      />
     </div>
   );
 }
 
-function AreaResultsView({ country, params, results, onBack, onExport, onSave, onOpenSection, scenarios, currentScenario, onAddScenario, onRemoveScenario }) {
+function AreaResultsView({ country, params, results, onBack, onExport, onSave, onOpenSection, scenarios, currentScenario, suggestedScenario, onAddScenario, onRemoveScenario, adBanner, canManageAds = false, onManageAds, onToggleAdVisibility, onRemoveAd }) {
   const c = COUNTRIES[country] || COUNTRIES.sa;
   const finishLabel = FINISH_LEVELS.find(f => f.id === params.finish)?.ar;
   const typeLabel = BUILDING_TYPES.find(t => t.id === params.type)?.ar;
@@ -834,7 +1105,7 @@ function AreaResultsView({ country, params, results, onBack, onExport, onSave, o
         </div>
         <div className="text-[14px] font-bold text-[#C9A84C]/80" style={{ fontFamily: AR }}>تكلفة تقديرية للمبنى بالكامل</div>
 
-        <div className="mt-8 pt-8 border-t border-white/10 grid grid-cols-2 gap-6">
+        <div className="mt-8 grid grid-cols-1 gap-4 border-t border-white/10 pt-8 sm:grid-cols-2 sm:gap-6">
            <div>
              <div className="text-[10px] text-[#9A8A6A] font-bold uppercase tracking-wider mb-1">Price Per m²</div>
              <div className="text-[20px] font-bold text-white" style={{ fontFamily: MONO }}>{fmtNum(results.unitPrice)} <span className="text-[12px] text-[#9A8A6A]">{c.currency}</span></div>
@@ -856,7 +1127,7 @@ function AreaResultsView({ country, params, results, onBack, onExport, onSave, o
         <h3 className="text-[16px] font-bold text-[#082555] mb-6 flex items-center gap-2" style={{ fontFamily: AR }}>
           <div className="h-2 w-2 rounded-full bg-[#C9A84C]" /> ملخص المشروع
         </h3>
-        <div className="grid grid-cols-2 gap-y-5 gap-x-4">
+        <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
           {[
             { label: 'المساحة الكلية', val: `${params.area * params.floors} م²` },
             { label: 'عدد الأدوار', val: params.floors },
@@ -874,6 +1145,7 @@ function AreaResultsView({ country, params, results, onBack, onExport, onSave, o
       <AreaScenarioCompare
         scenarios={scenarios}
         currentScenario={currentScenario}
+        suggestedScenario={suggestedScenario}
         currency={c.currency}
         onAddCurrent={onAddScenario}
         onRemove={onRemoveScenario}
@@ -927,16 +1199,110 @@ function AreaResultsView({ country, params, results, onBack, onExport, onSave, o
            </p>
          </div>
       </div>
+
+      <AnalysisAdBanner
+        adBanner={{ ...(adBanner || {}), slotId: AD_SLOT_IDS.areaResultsAfterNote }}
+        canManageAds={canManageAds}
+        onManageAds={onManageAds}
+        onToggleVisibility={onToggleAdVisibility}
+        onRemove={onRemoveAd}
+      />
     </div>
   );
 }
 
-function AreaSectionDetailView({ country, params, draft, overallResults, onBack, onReset, onUpdateItem }) {
+function AreaSectionDetailView({
+  country,
+  params,
+  draft,
+  overallResults,
+  onBack,
+  onReset,
+  onUpdateItem,
+  onSave,
+  adBanner,
+  canManageAds = false,
+  onManageAds,
+  onToggleAdVisibility,
+  onRemoveAd,
+}) {
   const c = COUNTRIES[country] || COUNTRIES.sa;
   const totalArea = (Number(params?.area) || 0) * (Number(params?.floors) || 0);
   const overallShare = overallResults?.total > 0 ? (draft.sectionTotal / overallResults.total) * 100 : 0;
 
   if (!draft) return null;
+
+  const handleExportSectionPdf = () => {
+    const now = new Date().toLocaleDateString("ar-SA");
+    const rowsHtml = draft.items.map((item, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${item.label}</td>
+        <td>${item.basis}</td>
+        <td>${fmtNum(item.qty)} ${item.unit}</td>
+        <td>${fmtNum(item.rate)} ${c.currency}</td>
+        <td>${fmtNum(item.total)} ${c.currency}</td>
+      </tr>
+    `).join("");
+    const assumptionsHtml = draft.assumptions.map((line) => `<li>${line}</li>`).join("");
+
+    const html = `
+      <!doctype html>
+      <html lang="ar" dir="rtl">
+        <head>
+          <meta charset="utf-8" />
+          <title>${draft.title}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 24px; color: #082555; direction: rtl; }
+            h1 { font-size: 22px; margin-bottom: 8px; }
+            .meta { color: #7b6c4a; margin-bottom: 20px; font-size: 13px; }
+            .summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
+            .summary-card { border: 1px solid #e2d8c4; border-radius: 14px; padding: 12px; background: #fcfbf8; }
+            .summary-card strong { display: block; margin-bottom: 6px; color: #9A8A6A; font-size: 12px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
+            th { background: #082555; color: #E8C97A; padding: 8px; text-align: right; }
+            td { padding: 8px; border-bottom: 1px solid #eee; }
+            .note { background: #F5EDD8; border: 1px solid #E2D8C4; border-radius: 16px; padding: 16px; }
+            ul { margin: 0; padding-right: 18px; }
+            @media print { button { display: none; } }
+          </style>
+        </head>
+        <body>
+          <h1>${draft.title}</h1>
+          <div class="meta">تقرير تفاصيل التخصص • ${now}</div>
+          <div class="summary">
+            <div class="summary-card"><strong>إجمالي التخصص</strong>${fmtNum(draft.sectionTotal)} ${c.currency}</div>
+            <div class="summary-card"><strong>سعر المتر</strong>${fmtNum(draft.unitPrice)} ${c.currency}</div>
+            <div class="summary-card"><strong>حصة التخصص</strong>${overallShare.toFixed(1)}%</div>
+            <div class="summary-card"><strong>المساحة الكلية</strong>${fmtNum(totalArea)} م²</div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>البند</th>
+                <th>الأساس</th>
+                <th>الكمية</th>
+                <th>سعر الوحدة</th>
+                <th>الإجمالي</th>
+              </tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+          <div class="note">
+            <strong>افتراضات هندسية مستخدمة</strong>
+            <ul>${assumptionsHtml}</ul>
+          </div>
+          <script>window.onload = () => window.print();</script>
+        </body>
+      </html>
+    `;
+
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.write(html);
+    win.document.close();
+  };
 
   return (
     <div className="space-y-6 pb-12 animate-in fade-in slide-in-from-left-4 duration-500">
@@ -965,7 +1331,7 @@ function AreaSectionDetailView({ country, params, draft, overallResults, onBack,
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
             { label: "إجمالي التخصص", value: `${fmtNum(draft.sectionTotal)} ${c.currency}` },
             { label: "سعر المتر", value: `${fmtNum(draft.unitPrice)} ${c.currency}` },
@@ -1006,7 +1372,7 @@ function AreaSectionDetailView({ country, params, draft, overallResults, onBack,
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div>
                   <div className="mb-2 text-[11px] font-bold text-[#9A8A6A]">الكمية التقريبية</div>
                   <input
@@ -1054,6 +1420,42 @@ function AreaSectionDetailView({ country, params, draft, overallResults, onBack,
           ))}
         </div>
       </div>
+
+      <div className="rounded-3xl border-2 border-[#E2D8C4] bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-[16px] font-bold text-[#082555]" style={{ fontFamily: AR }}>إجراءات التخصص</h3>
+            <p className="mt-1 text-[12px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+              احفظ تفاصيل هذا التخصص في الحساب أو صدّرها كـ PDF بنفس القيم الحالية.
+            </p>
+          </div>
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F7F3EC] text-[22px]">
+            {draft.icon}
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={() => onSave?.()}
+            className="flex-1 min-h-[56px] rounded-2xl bg-[#C9A84C] text-[#082555] font-bold text-[15px] flex items-center justify-center gap-2 shadow-lg transition hover:bg-[#E8C97A] active:scale-[0.98]"
+          >
+            <SaveIcon className="h-5 w-5" /> حفظ في الحساب
+          </button>
+          <button
+            onClick={handleExportSectionPdf}
+            className="flex-1 min-h-[56px] rounded-2xl bg-white border-2 border-[#082555] text-[#082555] font-bold text-[15px] flex items-center justify-center gap-2 transition hover:bg-[#F5EDD8] active:scale-[0.98]"
+          >
+            <PrinterIcon className="h-5 w-5" /> تصدير PDF
+          </button>
+        </div>
+      </div>
+
+      <AnalysisAdBanner
+        adBanner={{ ...(adBanner || {}), slotId: AD_SLOT_IDS.areaSectionAfterAssumptions }}
+        canManageAds={canManageAds}
+        onManageAds={onManageAds}
+        onToggleVisibility={onToggleAdVisibility}
+        onRemove={onRemoveAd}
+      />
     </div>
   );
 }
@@ -1061,7 +1463,7 @@ function AreaSectionDetailView({ country, params, draft, overallResults, onBack,
 
 // --- Main Pricing Workspace Component ---
 
-export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings }) {
+export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings, sessionMeta, onOpenSubscription, onOpenAuthScreen, onShowStatus, systemBridge }) {
   // initialCountry comes from the CountryPicker on PricingPage; always override persisted value
   const [country, setCountry] = useState(initialCountry || "sa");
   const [mode, setMode] = useState("selection"); // selection, items, area, area-results
@@ -1083,13 +1485,159 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   const [selfPriceProfit, setSelfPriceProfit] = useState(15);
 
   const { msg: toastMsg, visible: toastVisible, show: showToast } = useToast();
+  const { profile: userProfile } = useAdminSession({
+    uid: sessionMeta?.uid,
+    email: settings?.userEmail,
+    displayName: settings?.userName,
+  });
+  const [guestItemOpenCount, setGuestItemOpenCount] = usePersistentState("taseera.v3.guestItemOpenCount", 0);
+  const [guestAreaTrialCount, setGuestAreaTrialCount] = usePersistentState("taseera.v3.guestAreaTrialCount", 0);
+  const [analysisTopAdBanner, setAnalysisTopAdBanner] = useState(null);
+  const [analysisActionsAdBanner, setAnalysisActionsAdBanner] = useState(null);
+  const [analysisBottomAdBanner, setAnalysisBottomAdBanner] = useState(null);
+  const [areaFormAdBanner, setAreaFormAdBanner] = useState(null);
+  const [areaResultsAdBanner, setAreaResultsAdBanner] = useState(null);
+  const [areaSectionAdBanner, setAreaSectionAdBanner] = useState(null);
+  const [csiAfterDiv28AdBanner, setCsiAfterDiv28AdBanner] = useState(null);
+  const [adEditor, setAdEditor] = useState({
+    open: false,
+    slotId: AD_SLOT_IDS.analysisPreResult,
+    draft: { ...DEFAULT_AD_BANNER },
+    saving: false,
+  });
 
   // Analysis Parameters (Moved up for persistence and export)
   const [qty, setQty] = useState(1);
-  const [overhead, setOverhead] = useState(12);
-  const [profit, setProfit] = useState(15);
-  const [factor, setFactor] = useState(1.03);
+  const [overhead, setOverhead] = useState(() => Number(settings?.overheadPercent) || 12);
+  const [profit, setProfit] = useState(() => Number(settings?.profitPercent) || 15);
+  const [factor, setFactor] = useState(() => Number(settings?.locationFactor) || 1.03);
   const [analysisBaseline, setAnalysisBaseline] = useState(null);
+
+  useEffect(() => {
+    const unsubscribeTop = listenAdBanner((data) => setAnalysisTopAdBanner(data), AD_SLOT_IDS.analysisPreResult);
+    const unsubscribeActions = listenAdBanner((data) => setAnalysisActionsAdBanner(data), AD_SLOT_IDS.analysisAfterActions);
+    const unsubscribeBottom = listenAdBanner((data) => setAnalysisBottomAdBanner(data), AD_SLOT_IDS.analysisPostResult);
+    const unsubscribeAreaForm = listenAdBanner((data) => setAreaFormAdBanner(data), AD_SLOT_IDS.areaFormAfterCard);
+    const unsubscribeAreaResults = listenAdBanner((data) => setAreaResultsAdBanner(data), AD_SLOT_IDS.areaResultsAfterNote);
+    const unsubscribeAreaSection = listenAdBanner((data) => setAreaSectionAdBanner(data), AD_SLOT_IDS.areaSectionAfterAssumptions);
+    const unsubscribeCsiDiv28 = listenAdBanner((data) => setCsiAfterDiv28AdBanner(data), AD_SLOT_IDS.csiAfterDiv28);
+    return () => {
+      unsubscribeTop?.();
+      unsubscribeActions?.();
+      unsubscribeBottom?.();
+      unsubscribeAreaForm?.();
+      unsubscribeAreaResults?.();
+      unsubscribeAreaSection?.();
+      unsubscribeCsiDiv28?.();
+    };
+  }, []);
+
+  const isGuest = authMode === "guest";
+  const isAdminUnlocked = !isGuest && (
+    userProfile?.canAccessAdmin === true ||
+    String(settings?.userEmail || "").toLowerCase() === SUPER_ADMIN_EMAIL
+  );
+  const isSubscribed = isAdminUnlocked || (!isGuest && userProfile?.isPaid === true);
+  const itemLimit = isSubscribed ? Number.POSITIVE_INFINITY : isGuest ? 2 : 4;
+  const areaLimit = isSubscribed ? Number.POSITIVE_INFINITY : isGuest ? 1 : 3;
+  const itemUsed = isGuest ? Number(guestItemOpenCount) || 0 : Number(userProfile?.itemAnalysisOpenCount) || 0;
+  const areaUsed = isGuest ? Number(guestAreaTrialCount) || 0 : Number(userProfile?.areaPricingTrialCount) || 0;
+  const itemLocked = !isSubscribed && itemUsed >= itemLimit;
+  const areaLocked = !isSubscribed && areaUsed >= areaLimit;
+  const itemRemaining = Number.isFinite(itemLimit) ? Math.max(0, itemLimit - itemUsed) : null;
+
+  const getAdSlotLabel = useCallback((slotId) => {
+    if (slotId === AD_SLOT_IDS.analysisPreResult) return "إعلان أعلى شاشة التحليل";
+    if (slotId === AD_SLOT_IDS.analysisAfterActions) return "إعلان بعد أزرار التحليل";
+    if (slotId === AD_SLOT_IDS.analysisPostResult) return "إعلان أسفل نتيجة التحليل";
+    if (slotId === AD_SLOT_IDS.areaFormAfterCard) return "إعلان بعد نموذج تسعير المبنى";
+    if (slotId === AD_SLOT_IDS.areaResultsAfterNote) return "إعلان بعد ملاحظة تسعير المبنى";
+    if (slotId === AD_SLOT_IDS.areaSectionAfterAssumptions) return "إعلان بعد افتراضات تفاصيل التخصص";
+    return "إعدادات الإعلان";
+  }, []);
+
+  const handleOpenAdEditor = useCallback((slotId, currentBanner) => {
+    setAdEditor({
+      open: true,
+      slotId,
+      draft: { ...DEFAULT_AD_BANNER, ...(currentBanner || {}) },
+      saving: false,
+    });
+  }, []);
+
+  const handleCloseAdEditor = useCallback(() => {
+    setAdEditor((prev) => ({ ...prev, open: false, saving: false }));
+  }, []);
+
+  const handleAdEditorDraftChange = useCallback((key, value) => {
+    setAdEditor((prev) => ({
+      ...prev,
+      draft: {
+        ...prev.draft,
+        [key]: value,
+      },
+    }));
+  }, []);
+
+  const handleSaveAdEditor = useCallback(async () => {
+    if (!userProfile) {
+      showToast("يلزم تسجيل الدخول قبل تعديل الإعلان");
+      return;
+    }
+
+    try {
+      setAdEditor((prev) => ({ ...prev, saving: true }));
+      await saveAdBanner(userProfile, adEditor.draft, adEditor.slotId);
+      showToast("تم حفظ الإعلان بنجاح");
+      setAdEditor((prev) => ({ ...prev, open: false, saving: false }));
+    } catch (error) {
+      setAdEditor((prev) => ({ ...prev, saving: false }));
+      showToast(error?.message || "تعذر حفظ الإعلان");
+    }
+  }, [adEditor.draft, adEditor.slotId, showToast, userProfile]);
+
+  const handleToggleAdVisibility = useCallback(async (slotId, currentBanner, nextEnabled) => {
+    if (!userProfile) {
+      showToast("يلزم تسجيل الدخول قبل تعديل الإعلان");
+      return;
+    }
+
+    try {
+      await saveAdBanner(
+        userProfile,
+        { ...(currentBanner || DEFAULT_AD_BANNER), enabled: Boolean(nextEnabled) },
+        slotId || AD_SLOT_IDS.analysisPreResult
+      );
+      showToast(nextEnabled ? "تم إظهار الإعلان" : "تم إخفاء الإعلان");
+    } catch (error) {
+      showToast(error?.message || "تعذر تحديث حالة الإعلان");
+    }
+  }, [showToast, userProfile]);
+
+  const handleRemoveAd = useCallback(async (slotId) => {
+    if (!userProfile) {
+      showToast("يلزم تسجيل الدخول قبل تعديل الإعلان");
+      return;
+    }
+
+    try {
+      await saveAdBanner(
+        userProfile,
+        {
+          ...DEFAULT_AD_BANNER,
+          enabled: false,
+          title: "",
+          imageUrl: "",
+          targetUrl: "",
+          alt: "",
+        },
+        slotId || AD_SLOT_IDS.analysisPreResult
+      );
+      showToast("تمت إزالة محتوى الإعلان");
+    } catch (error) {
+      showToast(error?.message || "تعذر إزالة الإعلان");
+    }
+  }, [showToast, userProfile]);
 
   const buildAnalysisSnapshot = useCallback((itemValue, resourcesValue, paramsValue) => ({
     selectedItem: itemValue ? { ...itemValue } : null,
@@ -1107,10 +1655,10 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     setSelectedItem(snapshot.selectedItem ? { ...snapshot.selectedItem } : null);
     setResources(JSON.parse(JSON.stringify(snapshot.resources || { مواد: [], عمالة: [], معدات: [] })));
     setQty(snapshot.params?.qty ?? 1);
-    setFactor(snapshot.params?.factor ?? 1.03);
-    setOverhead(snapshot.params?.overhead ?? 12);
-    setProfit(snapshot.params?.profit ?? 15);
-  }, []);
+    setFactor(snapshot.params?.factor ?? (Number(settings?.locationFactor) || 1.03));
+    setOverhead(snapshot.params?.overhead ?? (Number(settings?.overheadPercent) || 12));
+    setProfit(snapshot.params?.profit ?? (Number(settings?.profitPercent) || 15));
+  }, [settings]);
 
   const currentAnalysisSignature = useMemo(() => JSON.stringify(
     buildAnalysisSnapshot(selectedItem, resources, {
@@ -1192,13 +1740,49 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
       unitPrice: effectiveAreaResults.unitPrice,
       totalArea: (Number(areaParams.area) || 0) * (Number(areaParams.floors) || 0),
       floors: Number(areaParams.floors) || 0,
+      finishId: areaParams.finish,
+      typeId: areaParams.type,
+      scopeId: areaParams.scope,
       typeLabel: BUILDING_TYPES.find((item) => item.id === areaParams.type)?.ar || areaParams.type,
       finishLabel: FINISH_LEVELS.find((item) => item.id === areaParams.finish)?.ar || areaParams.finish,
       scopeLabel: SCOPES.find((item) => item.id === areaParams.scope)?.ar || areaParams.scope,
     };
   }, [areaParams, effectiveAreaResults]);
 
-  const handleCalculateArea = (params) => {
+  const suggestedAreaScenario = useMemo(() => {
+    if (!currentAreaScenario || !areaParams || !effectiveAreaResults) return null;
+
+    const currentFinishIndex = FINISH_LEVELS.findIndex((item) => item.id === areaParams.finish);
+    const nextFinish = currentFinishIndex >= 0 ? FINISH_LEVELS[currentFinishIndex + 1] : null;
+    if (!nextFinish) return null;
+
+    const config = AREA_PRICING_BASE[country] || AREA_PRICING_BASE.sa;
+    const currentFactor = config.finishFactors[areaParams.finish] || 1;
+    const nextFactor = config.finishFactors[nextFinish.id] || currentFactor;
+    const ratio = currentFactor > 0 ? nextFactor / currentFactor : 1;
+
+    return {
+      id: `scenario-upgrade-${areaParams.type}-${areaParams.scope}-${nextFinish.id}-${areaParams.area}-${areaParams.floors}`,
+      total: roundTo(effectiveAreaResults.total * ratio),
+      unitPrice: roundTo(effectiveAreaResults.unitPrice * ratio),
+      totalArea: currentAreaScenario.totalArea,
+      floors: currentAreaScenario.floors,
+      finishId: nextFinish.id,
+      typeId: areaParams.type,
+      scopeId: areaParams.scope,
+      typeLabel: currentAreaScenario.typeLabel,
+      finishLabel: nextFinish.ar,
+      scopeLabel: currentAreaScenario.scopeLabel,
+    };
+  }, [areaParams, country, currentAreaScenario, effectiveAreaResults]);
+
+  const handleCalculateArea = async (params) => {
+    const allowed = await consumeAccess("area");
+    if (!allowed) {
+      openSubscriptionScreen();
+      return;
+    }
+
     const config = AREA_PRICING_BASE[country] || AREA_PRICING_BASE.sa;
     let rate = config.baseRate;
     rate *= config.finishFactors[params.finish] || 1;
@@ -1470,42 +2054,105 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
         </html>
       `;
 
-      const printFrame = document.createElement("iframe");
-      printFrame.style.position = "fixed";
-      printFrame.style.right = "0";
-      printFrame.style.bottom = "0";
-      printFrame.style.width = "0";
-      printFrame.style.height = "0";
-      printFrame.style.border = "0";
-      printFrame.setAttribute("aria-hidden", "true");
-      document.body.appendChild(printFrame);
-
-      const frameWindow = printFrame.contentWindow;
-      const frameDocument = printFrame.contentDocument || frameWindow?.document;
-
-      if (!frameWindow || !frameDocument) {
-        printFrame.remove();
-        showToast("تعذر تجهيز الطباعة في هذا المتصفح.");
-        return;
-      }
-
-      frameDocument.open();
-      frameDocument.write(html);
-      frameDocument.close();
-
-      setTimeout(() => {
-        frameWindow.focus();
-        frameWindow.print();
+      // Open empty window first then write HTML — works on mobile browsers
+      // that block blob:// URLs (avoids "تعذر فتح التطبيق" error on Android/iOS)
+      const printWin = window.open("", "_blank", "width=900,height=700");
+      if (printWin) {
+        printWin.document.open();
+        printWin.document.write(html);
+        printWin.document.close();
+        printWin.focus();
         setTimeout(() => {
-          printFrame.remove();
-        }, 1000);
-      }, 300);
-
-      showToast("تم تجهيز ملف PDF/الطباعة بالقيم الحالية");
+          try { printWin.print(); } catch (_) {}
+        }, 600);
+        showToast("اختر «حفظ كـ PDF» من قائمة الطباعة");
+      } else {
+        // Popup blocked — fallback: download as HTML file
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `تحليل_بند_${selectedItem.num.replace(/\s/g, "_")}.html`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+        showToast("تم تحميل ملف التقرير");
+      }
     }
   }, [mode, country, areaParams, areaResults, effectiveAreaResults, selectedItem, resources, qty, overhead, profit, factor, showToast]);
 
-  function handleSelfPrice(item, div) {
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+
+  const openSubscriptionScreen = useCallback(() => {
+    if (isGuest) {
+      // Store intent so the app opens subscription automatically after login
+      sessionStorage.setItem("pendingSubscriptionAfterLogin", "1");
+      onOpenAuthScreen?.();
+    } else {
+      setShowSubscriptionModal(true);
+    }
+  }, [isGuest, onOpenAuthScreen]);
+
+  const itemLockMessage = isGuest
+    ? "لقد وصلت للحد المجاني للبنود. يرجى تسجيل الدخول والاشتراك لفتح جميع البنود."
+    : "لقد وصلت للحد المجاني للبنود. اشترك الآن للوصول الكامل غير المحدود.";
+  const areaLockMessage = isGuest
+    ? "لقد استخدمت التجربة المجانية لتسعير مبني. يرجى تسجيل الدخول والاشتراك لإكمال الاستخدام."
+    : "لقد وصلت لحد التجربة المجانية لتسعير مبني. اشترك الآن للوصول الكامل.";
+
+  const consumeAccess = useCallback(async (scope) => {
+    if (isSubscribed) return true;
+
+    if (scope === "items") {
+      if (itemLocked) {
+        showToast(itemLockMessage);
+        return false;
+      }
+      if (isGuest) {
+        setGuestItemOpenCount((current) => (Number(current) || 0) + 1);
+        return true;
+      }
+      if (sessionMeta?.uid) {
+        try {
+          await incrementUsageCounter(sessionMeta.uid, "itemAnalysisOpenCount");
+        } catch (_error) {
+          showToast("تعذر تحديث العداد. حاول مرة أخرى.");
+          return false;
+        }
+      }
+      return true;
+    }
+
+    if (scope === "area") {
+      if (areaLocked) {
+        showToast(areaLockMessage);
+        return false;
+      }
+      if (isGuest) {
+        setGuestAreaTrialCount((current) => (Number(current) || 0) + 1);
+        return true;
+      }
+      if (sessionMeta?.uid) {
+        try {
+          await incrementUsageCounter(sessionMeta.uid, "areaPricingTrialCount");
+        } catch (_error) {
+          showToast("تعذر تحديث العداد. حاول مرة أخرى.");
+          return false;
+        }
+      }
+      return true;
+    }
+
+    return true;
+  }, [areaLockMessage, areaLocked, isGuest, isSubscribed, itemLockMessage, itemLocked, sessionMeta?.uid, setGuestAreaTrialCount, setGuestItemOpenCount, showToast]);
+
+  async function handleSelfPrice(item, div) {
+    const allowed = await consumeAccess("items");
+    if (!allowed) {
+      openSubscriptionScreen();
+      return;
+    }
     const full = {
       ...item,
       divAr: div.ar,
@@ -1522,7 +2169,12 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     setMode("self-price");
   }
 
-  function handleSelectItem(item, div) {
+  async function handleSelectItem(item, div) {
+    const allowed = await consumeAccess("items");
+    if (!allowed) {
+      openSubscriptionScreen();
+      return;
+    }
     const full = {
       ...item,
       divAr: div.ar,
@@ -1574,7 +2226,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     setAddModalType(null);
   }
 
-  function handleModeChange(nextMode) {
+  async function handleModeChange(nextMode) {
     if (mode === "items" && tab === "analysis") {
       const canLeave = confirmDiscardAnalysisChanges(() => setMode(nextMode));
       if (!canLeave) return;
@@ -1636,10 +2288,10 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   }, [mode, tab, navigationBridge?.onEntryChange]);
 
   const tabs = [
-    { id: "csi", label: "البنود" },
-    { id: "analysis", label: "التحليل" },
-    { id: "market", label: "السوق" },
-    { id: "history", label: "المحفوظة" },
+    { id: "csi",      label: "البنود",    icon: "📋" },
+    { id: "analysis", label: "التحليل",   icon: "📊" },
+    { id: "market",   label: "السوق",     icon: "📈" },
+    { id: "history",  label: "المحفوظة", icon: "🕘" },
   ];
 
   if (!country) {
@@ -1658,37 +2310,82 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
       <div className="mx-auto w-full max-w-[720px] p-3 sm:p-4 pb-4">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
-          <button onClick={() => handleModeChange("selection")} className="flex items-center gap-3 text-right">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0d2545] text-[#d4a843] shadow-lg">
+          <button onClick={() => handleModeChange("selection")} className="group flex items-center gap-3 text-right">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#0d2545] to-[#162e52] text-[#d4a843] shadow-lg ring-1 ring-[#d4a843]/20 transition-shadow group-hover:shadow-[0_4px_16px_rgba(212,168,67,0.25)]">
               <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">
                 <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71L12 2z" />
               </svg>
             </div>
             <div>
               <h1 className="text-[16px] font-bold text-[#0d2545] leading-none">تسعيرة</h1>
-              <p className="text-[10px] font-bold text-[#d4a843] mt-1.5 uppercase tracking-tighter">Construction Pricing</p>
+              <p className="text-[10px] font-bold text-[#d4a843] mt-1 uppercase tracking-widest">Construction Pricing</p>
             </div>
           </button>
-
-
         </div>
 
         {/* --- MAIN CONTENT SWITCHER --- */}
 
-        {mode === "selection" && <ModeSelection onSelect={setMode} />}
+        {mode === "selection" && (
+          <ModeSelection
+            onSelect={handleModeChange}
+            areaLocked={areaLocked}
+            areaMessage={areaLockMessage}
+            onOpenSubscription={openSubscriptionScreen}
+          />
+        )}
+
+        {mode === "candy" && (
+          <QSPremiumGate
+            country={country}
+            userId={sessionMeta?.uid}
+            userEmail={sessionMeta?.email}
+            userName={sessionMeta?.displayName}
+            onOpenAuthScreen={onOpenAuthScreen}
+            systemBridge={systemBridge}
+            isAdminUnlocked={isAdminUnlocked}
+          >
+            <ScreenProtection enabled={true}>
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <CandyWorkspace
+                  country={country}
+                  onBack={() => handleModeChange("selection")}
+                />
+              </div>
+            </ScreenProtection>
+          </QSPremiumGate>
+        )}
 
         {mode === "items" && (
           <div className="animate-in fade-in slide-in-from-left-4 duration-500">
-            <div className="mb-6 w-full rounded-2xl bg-[#082555] p-1.5 flex gap-1.5 shadow-xl">
-              {tabs.map((t) => (
-                <button key={t.id} type="button" onClick={() => handleTabChange(t.id)}
-                  className={`flex-1 min-w-0 min-h-[44px] rounded-xl py-2 text-[13px] font-bold transition-all duration-300 ${tab === t.id ? "bg-[#C9A84C] text-[#082555] shadow-lg" : "text-[#9A8A6A] hover:text-white"}`}
-                  style={{ fontFamily: AR }}>
-                  <span className="truncate block px-1">{t.label}</span>
-                </button>
-              ))}
+            <div className="mb-5 w-full overflow-hidden rounded-2xl bg-gradient-to-br from-[#082555] to-[#0d3070] p-1.5 shadow-[0_8px_24px_rgba(8,37,85,0.22)]">
+              <div className="flex gap-1.5">
+                {tabs.map((t) => (
+                  <button key={t.id} type="button" onClick={() => handleTabChange(t.id)}
+                    className={`flex flex-1 min-w-0 flex-col items-center gap-0.5 rounded-xl py-2.5 px-1 text-[11px] font-bold transition-all duration-200 ${
+                      tab === t.id
+                        ? "bg-[#C9A84C] text-[#082555] shadow-[0_2px_10px_rgba(201,168,76,0.4)]"
+                        : "text-white/50 hover:text-white hover:bg-white/8"
+                    }`}
+                    style={{ fontFamily: AR }}>
+                    <span className="text-base leading-none">{t.icon}</span>
+                    <span className="truncate">{t.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-            {tab === "csi" && <CSIScreen country={country} onSelectItem={handleSelectItem} onSelfPrice={handleSelfPrice} />}
+            {tab === "csi" && (
+              <CSIScreen
+                country={country}
+                onSelectItem={handleSelectItem}
+                onSelfPrice={handleSelfPrice}
+                itemLocked={itemLocked}
+                itemRemaining={itemRemaining}
+                onOpenSubscription={openSubscriptionScreen}
+                afterDiv28AdBanner={csiAfterDiv28AdBanner}
+                isGuest={isGuest}
+                onOpenAuthScreen={onOpenAuthScreen}
+              />
+            )}
             {tab === "history" && (
               <HistoryScreen
                 savedAnalyses={savedAnalyses}
@@ -1712,14 +2409,52 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 profit={profit} setProfit={setProfit}
                 factor={factor} setFactor={setFactor}
                 settings={settings}
+                topAdBanner={analysisTopAdBanner}
+                actionsAdBanner={analysisActionsAdBanner}
+                bottomAdBanner={analysisBottomAdBanner}
+                canManageAds={isAdminUnlocked}
+                onManageAds={handleOpenAdEditor}
+                onToggleAdVisibility={handleToggleAdVisibility}
+                onRemoveAd={handleRemoveAd}
 
               />
             )}
-            {tab === "market" && <MarketScreen country={country} onSelectItem={handleSelectItem} onSelfPrice={handleSelfPrice} />}
+            {tab === "market" && (
+              <MarketScreen
+                country={country}
+                onSelectItem={handleSelectItem}
+                onSelfPrice={handleSelfPrice}
+                itemLocked={itemLocked}
+                itemRemaining={itemRemaining}
+                onOpenSubscription={openSubscriptionScreen}
+              />
+            )}
           </div>
         )}
 
-        {mode === "area" && <AreaPricingForm country={country} onCalculate={handleCalculateArea} />}
+        {mode === "area" && (
+          /* Registered user who used up their trial → full gate */
+          (areaLocked && !isGuest) ? (
+            <TaseeraProGate
+              country={country}
+              isGuest={false}
+              onOpenSubscription={openSubscriptionScreen}
+              onOpenAuthScreen={onOpenAuthScreen}
+            />
+          ) : (
+            <GuestAreaWrapper isGuest={isGuest} onOpenAuthScreen={onOpenAuthScreen}>
+              <AreaPricingForm
+                country={country}
+                onCalculate={handleCalculateArea}
+                adBanner={areaFormAdBanner}
+                canManageAds={isAdminUnlocked}
+                onManageAds={handleOpenAdEditor}
+                onToggleAdVisibility={handleToggleAdVisibility}
+                onRemoveAd={handleRemoveAd}
+              />
+            </GuestAreaWrapper>
+          )
+        )}
 
         {mode === "area-results" && (
           <AreaResultsView
@@ -1728,6 +2463,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             results={effectiveAreaResults}
             scenarios={areaScenarios}
             currentScenario={currentAreaScenario}
+            suggestedScenario={suggestedAreaScenario}
             onAddScenario={handleAddAreaScenario}
             onRemoveScenario={handleRemoveAreaScenario}
             onBack={() => setMode("area")}
@@ -1743,6 +2479,11 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
               showToast("تم حفظ تسعير المشروع بنجاح");
             }}
             onOpenSection={handleOpenAreaSection}
+            adBanner={areaResultsAdBanner}
+            canManageAds={isAdminUnlocked}
+            onManageAds={handleOpenAdEditor}
+            onToggleAdVisibility={handleToggleAdVisibility}
+            onRemoveAd={handleRemoveAd}
           />
         )}
 
@@ -1755,14 +2496,16 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             overhead={selfPriceOverhead} setOverhead={setSelfPriceOverhead}
             profit={selfPriceProfit} setProfit={setSelfPriceProfit}
             country={country}
+            authMode={authMode}
+            sessionMeta={sessionMeta}
+            settings={settings}
             onBack={() => { setMode("items"); setTab("csi"); }}
             onSave={(result) => {
               onSaveAnalysis?.({
-                itemName: selfPriceItem.ar,
-                itemNum: selfPriceItem.num,
+                item: selfPriceItem,
                 resources: selfPriceResources,
                 params: { qty: selfPriceQty, overhead: selfPriceOverhead, profit: selfPriceProfit, unit: selfPriceItem.unit, market: selfPriceItem.market, divAr: selfPriceItem.divAr },
-                result,
+                results: result,
                 mode: 'item',
               });
               showToast("تم حفظ تحليل السعر بنجاح ✔️");
@@ -1779,6 +2522,39 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             onBack={() => setMode("area-results")}
             onReset={handleResetAreaSection}
             onUpdateItem={handleUpdateAreaSectionItem}
+            onSave={() => {
+              const activeDraft = selectedAreaSection
+                ? areaSectionDrafts[selectedAreaSection] || buildAreaSectionDraft(selectedAreaSection, areaParams, areaResults)
+                : null;
+              if (!activeDraft) return;
+
+              onSaveAnalysis?.({
+                item: { ar: `تفاصيل تخصص (${activeDraft.title})`, num: `AREA-${activeDraft.sectionId}` },
+                resources: {},
+                results: {
+                  total: activeDraft.sectionTotal,
+                  unitPrice: activeDraft.unitPrice,
+                  overallShare:
+                    effectiveAreaResults?.total > 0
+                      ? (activeDraft.sectionTotal / effectiveAreaResults.total) * 100
+                      : 0,
+                },
+                params: {
+                  ...areaParams,
+                  sectionId: activeDraft.sectionId,
+                  sectionTitle: activeDraft.title,
+                  assumptions: activeDraft.assumptions,
+                  items: activeDraft.items,
+                },
+                mode: "area-section-detail",
+              });
+              showToast("تم حفظ تفاصيل التخصص بنجاح");
+            }}
+            adBanner={areaSectionAdBanner}
+            canManageAds={isAdminUnlocked}
+            onManageAds={handleOpenAdEditor}
+            onToggleAdVisibility={handleToggleAdVisibility}
+            onRemoveAd={handleRemoveAd}
           />
         )}
       </div>
@@ -1787,10 +2563,60 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
         <AddResourceModal defaultType={addModalType} onAdd={handleAddResource} onClose={() => setAddModalType(null)} />
       )}
 
+      {adEditor.open ? (
+        <InlineAdEditorModal
+          title={getAdSlotLabel(adEditor.slotId)}
+          draft={adEditor.draft}
+          saving={adEditor.saving}
+          onChange={handleAdEditorDraftChange}
+          onSave={handleSaveAdEditor}
+          onClose={handleCloseAdEditor}
+        />
+      ) : null}
+
       {toastVisible && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-xl bg-[#082555] px-5 py-2.5 text-[12px] font-medium text-[#E8C97A] shadow-xl"
           style={{ fontFamily: AR }}>
           {toastMsg}
+        </div>
+      )}
+
+      {showSubscriptionModal && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50"
+          style={{ backdropFilter: "blur(4px)" }}
+          onClick={() => setShowSubscriptionModal(false)}
+        >
+          <div
+            className="w-full max-w-lg rounded-t-3xl bg-[#F7F3EC] shadow-2xl"
+            style={{ maxHeight: "90vh", overflowY: "auto" }}
+            onClick={(e) => e.stopPropagation()}
+            dir={settings?.language === "en" ? "ltr" : "rtl"}
+          >
+            <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-3xl bg-gradient-to-r from-[#082555] to-[#0d3070] px-5 py-4">
+              <p className="text-[15px] font-bold text-white" style={{ fontFamily: AR }}>
+                {settings?.language === "en" ? "Subscription" : "الاشتراك"}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowSubscriptionModal(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-white hover:bg-white/20"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4">
+              <SubscriptionPanel
+                language={settings?.language || "ar"}
+                authMode={authMode}
+                sessionMeta={sessionMeta}
+                settings={settings}
+                isSubscribed={isSubscribed}
+                onOpenAuthScreen={onOpenAuthScreen}
+                onShowStatus={(msg, tone) => showToast(msg)}
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -1801,9 +2627,17 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
 // Sub-components (Moved from previous implementation or newly added)
 
 // ===== سعر بنفسك Screen =====
-function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhead, setOverhead, profit, setProfit, country, onBack, onSave }) {
-  const sym = COUNTRIES[country]?.sym || "ر.س";
-  const fmt = (n) => Number(n).toLocaleString("ar-EG", { maximumFractionDigits: 0 });
+function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhead, setOverhead, profit, setProfit, country, authMode, sessionMeta, settings, onBack, onSave }) {
+  const sym = getCurrencySymbol(country);
+  const fmt = (n) => Number(n).toLocaleString("en-US", { maximumFractionDigits: 0 });
+
+  const { profile: adminProfile } = useAdminSession({ uid: sessionMeta?.uid, email: settings?.userEmail, displayName: settings?.userName });
+  const canManageAds = authMode !== "guest" && (adminProfile?.canAccessAdmin === true || String(settings?.userEmail || "").toLowerCase() === SUPER_ADMIN_EMAIL);
+  const [selfPricingAd, setSelfPricingAd] = useState(null);
+  useEffect(() => {
+    const unsub = listenAdBanner((data) => setSelfPricingAd(data), AD_SLOT_IDS.selfPricingAfterActions);
+    return () => unsub?.();
+  }, []);
 
   // حساب مجموع كل مجموعة
   const sumGroup = (grp) =>
@@ -1873,8 +2707,8 @@ function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhea
 
       {/* Resource Groups */}
       {GROUP_HEADERS.map(({ key, label, emoji, color, btn }) => (
-        <div key={key} className={`mb-4 rounded-xl border-2 ${color} overflow-hidden`}>
-          <div className="flex items-center justify-between px-4 py-2.5 bg-white bg-opacity-60">
+        <div key={key} className={`mb-4 rounded-xl border-2 ${color}`}>
+          <div className="flex items-center justify-between px-4 py-2.5 bg-white bg-opacity-60 rounded-t-xl">
             <span className="text-[14px] font-bold text-[#082555]">{emoji} {label}</span>
             <div className="flex items-center gap-2">
               <span className="text-[13px] font-bold text-[#082555]">{fmt(sumGroup(key))} {sym}</span>
@@ -1886,28 +2720,52 @@ function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhea
           </div>
           <div className="divide-y divide-[#E2D8C4]">
             {(resources[key] || []).map((row, idx) => (
-              <div key={idx} className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-gray-50 transition">
-                <span className="text-[15px] shrink-0">{row.icon || "📦"}</span>
-                <input
-                  value={row.name}
-                  onChange={e => updateRow(key, idx, "name", e.target.value)}
-                  className="flex-1 min-w-0 rounded-lg border border-transparent px-2 py-1 text-[12px] text-[#082555] focus:border-[#C9A84C] focus:outline-none bg-transparent"
-                />
-                <input type="number" min="0" step="0.01"
-                  value={row.qty}
-                  onChange={e => updateRow(key, idx, "qty", e.target.value)}
-                  className="w-16 rounded-lg border border-[#E2D8C4] px-2 py-1 text-center text-[12px] font-bold text-[#082555] focus:outline-none focus:ring-1 focus:ring-[#C9A84C]"
-                />
-                <span className="text-[10px] text-[#9A8A6A] min-w-[24px] text-center">{row.unit || ""}</span>
-                <span className="text-[10px] text-[#9A8A6A]">×</span>
-                <input type="number" min="0" step="1"
-                  value={row.rate}
-                  onChange={e => updateRow(key, idx, "rate", e.target.value)}
-                  className="w-20 rounded-lg border border-[#E2D8C4] px-2 py-1 text-center text-[12px] font-bold text-[#082555] focus:outline-none focus:ring-1 focus:ring-[#C9A84C]"
-                />
-                <span className="text-[10px] text-[#9A8A6A] shrink-0">{sym}</span>
-                <span className="min-w-[52px] text-left text-[11px] font-bold text-[#082555]">{fmt((Number(row.qty)||0)*(Number(row.rate)||0))}</span>
-                <button onClick={() => removeRow(key, idx)} className="shrink-0 text-red-400 hover:text-red-600 transition text-[14px] leading-none">✕</button>
+              <div key={idx} className="px-3 py-2.5 bg-white hover:bg-gray-50 transition">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-lg shrink-0">{row.icon || "📦"}</span>
+                  <input
+                    value={row.name}
+                    onChange={e => updateRow(key, idx, "name", e.target.value)}
+                    className="flex-1 min-w-0 rounded-lg border border-transparent px-1 py-0.5 text-[13px] font-bold text-[#082555] focus:border-[#C9A84C] focus:outline-none bg-transparent"
+                    style={{ fontFamily: AR }}
+                  />
+                  <button onClick={() => removeRow(key, idx)} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#E2D8C4] bg-white text-xs text-[#9A8A6A] transition-all hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500">✕</button>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[9px] font-bold text-[#9A8A6A] tracking-wider" style={{ fontFamily: AR }}>الكمية</span>
+                    <input type="number" min="0" step="0.01"
+                      value={row.qty}
+                      onChange={e => updateRow(key, idx, "qty", e.target.value)}
+                      className="w-full rounded-xl border border-[#E2D8C4] px-2 py-1.5 text-center text-[13px] font-bold text-[#082555] focus:outline-none focus:ring-1 focus:ring-[#C9A84C]"
+                      style={{ fontFamily: MONO }}
+                      dir="ltr" lang="en"
+                    />
+                    <span className="text-[9px] font-bold text-[#9A8A6A]">{row.unit || "وحدة"}</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[9px] font-bold text-[#9A8A6A] tracking-wider" style={{ fontFamily: AR }}>السعر</span>
+                    <input type="number" min="0" step="1"
+                      value={row.rate}
+                      onChange={e => updateRow(key, idx, "rate", e.target.value)}
+                      className="w-full rounded-xl border border-[#E2D8C4] px-2 py-1.5 text-center text-[13px] font-bold text-[#082555] focus:outline-none focus:ring-1 focus:ring-[#C9A84C]"
+                      style={{ fontFamily: MONO }}
+                      dir="ltr" lang="en"
+                    />
+                    <span className="text-[9px] font-bold text-[#9A8A6A]">{sym}</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-0.5">
+                    <span className="text-[9px] font-bold text-[#C9A84C] tracking-wider" style={{ fontFamily: MONO }}>TOTAL</span>
+                    <div
+                      className="w-full rounded-xl border border-[#C9A84C]/40 bg-[#FFFBF0] px-2 py-1.5 text-center text-[13px] font-bold text-[#082555] shadow-sm"
+                      style={{ fontFamily: MONO }}
+                      dir="ltr" lang="en"
+                    >
+                      {fmt((Number(row.qty)||0)*(Number(row.rate)||0))}
+                    </div>
+                    <span className="text-[9px] font-bold text-[#9A8A6A]">{sym}</span>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -1915,7 +2773,7 @@ function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhea
       ))}
 
       {/* Overhead & Profit */}
-      <div className="mb-4 grid grid-cols-2 gap-3">
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-xl bg-white border border-[#E2D8C4] p-3 text-center">
           <p className="mb-1.5 text-[11px] text-[#9A8A6A]">المصاريف العامة %</p>
           <input type="number" min="0" max="50"
@@ -2006,6 +2864,62 @@ ${GROUP_HEADERS.map(g => `<h3 style="margin-bottom:4px">${g.emoji} ${g.label}</h
           🖨️ طباعة
         </button>
       </div>
+
+      {/* Ad Banner — self pricing after actions */}
+      <div className="pb-6">
+        <SelfPricingAdBanner
+          adBanner={selfPricingAd}
+          canManageAds={canManageAds}
+          adminProfile={adminProfile}
+        />
+      </div>
+    </div>
+  );
+}
+
+function SelfPricingAdBanner({ adBanner, canManageAds, adminProfile }) {
+  const hasContent = adBanner?.enabled && adBanner?.imageUrl;
+  const handleToggle = async (nextEnabled) => {
+    await saveAdBanner(adminProfile, { ...(adBanner || DEFAULT_AD_BANNER), enabled: Boolean(nextEnabled) }, AD_SLOT_IDS.selfPricingAfterActions);
+  };
+  const handleRemove = async () => {
+    const ok = window.confirm("هل تريد إزالة محتوى هذا الإعلان؟");
+    if (!ok) return;
+    await saveAdBanner(adminProfile, { ...DEFAULT_AD_BANNER, enabled: false }, AD_SLOT_IDS.selfPricingAfterActions);
+  };
+  return (
+    <div className="relative rounded-2xl border-2 border-[#E2D8C4] bg-white p-2.5 shadow-sm overflow-hidden">
+      {canManageAds && (
+        <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5">
+          <button type="button" onClick={() => handleToggle(true)}
+            className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm" style={{ fontFamily: AR }}>
+            إظهار
+          </button>
+          <button type="button" onClick={() => handleToggle(false)}
+            className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm" style={{ fontFamily: AR }}>
+            إخفاء
+          </button>
+          <button type="button" onClick={handleRemove}
+            className="rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-bold text-rose-700 shadow-sm" style={{ fontFamily: AR }}>
+            إزالة
+          </button>
+        </div>
+      )}
+      {hasContent ? (
+        <>
+          <button type="button" onClick={() => adBanner?.targetUrl && window.open(adBanner.targetUrl, "_blank", "noopener,noreferrer")}
+            className="mx-auto block h-[230px] w-full max-w-[608px] overflow-hidden rounded-xl bg-[#F7F3EC]">
+            <img src={adBanner.imageUrl} alt={adBanner.alt || adBanner.title || "self-pricing-ad"} loading="lazy" className="h-full w-full object-cover" />
+          </button>
+          {adBanner.title && <p className="mt-2 text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>{adBanner.title}</p>}
+        </>
+      ) : canManageAds ? (
+        <div className="mx-auto flex h-[230px] w-full max-w-[608px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#d4a843]/35 bg-[#fff9ec] px-4 py-5 text-center">
+          <p className="text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>مساحة إعلانية</p>
+        </div>
+      ) : (
+        <AdSenseUnit />
+      )}
     </div>
   );
 }
@@ -2090,9 +3004,10 @@ function HistoryScreen({ savedAnalyses, onView }) {
   );
 }
 
-function CSIScreen({ country, onSelectItem, onSelfPrice }) {
+function CSIScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, itemRemaining = null, onOpenSubscription, afterDiv28AdBanner, isGuest = false, onOpenAuthScreen }) {
   const [search, setSearch] = useState("");
   const [openDiv, setOpenDiv] = useState(null);
+  const [showGuestPrompt, setShowGuestPrompt] = useState(false);
   const c = COUNTRIES[country] || COUNTRIES.sa;
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -2106,65 +3021,179 @@ function CSIScreen({ country, onSelectItem, onSelfPrice }) {
   }, [search]);
   const isSearching = search.trim().length > 0;
   return (
-    <div className="space-y-4">
-      <div className="rounded-3xl bg-white border-2 border-[#E2D8C4] p-5 shadow-sm">
-        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-          placeholder="🔍  ابحث عن بند أو وصف..."
-          className="min-h-[52px] w-full rounded-2xl border-2 border-[#E2D8C4] bg-[#F7F3EC] px-4 py-2.5 text-[15px] outline-none focus:border-[#C9A84C] transition-colors"
-          style={{ fontFamily: AR }} />
-        <div className="mt-3 flex items-center justify-between">
-          <span className="text-[11px] font-bold text-[#9A8A6A] tracking-wider uppercase mr-1" style={{ fontFamily: AR }}>CSI MasterFormat 2024</span>
-          {c && (
-             <span className="text-[11px] font-bold text-[#C9A84C] bg-[#F5EDD8] px-3 py-1 rounded-lg">قاعدة بيانات {c.name}</span>
+    <div className="space-y-3">
+
+      {/* Free plan banner */}
+      {!itemLocked && Number.isFinite(itemRemaining) && (
+        <div className="flex items-center gap-3 rounded-2xl border border-[#d4a843]/30 bg-[#fffbf0] px-4 py-3">
+          <span className="text-lg">🎯</span>
+          <p className="text-[12px] font-bold text-[#7a5c1e]" style={{ fontFamily: AR }}>
+            المتبقي في الخطة المجانية: <span className="text-[#C9A84C]">{itemRemaining} بند</span>
+          </p>
+        </div>
+      )}
+
+      {/* Locked banner */}
+      {itemLocked && (
+        <div className="overflow-hidden rounded-2xl border border-[#E2D8C4] bg-white shadow-sm">
+          <div className="bg-gradient-to-r from-[#082555] to-[#0d3070] px-4 py-3">
+            <p className="text-[13px] font-bold text-white" style={{ fontFamily: AR }}>🔒 تم الوصول للحد المجاني</p>
+          </div>
+          <div className="p-4">
+            <p className="text-[12px] leading-6 text-[#5A4E38]" style={{ fontFamily: AR }}>
+              اشترك للوصول الكامل لجميع البنود وتسعير المباني بدون حدود.
+            </p>
+            <button type="button"
+              onClick={isGuest ? () => setShowGuestPrompt(true) : onOpenSubscription}
+              className="mt-3 w-full rounded-xl bg-gradient-to-r from-[#C9A84C] to-[#E8C97A] py-2.5 text-[13px] font-bold text-[#082555] shadow-md transition-all hover:shadow-lg active:scale-[0.98]"
+              style={{ fontFamily: AR }}>
+              {isGuest ? "سجّل دخولك ثم اشترك ←" : "فتح صفحة الاشتراك ←"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Guest login modal */}
+      <GuestLoginModal open={showGuestPrompt} onClose={() => setShowGuestPrompt(false)}
+        onOpenAuthScreen={onOpenAuthScreen}
+        subtitle="سجّل دخولك أو أنشئ حساباً للوصول لجميع البنود وتسعير المباني" />
+
+      {/* Search card */}
+      <div className="overflow-hidden rounded-2xl border border-[#E2D8C4] bg-white shadow-sm">
+        <div className="border-b border-[#E2D8C4] bg-gradient-to-r from-[#082555] to-[#0d3070] px-4 py-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-white/50">CSI MasterFormat 2024</span>
+            {c && (
+              <span className="rounded-full bg-[#C9A84C]/20 border border-[#C9A84C]/30 px-2.5 py-0.5 text-[10px] font-bold text-[#E8C97A]">
+                {c.name}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="p-3">
+          <div className="flex items-center gap-2 rounded-xl border border-[#E2D8C4] bg-[#F7F3EC] px-3 focus-within:border-[#C9A84C] focus-within:bg-white transition-all">
+            <span className="shrink-0 text-[16px]">🔍</span>
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+              placeholder="ابحث عن بند أو وصف..."
+              className="h-[44px] flex-1 bg-transparent text-[14px] font-medium text-[#082555] outline-none placeholder:text-[#B0A090]"
+              style={{ fontFamily: AR }} />
+            {search && (
+              <button type="button" onClick={() => setSearch("")}
+                className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-[#E2D8C4] text-[10px] font-bold text-[#9A8A6A] hover:bg-[#C9A84C]/20">
+                ✕
+              </button>
+            )}
+          </div>
+          {isSearching && (
+            <p className="mt-2 px-1 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+              {filtered.reduce((n, d) => n + d.items.length, 0)} نتيجة
+            </p>
           )}
         </div>
       </div>
-      <div className="flex flex-col gap-3">
+
+      {/* Division cards */}
+      <div className="flex flex-col gap-2">
         {filtered.map((div) => {
           const isOpen = isSearching || openDiv === div.num;
           const price = c?.rates?.[div.rateKey] > 0 ? c.rates[div.rateKey] : null;
-          return (
-            <div key={div.num} className="rounded-2xl bg-white border-2 border-[#E2D8C4] overflow-hidden shadow-sm transition-all hover:shadow-md">
+          const card = (
+            <div key={div.num}
+              className="overflow-hidden rounded-2xl border border-[#E2D8C4] bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-px">
+
+              {/* Division header */}
               <button type="button" onClick={() => setOpenDiv(openDiv === div.num ? null : div.num)}
-                className={`w-full flex min-h-[72px] items-center gap-4 px-4 py-3 text-right transition-colors ${isOpen ? "bg-[#F5EDD8]" : "hover:bg-[#F5EDD8]/30"}`}>
-                <span className="rounded-xl bg-[#082555] px-3 py-2 text-[12px] font-bold text-[#E8C97A]" style={{ fontFamily: MONO }}>{div.num}</span>
+                className={`w-full flex items-center gap-3 px-4 py-3.5 text-right transition-colors duration-150 ${isOpen ? "bg-[#F5EDD8]" : "hover:bg-[#F5EDD8]/40"}`}>
+                {/* Num badge */}
+                <span className="shrink-0 rounded-xl bg-[#082555] px-2.5 py-1.5 text-[11px] font-black text-[#E8C97A] shadow-sm"
+                  style={{ fontFamily: MONO }}>{div.num}</span>
+
+                {/* Name */}
                 <div className="flex-1 min-w-0 text-right">
-                  <div className="text-[15px] font-bold text-[#082555] truncate mb-0.5" style={{ fontFamily: AR }}>{div.ar}</div>
-                  <div className="text-[11px] text-[#9A8A6A] font-bold uppercase tracking-tight">{div.en}</div>
+                  <div className="text-[14px] font-bold leading-snug text-[#082555]" style={{ fontFamily: AR }}>{div.ar}</div>
+                  <div className="mt-0.5 text-[10px] font-bold uppercase tracking-wide text-[#9A8A6A]">{div.en}</div>
                 </div>
-                {price && (
-                  <div className="text-left shrink-0 ml-1">
-                    <div className="text-[14px] font-bold text-[#C9A84C]" style={{ fontFamily: MONO }}>{price.toLocaleString()}</div>
-                    <div className="text-[9px] text-[#9A8A6A] font-bold uppercase">{c.currency}/{div.unit}</div>
-                  </div>
-                )}
-                <span className={`text-[14px] text-[#9A8A6A] transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}>▼</span>
+
+                {/* Price + count + chevron */}
+                <div className="flex shrink-0 items-center gap-2">
+                  {price && (
+                    <div className="hidden sm:block text-right">
+                      <div className="text-[13px] font-black text-[#C9A84C]" style={{ fontFamily: MONO }}>{price.toLocaleString()}</div>
+                      <div className="text-[8px] font-bold uppercase text-[#9A8A6A]">{c.currency}/{div.unit}</div>
+                    </div>
+                  )}
+                  <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-[#082555]/8 text-[11px] text-[#082555]/50 transition-transform duration-200"
+                    style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+                </div>
               </button>
+
+              {/* Items list */}
               {isOpen && (
-                <div className="border-t-2 border-[#E2D8C4] bg-[#FAFAFA]">
-                  {div.items.map((item) => (
-                    <div key={item.num} className="flex min-h-[64px] items-center gap-4 border-b border-[#E2D8C4] px-5 py-3 last:border-b-0 hover:bg-white transition-colors">
-                      <span className="text-[11px] font-bold text-[#C9A84C] min-w-[70px]" style={{ fontFamily: MONO }}>{item.num}</span>
-                      <span className="flex-1 text-[14px] font-bold text-[#082555]" style={{ fontFamily: AR }}>{item.ar}</span>
-                      <span className="rounded-lg bg-[#F7F3EC] px-2.5 py-1 text-[10px] font-bold text-[#9A8A6A]">{item.unit}</span>
-                      <button type="button" onClick={() => onSelfPrice(item, div)}
-                        className="min-h-[40px] rounded-xl border-2 border-[#082555] bg-white px-4 py-1 text-[12px] font-bold text-[#082555] transition hover:bg-[#F5EDD8] active:scale-[0.95]"
-                        style={{ fontFamily: AR }}>
-                        💡 سعر بنفسك
-                      </button>
-                      <button type="button" onClick={() => onSelectItem(item, div)}
-                        className="min-h-[40px] rounded-xl bg-[#C9A84C] px-5 py-1 text-[13px] font-bold text-[#082555] transition hover:bg-[#E8C97A] active:scale-[0.95]"
-                        style={{ fontFamily: AR }}>
-                        اختر
-                      </button>
+                <div className="border-t border-[#E2D8C4]">
+                  {div.items.map((item, idx) => (
+                    <div key={item.num}
+                      className={`group flex flex-col gap-2.5 border-b border-[#E2D8C4] px-4 py-3 last:border-b-0 transition-colors duration-150 hover:bg-[#FFFDF8]
+                        sm:flex-row sm:items-center sm:gap-4 ${idx % 2 === 0 ? "bg-white" : "bg-[#FAFAF8]"}`}>
+
+                      {/* Item code + name */}
+                      <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                        <span className="mt-0.5 shrink-0 rounded-lg bg-[#F5EDD8] px-2 py-1 text-[10px] font-black text-[#C9A84C]"
+                          style={{ fontFamily: MONO }}>{item.num}</span>
+                        <span className="text-[13px] font-bold leading-snug text-[#082555]"
+                          style={{ fontFamily: AR }}>{item.ar}</span>
+                      </div>
+
+                      {/* Unit + buttons */}
+                      <div className="flex items-center gap-2 sm:shrink-0">
+                        <span className="rounded-lg border border-[#E2D8C4] bg-[#F7F3EC] px-2.5 py-1 text-[10px] font-bold text-[#9A8A6A]">
+                          {item.unit}
+                        </span>
+                        <button type="button"
+                          onClick={itemLocked ? (isGuest ? () => setShowGuestPrompt(true) : () => onOpenSubscription?.()) : () => onSelfPrice(item, div)}
+                          className="flex-1 sm:flex-none min-h-[36px] rounded-xl border border-[#082555]/20 bg-white px-3 text-[11px] font-bold text-[#082555] shadow-sm transition-all duration-150 hover:border-[#082555] hover:bg-[#F5EDD8] hover:shadow-md active:scale-[0.96]"
+                          style={{ fontFamily: AR }}>
+                          {itemLocked ? "🔒 مقفول" : "💡 سعر بنفسك"}
+                        </button>
+                        <button type="button"
+                          onClick={itemLocked ? (isGuest ? () => setShowGuestPrompt(true) : () => onOpenSubscription?.()) : () => onSelectItem(item, div)}
+                          className="flex-1 sm:flex-none min-h-[36px] rounded-xl bg-[#C9A84C] px-4 text-[12px] font-bold text-[#082555] shadow-sm transition-all duration-150 hover:bg-[#E8C97A] hover:shadow-md active:scale-[0.96]"
+                          style={{ fontFamily: AR }}>
+                          {itemLocked ? "🔒" : "اختر"}
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
           );
+
+          /* ── AdSense after division 28 ── */
+          if (div.num === "28") {
+            return (
+              <div key={`${div.num}-wrap`}>
+                {card}
+                {(!afterDiv28AdBanner || afterDiv28AdBanner.enabled !== false) && (
+                  <div className="mt-2 overflow-hidden rounded-2xl border border-[#E2D8C4] bg-white shadow-sm">
+                    <AdSenseUnit className="min-h-[100px]" />
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          return card;
         })}
       </div>
+
+      {/* Empty state */}
+      {filtered.length === 0 && (
+        <div className="rounded-2xl border border-[#E2D8C4] bg-white py-12 text-center">
+          <p className="text-3xl mb-3">🔍</p>
+          <p className="text-[14px] font-bold text-[#082555]" style={{ fontFamily: AR }}>لا توجد نتائج</p>
+          <p className="mt-1 text-[11px] text-[#9A8A6A]" style={{ fontFamily: AR }}>جرب كلمة بحث مختلفة</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -2236,7 +3265,7 @@ function MarketComparisonCard({ myPrice, mkt, status, sym }) {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-5">
+      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border-2 border-[#F7F3EC] bg-[#FAFAFA] p-3 flex flex-col items-center">
              <div className="text-[10px] font-bold text-[#9A8A6A] uppercase tracking-widest mb-1">سعرك</div>
              <div className="flex items-baseline gap-1">
@@ -2292,16 +3321,107 @@ function MarketComparisonCard({ myPrice, mkt, status, sym }) {
   );
 }
 
+function AnalysisAdBanner({ adBanner, canManageAds = false, onManageAds, onToggleVisibility, onRemove }) {
+  const hasContent = adBanner?.enabled && adBanner?.imageUrl;
+  const isEnabled = adBanner?.enabled === true;
+
+  const handleClick = () => {
+    if (!hasContent || !adBanner?.targetUrl) return;
+    window.open(adBanner.targetUrl, "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <div className="relative rounded-[24px] border border-[#E2D8C4] bg-white p-3 shadow-sm overflow-hidden">
+      {canManageAds ? (
+        <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onManageAds?.(adBanner?.slotId || AD_SLOT_IDS.analysisPreResult, adBanner)}
+            className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm"
+            style={{ fontFamily: AR }}
+          >
+            تعديل
+          </button>
+          <button
+            type="button"
+            onClick={() => onToggleVisibility?.(adBanner?.slotId || AD_SLOT_IDS.analysisPreResult, adBanner, true)}
+            className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm"
+            style={{ fontFamily: AR }}
+          >
+            إظهار
+          </button>
+          <button
+            type="button"
+            onClick={() => onToggleVisibility?.(adBanner?.slotId || AD_SLOT_IDS.analysisPreResult, adBanner, false)}
+            className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm"
+            style={{ fontFamily: AR }}
+          >
+            إخفاء
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const ok = window.confirm("هل تريد إزالة محتوى هذا الإعلان؟");
+              if (!ok) return;
+              onRemove?.(adBanner?.slotId || AD_SLOT_IDS.analysisPreResult, adBanner);
+            }}
+            className="rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-bold text-rose-700 shadow-sm"
+            style={{ fontFamily: AR }}
+          >
+            إزالة
+          </button>
+        </div>
+      ) : null}
+
+      {hasContent ? (
+        <>
+          <button
+            type="button"
+            onClick={handleClick}
+            className="mx-auto block h-[230px] w-full max-w-[608px] overflow-hidden rounded-2xl bg-[#F7F3EC]"
+          >
+            <img
+              src={adBanner.imageUrl}
+              alt={adBanner.alt || adBanner.title || "ad-banner"}
+              loading="lazy"
+              className="h-full w-full object-cover"
+            />
+          </button>
+          {adBanner.title ? (
+            <p className="mt-2 text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+              {adBanner.title}
+            </p>
+          ) : null}
+        </>
+      ) : canManageAds ? (
+        <div className="mx-auto flex h-[230px] w-full max-w-[608px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#d4a843]/40 bg-[#fff9ec] px-4 py-5 text-center">
+          <span className="mb-2 rounded-full bg-[#C9A84C]/12 px-3 py-1 text-[10px] font-bold text-[#8B6A1F]" style={{ fontFamily: AR }}>
+            مساحة إعلانية
+          </span>
+          <p className="text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+            {isEnabled ? "الإعلان مفعّل لكن بدون صورة حالية" : "لا توجد صورة إعلان مفعلة لهذا المكان"}
+          </p>
+          <p className="mt-1 text-[10px] text-[#9A8A6A]" style={{ fontFamily: AR }}>
+            اضغط تعديل الإعلان لإضافة الصورة والرابط
+          </p>
+        </div>
+      ) : (
+        <AdSenseUnit />
+      )}
+    </div>
+  );
+}
+
 function AnalysisScreen({
   authMode,
   country, selectedItem, resources, setResources, onOpenAddModal, onSave, onRfq, onExport, toast,
   qty, setQty, overhead, setOverhead, profit, setProfit, factor, setFactor,
-  settings,
+  settings, topAdBanner, actionsAdBanner, bottomAdBanner, canManageAds = false, onManageAds, onToggleAdVisibility, onRemoveAd,
 }) {
   const c = COUNTRIES[country] || COUNTRIES.sa;
   const sym = c.currency;
   const mkt = selectedItem ? selectedItem.market : 0;
-  const taxPct = Number(settings?.taxPercent) || 15;
+  const [taxPct, setTaxPct] = useState(() => Number(settings?.taxPercent) || 15);
   const isAuthenticated = authMode && authMode !== "guest";
 
   const calc = useMemo(() => {
@@ -2434,19 +3554,31 @@ function AnalysisScreen({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: "الكمية", val: qty, setter: setQty, unit: selectedItem.unit, step: "0.1" },
           { label: "مصاريف غير مباشرة", val: overhead, setter: setOverhead, unit: "%", step: "0.1" },
-          { label: "Profit", val: profit, setter: setProfit, unit: "%", step: "0.1" },
-          { label: "Factor", val: factor, setter: setFactor, unit: "F", step: "0.01" },
+          { label: "الربح", val: profit, setter: setProfit, unit: "%", step: "0.1" },
+          { label: "معامل الأمان", val: factor, setter: setFactor, unit: "F", step: "0.01" },
         ].map(({ label, val, setter, unit: u, step }) => (
-          <div key={label} className="rounded-2xl border-2 border-[#E2D8C4] bg-white px-3 py-2.5 text-center shadow-sm transition-all hover:border-[#C9A84C]">
-            <div className="text-[10px] font-bold text-[#9A8A6A] mb-1.5 uppercase" style={{ fontFamily: AR }}>{label}</div>
-            <input type="number" value={val} step={step} onChange={(e) => setter(e.target.value)} disabled={!isAuthenticated}
-              className="w-full bg-transparent text-center text-[16px] font-bold text-[#082555] outline-none"
-              style={{ fontFamily: MONO }} />
-            <div className="text-[8px] font-bold text-[#C9A84C] mt-1 uppercase">{u}</div>
+          <div key={label} className="rounded-2xl border-2 border-[#E2D8C4] bg-white px-4 py-3 shadow-sm transition-all hover:border-[#C9A84C]">
+            <div className="flex min-h-[36px] items-center justify-between gap-3">
+              <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase text-[#9A8A6A]" style={{ fontFamily: AR }}>
+                <span>{label}</span>
+                <span className="text-[#C9A84C]">{u}</span>
+              </div>
+              <input
+                type="number"
+                value={val}
+                step={step}
+                onChange={(e) => setter(e.target.value)}
+                disabled={!isAuthenticated}
+                className="w-20 bg-transparent text-center text-[16px] font-bold text-[#082555] outline-none"
+                style={{ fontFamily: MONO }}
+                dir="ltr"
+                lang="en"
+              />
+            </div>
           </div>
         ))}
       </div>
@@ -2454,8 +3586,8 @@ function AnalysisScreen({
       {SECTIONS.map(({ key, label, icon }) => {
         const sectionTotal = (resources[key] || []).reduce((s, r) => s + r.qty * r.rate * (Number(qty) || 1) * (Number(factor) || 1), 0);
         return (
-          <div key={key} className="rounded-2xl border-2 border-[#E2D8C4] bg-white overflow-hidden shadow-sm">
-            <div className="flex min-h-[50px] items-center justify-between px-4 py-2 border-b-2 border-[#E2D8C4] bg-[#FAFAFA]">
+          <div key={key} className="rounded-2xl border-2 border-[#E2D8C4] bg-white shadow-sm">
+            <div className="flex min-h-[50px] items-center justify-between px-4 py-2 border-b-2 border-[#E2D8C4] bg-[#FAFAFA] rounded-t-2xl">
               <div className="flex items-center gap-3">
                 <span className="text-[20px]">{icon}</span>
                 <div className="flex flex-col">
@@ -2474,77 +3606,132 @@ function AnalysisScreen({
                 </button>
               </div>
             </div>
-            {(resources[key] || []).map((r, i) => {
-              const lineTotal = r.qty * r.rate * (Number(qty) || 1) * (Number(factor) || 1);
-              return (
-                <div key={i} className="flex min-h-[56px] items-center gap-3 border-b border-[#E2D8C4] px-4 py-2.5 last:border-0 hover:bg-[#F7F3EC]/50 transition-colors">
-                  <div className="h-10 w-10 flex items-center justify-center rounded-2xl bg-[#F7F3EC] text-lg shrink-0 shadow-inner">{r.icon}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[13px] font-bold text-[#082555] truncate mb-0.5" style={{ fontFamily: AR }}>{r.name}</div>
-                    <div className="flex items-center gap-2">
-                      {isAuthenticated ? (
-                        <input
-                          type="number"
-                          value={r.qty}
-                          step="0.01"
-                          onChange={(e) => updateQty(key, i, e.target.value)}
-                          className="w-16 rounded-lg border border-[#E2D8C4] bg-white px-2 py-1 text-[10px] font-bold text-[#9A8A6A] outline-none focus:border-[#C9A84C]"
-                          style={{ fontFamily: MONO }}
-                        />
-                      ) : (
-                        <span className="text-[11px] font-bold text-[#9A8A6A] uppercase tracking-tighter">{r.qty}</span>
-                      )}
-                      <span className="h-1 w-1 rounded-full bg-[#E2D8C4]" />
-                      {isAuthenticated ? (
-                        <div className="flex items-center gap-2">
+            <div className="overflow-hidden">
+              <div className="min-w-0">
+                {/* Column header — shown once per section */}
+                {(resources[key] || []).length > 0 && (
+                  <div className="hidden sm:grid sm:grid-cols-[34px_minmax(0,_1fr)_72px_84px_92px_34px] sm:items-center sm:gap-[3px] sm:border-b sm:border-[#E2D8C4] sm:bg-[#F7F3EC]/60 sm:px-3 sm:py-2.5">
+                    <div />
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-[#9A8A6A]" style={{ fontFamily: AR }}>البند</div>
+                    <div className="text-center text-[10px] font-bold uppercase tracking-wider text-[#9A8A6A]" style={{ fontFamily: AR }}>الكمية</div>
+                    <div className="text-center text-[10px] font-bold uppercase tracking-wider text-[#9A8A6A]" style={{ fontFamily: AR }}>السعر</div>
+                    <div className="text-center text-[10px] font-bold uppercase tracking-wider text-[#C9A84C]" style={{ fontFamily: AR }}>الإجمالي</div>
+                    <div />
+                  </div>
+                )}
+
+                {(resources[key] || []).map((r, i) => {
+                  const lineTotal = r.qty * r.rate * (Number(qty) || 1) * (Number(factor) || 1);
+                  return (
+                    <div key={i} className="border-b border-[#E2D8C4] px-3 py-3 last:border-0 transition-colors hover:bg-[#F7F3EC]/50 sm:grid sm:grid-cols-[34px_minmax(0,_1fr)_72px_84px_92px_34px] sm:items-center sm:gap-[3px] sm:px-3">
+                      <div className="flex items-start gap-3 sm:hidden">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F7F3EC] text-xl shadow-inner">{r.icon}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[14px] font-bold leading-tight text-[#082555]" style={{ fontFamily: AR }}>{r.name}</div>
+                          <div className="mt-1 text-[11px] font-bold text-[#C9A84C]">{r.unit}</div>
+                        </div>
+                        {isAuthenticated && (
+                          <button
+                            type="button"
+                            onClick={() => deleteResource(key, i)}
+                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#E2D8C4] bg-white text-[#9A8A6A] transition-all hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-3 gap-2 sm:hidden">
+                        <div>
+                          <div className="mb-1 text-center text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>الكمية</div>
+                          {isAuthenticated ? (
+                            <input
+                              type="number" value={r.qty} step="0.01"
+                              onChange={(e) => updateQty(key, i, e.target.value)}
+                              className="w-full rounded-xl border border-[#E2D8C4] bg-white px-2 py-2 text-center text-[13px] font-bold text-[#082555] outline-none focus:border-[#C9A84C]"
+                              style={{ fontFamily: MONO }}
+                            />
+                          ) : (
+                            <div className="w-full rounded-xl border border-transparent py-2 text-center text-[13px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{r.qty}</div>
+                          )}
+                        </div>
+                        <div>
+                          <div className="mb-1 text-center text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>السعر</div>
+                          {isAuthenticated ? (
+                            <input
+                              type="number" value={r.rate} step="0.01"
+                              onChange={(e) => updateRate(key, i, e.target.value)}
+                              className="w-full rounded-xl border border-[#E2D8C4] bg-white px-2 py-2 text-center text-[13px] font-bold text-[#C9A84C] outline-none focus:border-[#C9A84C]"
+                              style={{ fontFamily: MONO }}
+                            />
+                          ) : (
+                            <div className="w-full rounded-xl border border-transparent py-2 text-center text-[13px] font-bold text-[#C9A84C]" style={{ fontFamily: MONO }}>{r.rate}</div>
+                          )}
+                        </div>
+                        <div>
+                          <div className="mb-1 text-center text-[10px] font-bold text-[#C9A84C]" style={{ fontFamily: AR }}>الإجمالي</div>
+                          <div className="w-full rounded-xl border border-[#C9A84C]/40 bg-[#FFFBF0] py-2 text-center text-[13px] font-bold text-[#082555] shadow-sm" style={{ fontFamily: MONO }}>
+                            {fmtNum(lineTotal)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F7F3EC] text-lg shadow-inner sm:flex">{r.icon}</div>
+
+                      <div className="hidden min-w-0 sm:block">
+                        <div className="text-[13px] font-bold leading-tight text-[#082555]" style={{ fontFamily: AR }}>{r.name}</div>
+                        <div className="mt-0.5 text-[10px] font-bold text-[#C9A84C]">{r.unit}</div>
+                      </div>
+
+                      <div className="hidden px-0.5 sm:block">
+                        {isAuthenticated ? (
                           <input
-                            type="number"
-                            value={r.rate}
-                            step="0.01"
-                            onChange={(e) => updateRate(key, i, e.target.value)}
-                            className="w-20 rounded-lg border border-[#E2D8C4] bg-white px-2 py-1 text-[10px] font-bold text-[#C9A84C] outline-none focus:border-[#C9A84C]"
+                            type="number" value={r.qty} step="0.01"
+                            onChange={(e) => updateQty(key, i, e.target.value)}
+                            className="w-full rounded-xl border border-[#E2D8C4] bg-white px-1.5 py-2 text-center text-[12px] font-bold text-[#082555] outline-none focus:border-[#C9A84C]"
                             style={{ fontFamily: MONO }}
                           />
-                          <span className="text-[11px] font-bold text-[#C9A84C] uppercase tracking-tighter">/ {r.unit}</span>
+                        ) : (
+                          <div className="w-full rounded-xl border border-transparent py-2 text-center text-[12px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{r.qty}</div>
+                        )}
+                      </div>
+
+                      <div className="hidden px-0.5 sm:block">
+                        {isAuthenticated ? (
+                          <input
+                            type="number" value={r.rate} step="0.01"
+                            onChange={(e) => updateRate(key, i, e.target.value)}
+                            className="w-full rounded-xl border border-[#E2D8C4] bg-white px-1.5 py-2 text-center text-[12px] font-bold text-[#C9A84C] outline-none focus:border-[#C9A84C]"
+                            style={{ fontFamily: MONO }}
+                          />
+                        ) : (
+                          <div className="w-full rounded-xl border border-transparent py-2 text-center text-[12px] font-bold text-[#C9A84C]" style={{ fontFamily: MONO }}>{r.rate}</div>
+                        )}
+                      </div>
+
+                      <div className="hidden px-0.5 sm:block">
+                        <div className="w-full rounded-xl border border-[#C9A84C]/40 bg-[#FFFBF0] py-2 text-center text-[12px] font-bold text-[#082555] shadow-sm" style={{ fontFamily: MONO }}>
+                          {fmtNum(lineTotal)}
                         </div>
-                      ) : (
-                        <span className="text-[11px] font-bold text-[#C9A84C] uppercase tracking-tighter">{r.rate} / {r.unit}</span>
-                      )}
+                      </div>
+
+                      <div className="hidden justify-center sm:flex">
+                        {isAuthenticated && (
+                          <button
+                            type="button"
+                            onClick={() => deleteResource(key, i)}
+                            className="h-8 w-8 flex items-center justify-center rounded-xl bg-white border border-[#E2D8C4] text-[#9A8A6A] hover:bg-rose-50 hover:border-rose-200 hover:text-rose-500 transition-all"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-left min-w-[84px]">
-                    {isAuthenticated ? (
-                      <>
-                        <input
-                          type="number"
-                          value={roundTo(lineTotal)}
-                          step="0.01"
-                          onChange={(e) => updateLineTotal(key, i, e.target.value)}
-                          className="w-full rounded-lg border border-[#E2D8C4] bg-white px-2 py-1 text-left text-[14px] font-bold text-[#082555] outline-none focus:border-[#C9A84C]"
-                          style={{ fontFamily: MONO }}
-                        />
-                        <div className="text-[9px] text-[#9A8A6A] font-bold uppercase mt-1">{sym}</div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="text-[14px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{fmtNum(lineTotal)}</div>
-                        <div className="text-[8px] text-[#9A8A6A] font-bold uppercase">{sym}</div>
-                      </>
-                    )}
-                  </div>
-                  {isAuthenticated && (
-                    <button
-                      type="button"
-                      onClick={() => deleteResource(key, i)}
-                      className="rounded-xl border border-[#E2D8C4] px-2 py-1.5 text-[10px] font-bold text-[#9A8A6A] transition hover:border-red-300 hover:text-red-500"
-                    >
-                      حذف
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-            <div className="border-t border-[#E2D8C4] bg-[#FFFDF8] px-4 py-2">
+                  );
+                })}
+              </div>
+            </div>
+            <div className="border-t border-[#E2D8C4] bg-[#FFFDF8] px-4 py-2 rounded-b-2xl">
               <div className="inline-flex items-center gap-3 rounded-2xl border border-[#E2D8C4] bg-white px-3 py-2">
                 <span className="text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>إجمالي {label}</span>
                 <span className="text-[14px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{fmtNum(sectionTotal)}</span>
@@ -2556,16 +3743,18 @@ function AnalysisScreen({
       })}
 
       {calc && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           {[
             { label: "إجمالي المواد", value: calc.matT, color: "#C9A84C" },
             { label: "إجمالي العمالة", value: calc.labT, color: "#E07B2A" },
             { label: "إجمالي المعدات", value: calc.eqpT, color: "#6FCF97" },
           ].map((item) => (
-            <div key={item.label} className="rounded-2xl border-2 border-[#E2D8C4] bg-white px-3 py-2.5 text-center shadow-sm">
-              <div className="mb-1 text-[9px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>{item.label}</div>
-              <div className="text-[18px] font-bold" style={{ fontFamily: MONO, color: item.color }}>{fmtNum(item.value)}</div>
-              <div className="text-[9px] font-bold text-[#9A8A6A]">{sym}</div>
+            <div key={item.label} className="rounded-2xl border-2 border-[#E2D8C4] bg-white px-3 py-3 shadow-sm">
+              <div className="flex items-center justify-center gap-2 text-center">
+                <span className="text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>{item.label}</span>
+                <span className="text-[18px] font-bold" style={{ fontFamily: MONO, color: item.color }}>{fmtNum(item.value)}</span>
+                <span className="text-[10px] font-bold text-[#9A8A6A]">{sym}</span>
+              </div>
             </div>
           ))}
         </div>
@@ -2583,42 +3772,116 @@ function AnalysisScreen({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              {
-                label: "مجموع البنود المباشرة", value: calc.direct, tone: "text-[#082555]",
-                hint: `مواد ${fmtNum(calc.matT)} + عمالة ${fmtNum(calc.labT)} + معدات ${fmtNum(calc.eqpT)} ${sym}`,
-              },
-              {
-                label: "المصاريف غير المباشرة", value: calc.indirect, tone: "text-[#9A8A6A]",
-                hint: `${overhead}% × ${fmtNum(calc.direct)} ${sym}`,
-              },
-              {
-                label: `هامش الربح ${profit}%`, value: calc.profitAmt, tone: "text-[#6FCF97]",
-                hint: `${profit}% × ${fmtNum(calc.withOverhead)} ${sym}`,
-              },
-              {
-                label: `ضريبة القيمة المضافة ${taxPct}%`, value: calc.taxAmt, tone: "text-[#E07B2A]",
-                hint: `${taxPct}% × ${fmtNum(calc.finalTotal)} ${sym}`,
-              },
-              {
-                label: "إجمالي البند قبل الضريبة", value: calc.finalTotal, tone: "text-[#082555]",
-                hint: `${fmtNum(calc.withOverhead)} + ربح ${fmtNum(calc.profitAmt)} ${sym}`,
-              },
-              {
-                label: "إجمالي البند بعد الضريبة", value: calc.totalWithTax, tone: "text-[#C9A84C]",
-                hint: `${fmtNum(calc.finalTotal)} + ضريبة ${fmtNum(calc.taxAmt)} ${sym}`,
-              },
-            ].map((item) => (
-              <div key={item.label} className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
-                <div className="mb-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>{item.label}</div>
-                <div className={`text-[20px] font-bold ${item.tone}`} style={{ fontFamily: MONO }}>{fmtNum(item.value)}</div>
-                <div className="mt-1 text-[10px] font-bold text-[#C9A84C]">{sym}</div>
-                {item.hint ? (
-                  <div className="mt-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>{item.hint}</div>
-                ) : null}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+            {/* مجموع البنود المباشرة */}
+            <div className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
+              <div className="mb-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>مجموع البنود المباشرة</div>
+              <div className="flex items-baseline gap-1 text-[20px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>
+                <span>{fmtNum(calc.direct)}</span>
+                <span className="text-[10px] font-bold text-[#C9A84C]">{sym}</span>
               </div>
-            ))}
+              <div className="mt-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+                مواد {fmtNum(calc.matT)} + عمالة {fmtNum(calc.labT)} + معدات {fmtNum(calc.eqpT)} {sym}
+              </div>
+            </div>
+
+            {/* المصاريف غير المباشرة — editable */}
+            <div className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>المصاريف غير المباشرة</span>
+                <div className="flex items-center gap-1 rounded-lg border border-[#E2D8C4] bg-white px-2 py-1">
+                  <input
+                    type="number" min="0" max="100" step="0.1"
+                    value={overhead}
+                    onChange={(e) => setOverhead(e.target.value)}
+                    className="w-10 bg-transparent text-center text-[11px] font-bold text-[#082555] outline-none"
+                    style={{ fontFamily: MONO }}
+                  />
+                  <span className="text-[10px] font-bold text-[#9A8A6A]">%</span>
+                </div>
+              </div>
+              <div className="flex items-baseline gap-1 text-[20px] font-bold text-[#9A8A6A]" style={{ fontFamily: MONO }}>
+                <span>{fmtNum(calc.indirect)}</span>
+                <span className="text-[10px] font-bold text-[#C9A84C]">{sym}</span>
+              </div>
+              <div className="mt-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+                {overhead}% × {fmtNum(calc.direct)} {sym}
+              </div>
+            </div>
+
+            {/* هامش الربح — editable */}
+            <div className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>هامش الربح</span>
+                <div className="flex items-center gap-1 rounded-lg border border-[#6FCF97]/50 bg-[#6FCF97]/8 px-2 py-1">
+                  <input
+                    type="number" min="0" max="100" step="0.1"
+                    value={profit}
+                    onChange={(e) => setProfit(e.target.value)}
+                    className="w-10 bg-transparent text-center text-[11px] font-bold text-[#6FCF97] outline-none"
+                    style={{ fontFamily: MONO }}
+                  />
+                  <span className="text-[10px] font-bold text-[#6FCF97]">%</span>
+                </div>
+              </div>
+              <div className="flex items-baseline gap-1 text-[20px] font-bold text-[#6FCF97]" style={{ fontFamily: MONO }}>
+                <span>{fmtNum(calc.profitAmt)}</span>
+                <span className="text-[10px] font-bold text-[#C9A84C]">{sym}</span>
+              </div>
+              <div className="mt-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+                {profit}% × {fmtNum(calc.withOverhead)} {sym}
+              </div>
+            </div>
+
+            {/* ضريبة القيمة المضافة — editable */}
+            <div className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>ضريبة القيمة المضافة</span>
+                <div className="flex items-center gap-1 rounded-lg border border-[#E07B2A]/50 bg-[#E07B2A]/8 px-2 py-1">
+                  <input
+                    type="number" min="0" max="100" step="0.1"
+                    value={taxPct}
+                    onChange={(e) => setTaxPct(e.target.value)}
+                    className="w-10 bg-transparent text-center text-[11px] font-bold text-[#E07B2A] outline-none"
+                    style={{ fontFamily: MONO }}
+                  />
+                  <span className="text-[10px] font-bold text-[#E07B2A]">%</span>
+                </div>
+              </div>
+              <div className="flex items-baseline gap-1 text-[20px] font-bold text-[#E07B2A]" style={{ fontFamily: MONO }}>
+                <span>{fmtNum(calc.taxAmt)}</span>
+                <span className="text-[10px] font-bold text-[#C9A84C]">{sym}</span>
+              </div>
+              <div className="mt-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+                {taxPct}% × {fmtNum(calc.finalTotal)} {sym}
+              </div>
+            </div>
+
+            {/* إجمالي قبل الضريبة */}
+            <div className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
+              <div className="mb-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>إجمالي البند قبل الضريبة</div>
+              <div className="flex items-baseline gap-1 text-[20px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>
+                <span>{fmtNum(calc.finalTotal)}</span>
+                <span className="text-[10px] font-bold text-[#C9A84C]">{sym}</span>
+              </div>
+              <div className="mt-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+                {fmtNum(calc.withOverhead)} + ربح {fmtNum(calc.profitAmt)} {sym}
+              </div>
+            </div>
+
+            {/* إجمالي بعد الضريبة */}
+            <div className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
+              <div className="mb-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>إجمالي البند بعد الضريبة</div>
+              <div className="flex items-baseline gap-1 text-[20px] font-bold text-[#C9A84C]" style={{ fontFamily: MONO }}>
+                <span>{fmtNum(calc.totalWithTax)}</span>
+                <span className="text-[10px] font-bold text-[#C9A84C]">{sym}</span>
+              </div>
+              <div className="mt-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+                {fmtNum(calc.finalTotal)} + ضريبة {fmtNum(calc.taxAmt)} {sym}
+              </div>
+            </div>
+
           </div>
         </div>
       )}
@@ -2647,7 +3910,7 @@ function AnalysisScreen({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-5 border-t border-white/10 pt-5">
+          <div className="grid grid-cols-1 gap-5 border-t border-white/10 pt-5 sm:grid-cols-2">
             <div className="space-y-1.5">
               <span className="text-[11px] font-bold text-[#9A8A6A] uppercase tracking-widest">Gross Proposal</span>
               <div className="text-[18px] font-bold text-white leading-none" style={{ fontFamily: MONO }}>{fmtNum(calc.finalTotal)} <span className="text-[11px] opacity-60 ml-1">{sym}</span></div>
@@ -2666,7 +3929,7 @@ function AnalysisScreen({
             </div>
           </div>
 
-          <div className="mt-5 flex gap-3">
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             <button onClick={onSave} className="flex-1 min-h-[56px] rounded-2xl bg-[#C9A84C] text-[#082555] font-bold text-[15px] flex items-center justify-center gap-2 shadow-lg transition hover:bg-[#E8C97A] active:scale-[0.98]">
               <SaveIcon className="h-5 w-5" /> حفظ / تصدير تحليل البند PDF
             </button>
@@ -2676,15 +3939,136 @@ function AnalysisScreen({
           </div>
         </div>
       )}
+
+      <AnalysisAdBanner
+        adBanner={{ ...(actionsAdBanner || {}), slotId: AD_SLOT_IDS.analysisAfterActions }}
+        canManageAds={canManageAds}
+        onManageAds={onManageAds}
+        onToggleVisibility={onToggleAdVisibility}
+        onRemove={onRemoveAd}
+      />
+
+      <AnalysisAdBanner
+        adBanner={{ ...(bottomAdBanner || {}), slotId: AD_SLOT_IDS.analysisPostResult }}
+        canManageAds={canManageAds}
+        onManageAds={onManageAds}
+        onToggleVisibility={onToggleAdVisibility}
+        onRemove={onRemoveAd}
+      />
     </div>
   );
 }
 
-function MarketScreen({ country, onSelectItem, onSelfPrice }) {
+function InlineAdEditorModal({ title, draft, saving = false, onChange, onSave, onClose }) {
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#082555]/45 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-3xl border-2 border-[#E2D8C4] bg-white p-5 shadow-2xl">
+        <h3 className="text-[16px] font-bold text-[#082555]" style={{ fontFamily: AR }}>
+          {title}
+        </h3>
+
+        <div className="mt-4 space-y-3">
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+              عنوان الإعلان
+            </span>
+            <input
+              type="text"
+              value={draft?.title || ""}
+              onChange={(e) => onChange("title", e.target.value)}
+              className="w-full rounded-xl border-2 border-[#E2D8C4] px-3 py-2 text-[13px] font-bold text-[#082555] outline-none focus:border-[#C9A84C]"
+              style={{ fontFamily: AR }}
+              placeholder="مثال: خصم خاص لموردي المعدات"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+              رابط الصورة
+            </span>
+            <input
+              type="url"
+              value={draft?.imageUrl || ""}
+              onChange={(e) => onChange("imageUrl", e.target.value)}
+              className="w-full rounded-xl border-2 border-[#E2D8C4] px-3 py-2 text-[12px] font-bold text-[#082555] outline-none focus:border-[#C9A84C]"
+              style={{ fontFamily: MONO }}
+              placeholder="https://..."
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+              رابط التحويل عند الضغط
+            </span>
+            <input
+              type="url"
+              value={draft?.targetUrl || ""}
+              onChange={(e) => onChange("targetUrl", e.target.value)}
+              className="w-full rounded-xl border-2 border-[#E2D8C4] px-3 py-2 text-[12px] font-bold text-[#082555] outline-none focus:border-[#C9A84C]"
+              style={{ fontFamily: MONO }}
+              placeholder="https://..."
+            />
+          </label>
+
+          <label className="flex items-center justify-between rounded-xl border-2 border-[#E2D8C4] bg-[#F7F3EC] px-3 py-2">
+            <span className="text-[12px] font-bold text-[#082555]" style={{ fontFamily: AR }}>تفعيل الإعلان</span>
+            <input
+              type="checkbox"
+              checked={Boolean(draft?.enabled)}
+              onChange={(e) => onChange("enabled", e.target.checked)}
+              className="h-4 w-4"
+            />
+          </label>
+        </div>
+
+        <div className="mt-4 flex gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="flex-1 rounded-xl border-2 border-[#E2D8C4] px-3 py-2 text-[12px] font-bold text-[#5A4E38]"
+            style={{ fontFamily: AR }}
+          >
+            إغلاق
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={saving}
+            className="flex-1 rounded-xl bg-[#082555] px-3 py-2 text-[12px] font-bold text-[#E8C97A] disabled:opacity-60"
+            style={{ fontFamily: AR }}
+          >
+            {saving ? "جارٍ الحفظ..." : "حفظ الإعلان"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MarketScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, itemRemaining = null, onOpenSubscription }) {
   const c = country ? COUNTRIES[country] : COUNTRIES["sa"];
   const divs = CSI_DIVISIONS.filter((d) => c.rates[d.rateKey] > 0);
   return (
     <div className="space-y-4">
+      {itemLocked ? (
+        <div className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-4">
+          <p className="text-[12px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+            لقد وصلت للحد المجاني للبنود. اشترك الآن لفتح جميع بنود السوق.
+          </p>
+          <button
+            type="button"
+            onClick={onOpenSubscription}
+            className="mt-3 w-full rounded-xl bg-[#082555] py-2.5 text-[12px] font-bold text-[#E8C97A]"
+          >
+            فتح صفحة الاشتراك
+          </button>
+        </div>
+      ) : Number.isFinite(itemRemaining) ? (
+        <div className="rounded-2xl border border-[#d4a843]/30 bg-[#fff8e7] px-4 py-3 text-[12px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+          المتبقي لك في الخطة المجانية: {itemRemaining} بند
+        </div>
+      ) : null}
       <div className="flex items-center justify-between px-2">
         <span className="text-[15px] font-bold text-[#082555]" style={{ fontFamily: AR }}>أسعار السوق الحالية</span>
         <span className="text-[11px] font-bold text-[#9A8A6A] tracking-tighter uppercase" style={{ fontFamily: AR }}>SOURCE: TASEERA · {c.name}</span>
@@ -2696,8 +4080,17 @@ function MarketScreen({ country, onSelectItem, onSelfPrice }) {
           const up = changeVal >= 0;
           return (
             <div key={d.num}
-              className="w-full flex min-h-[80px] items-center gap-4 rounded-3xl border-2 border-[#E2D8C4] bg-white p-4 shadow-sm text-right transition-all hover:border-[#C9A84C] hover:shadow-md">
-              <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { if (d.items[0]) onSelectItem(d.items[0], d); }}>
+              className="w-full flex min-h-[80px] flex-col items-stretch gap-3 rounded-3xl border-2 border-[#E2D8C4] bg-white p-3 text-right shadow-sm transition-all hover:border-[#C9A84C] hover:shadow-md sm:flex-row sm:items-center sm:gap-4 sm:p-4">
+              <div
+                className={`flex-1 min-w-0 ${itemLocked ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
+                onClick={() => {
+                  if (itemLocked) {
+                    onOpenSubscription?.();
+                    return;
+                  }
+                  if (d.items[0]) onSelectItem(d.items[0], d);
+                }}
+              >
                 <div className="text-[11px] font-bold text-[#C9A84C] uppercase tracking-widest" style={{ fontFamily: MONO }}>{d.num} · {d.en}</div>
                 <div className="text-[16px] font-bold text-[#082555] mt-1.5 truncate" style={{ fontFamily: AR }}>{d.ar}</div>
                 <div className="text-[11px] font-bold text-[#9A8A6A] mt-1.5 flex items-center gap-2">
@@ -2706,21 +4099,23 @@ function MarketScreen({ country, onSelectItem, onSelfPrice }) {
                   <span className={up ? "text-emerald-600" : "text-amber-600"}>{up ? "↑" : "↓"} {Math.abs(changeVal)}% Trend</span>
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-2 shrink-0">
-                <div className="text-left">
+              <div className="flex shrink-0 flex-col gap-2 sm:items-end">
+                <div className="text-right sm:text-left">
                   <div className="text-[20px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{price.toLocaleString()}</div>
                   <div className="text-[10px] font-bold text-[#9A8A6A] uppercase tracking-wider">{c.currency}</div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button type="button"
                     onClick={() => { if (d.items[0]) onSelfPrice(d.items[0], d); }}
-                    className="rounded-xl border-2 border-[#082555] bg-white px-3 py-1.5 text-[11px] font-bold text-[#082555] hover:bg-[#F5EDD8] transition active:scale-[0.95]">
-                    💡 سعر بنفسك
+                    disabled={itemLocked}
+                    className="flex-1 rounded-xl border-2 border-[#082555] bg-white px-3 py-1.5 text-[11px] font-bold text-[#082555] transition hover:bg-[#F5EDD8] active:scale-[0.95] sm:flex-none">
+                    {itemLocked ? "🔒 مقفول" : "💡 سعر بنفسك"}
                   </button>
                   <button type="button"
                     onClick={() => { if (d.items[0]) onSelectItem(d.items[0], d); }}
-                    className="rounded-xl bg-[#C9A84C] px-3 py-1.5 text-[11px] font-bold text-[#082555] hover:bg-[#E8C97A] transition active:scale-[0.95]">
-                    اختر
+                    disabled={itemLocked}
+                    className="flex-1 rounded-xl bg-[#C9A84C] px-3 py-1.5 text-[11px] font-bold text-[#082555] transition hover:bg-[#E8C97A] active:scale-[0.95] sm:flex-none">
+                    {itemLocked ? "🔒 مقفول" : "اختر"}
                   </button>
                 </div>
               </div>
@@ -2751,7 +4146,7 @@ function AddResourceModal({ defaultType, onAdd, onClose }) {
           <span className="text-[18px] font-bold text-[#082555]" style={{ fontFamily: AR }}>إضافة مورد جديد للتحليل</span>
           <button type="button" onClick={onClose} className="h-10 w-10 flex items-center justify-center rounded-2xl bg-[#F7F3EC] text-[#9A8A6A] hover:bg-[#E2D8C4] transition-colors">✕</button>
         </div>
-        <div className="grid grid-cols-3 gap-3 mb-8">
+        <div className="grid grid-cols-1 gap-3 mb-8 sm:grid-cols-3">
           {["مواد", "عمالة", "معدات"].map((t) => (
             <button key={t} type="button" onClick={() => setType(t)}
               className={`min-h-[52px] rounded-2xl border-2 py-2 text-[14px] font-bold transition-all ${type === t ? "border-[#C9A84C] bg-[#F5EDD8] text-[#082555]" : "border-[#E2D8C4] bg-white text-[#9A8A6A]"}`}
@@ -2766,7 +4161,7 @@ function AddResourceModal({ defaultType, onAdd, onClose }) {
             className="min-h-[56px] w-full rounded-2xl border-2 border-[#E2D8C4] bg-[#F7F3EC] px-4 py-2 text-[15px] font-bold outline-none focus:border-[#C9A84C] transition-colors"
             style={{ fontFamily: AR }} />
         </div>
-        <div className="grid grid-cols-3 gap-4 mb-10">
+        <div className="grid grid-cols-1 gap-4 mb-10 sm:grid-cols-3">
           <div>
             <label className="block text-[12px] font-bold text-[#082555] mb-2 pr-1" style={{ fontFamily: AR }}>الكمية</label>
             <input type="number" value={qty} onChange={(e) => setQty(e.target.value)}

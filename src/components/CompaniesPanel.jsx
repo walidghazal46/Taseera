@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FolderIcon, PlusIcon, SearchIcon, StarIcon, ChevronRightIcon, BuildingsIcon } from "./icons";
 import useBackStack from "../hooks/useBackStack";
+import useAdminSession from "../hooks/useAdminSession";
+import { SUPER_ADMIN_EMAIL } from "../constants/admin";
+import { AD_SLOT_IDS, DEFAULT_AD_BANNER, listenAdBanner, saveAdBanner } from "../services/subscriptionApi";
+import AdSenseUnit from "./AdSenseUnit";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
 const MONO = "'IBM Plex Mono',monospace";
@@ -95,35 +99,43 @@ function Stars({ rating }) {
   );
 }
 
+const TAB_ICONS = { directory: "📋", projects: "📁", create: "➕" };
+
 function TabBar({ tabs, active, onSelect }) {
   return (
-    <div className="flex gap-1.5 rounded-2xl bg-[#082555] p-1.5 shadow-xl">
-      {tabs.map((tab) => (
-        <button
-          key={tab.id}
-          type="button"
-          onClick={() => onSelect(tab.id)}
-          className={`flex-1 min-h-[44px] rounded-xl px-2 py-2 text-[13px] font-bold transition-all duration-300 ${
-            active === tab.id
-              ? "bg-[#C9A84C] text-[#082555] shadow-md"
-              : "text-[#9A8A6A] hover:text-white"
-          }`}
-          style={{ fontFamily: AR }}
-        >
-          {tab.label}
-        </button>
-      ))}
+    <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#082555] to-[#0d3070] shadow-[0_8px_24px_rgba(8,37,85,0.22)] p-1.5">
+      <div className="flex gap-1.5">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => onSelect(tab.id)}
+            className={`flex flex-1 items-center justify-center gap-1.5 min-h-[46px] rounded-xl px-2 py-2 text-[12px] font-bold transition-all duration-200 ${
+              active === tab.id
+                ? "bg-[#C9A84C] text-[#082555] shadow-[0_2px_10px_rgba(201,168,76,0.4)]"
+                : "text-white/55 hover:text-white hover:bg-white/8"
+            }`}
+            style={{ fontFamily: AR }}
+          >
+            <span className="text-sm leading-none">{TAB_ICONS[tab.id] || "•"}</span>
+            {tab.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
 
-function StatBadge({ label, value }) {
+const STAT_ICONS = { 0: "🏢", 1: "🔨", 2: "📐" };
+
+function StatBadge({ label, value, index = 0 }) {
   return (
-    <div className="flex-1 rounded-2xl border-2 border-[#E2D8C4] bg-white px-2.5 py-[0.56rem] text-center shadow-sm">
-      <p className="text-[16px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{value}</p>
-      <p className="mt-0.5 text-[10px] font-bold text-[#9A8A6A] uppercase tracking-wider" style={{ fontFamily: AR }}>
-        {label}
-      </p>
+    <div className="flex flex-1 items-center gap-2.5 rounded-xl border border-[#E2D8C4] bg-white px-3 py-2.5 shadow-sm transition-shadow hover:shadow-md">
+      <span className="text-base leading-none shrink-0">{STAT_ICONS[index]}</span>
+      <div className="min-w-0">
+        <p className="text-[18px] font-bold leading-none text-[#082555]" style={{ fontFamily: MONO }}>{value}</p>
+        <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wide text-[#9A8A6A]" style={{ fontFamily: AR }}>{label}</p>
+      </div>
     </div>
   );
 }
@@ -242,7 +254,7 @@ function CompanyDetailView({ company, onBack, copy }) {
       </div>
 
       {/* Info grid */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-4 shadow-sm">
           <p className="text-[10px] font-bold text-[#9A8A6A] mb-2 uppercase tracking-wider">{copy.headquarters}</p>
           <p className="text-[13px] font-bold text-[#082555]" style={{ fontFamily: AR }}>
@@ -303,7 +315,7 @@ function CompanyDetailView({ company, onBack, copy }) {
 function FormField({ label, value, onChange, placeholder, type = "text" }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-[12px] font-bold text-[#082555] mr-1" style={{ fontFamily: AR }}>
+      <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500" style={{ fontFamily: AR }}>
         {label}
       </span>
       <input
@@ -311,35 +323,127 @@ function FormField({ label, value, onChange, placeholder, type = "text" }) {
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="min-h-[48px] w-full rounded-xl border-2 border-[#E2D8C4] bg-[#F7F3EC] px-4 py-2.5 text-[14px] font-medium text-[#082555] outline-none transition focus:border-[#C9A84C] focus:ring-4 focus:ring-[#C9A84C]/10"
+        className="min-h-[44px] w-full rounded-xl border border-[#E2D8C4] bg-white px-3.5 py-2.5 text-[13px] font-medium text-[#082555] outline-none transition-all duration-150 hover:border-[#C9A84C]/60 focus:border-[#C9A84C] focus:ring-2 focus:ring-[#C9A84C]/20 placeholder:text-slate-300"
         style={{ fontFamily: AR }}
       />
     </label>
   );
 }
 
+function InlineAdBanner({ adBanner, canManageAds = false, onEdit, onToggleVisibility, onRemove }) {
+  const hasContent = adBanner?.enabled && adBanner?.imageUrl;
+
+  return (
+    <div className="relative rounded-2xl border-2 border-[#E2D8C4] bg-white p-2.5 shadow-sm overflow-hidden">
+      {canManageAds ? (
+        <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onEdit?.()}
+            className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm"
+            style={{ fontFamily: AR }}
+          >
+            تعديل
+          </button>
+          <button
+            type="button"
+            onClick={() => onToggleVisibility?.(true)}
+            className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm"
+            style={{ fontFamily: AR }}
+          >
+            إظهار
+          </button>
+          <button
+            type="button"
+            onClick={() => onToggleVisibility?.(false)}
+            className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm"
+            style={{ fontFamily: AR }}
+          >
+            إخفاء
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const ok = window.confirm("هل تريد إزالة محتوى هذا الإعلان؟");
+              if (!ok) return;
+              onRemove?.();
+            }}
+            className="rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-bold text-rose-700 shadow-sm"
+            style={{ fontFamily: AR }}
+          >
+            إزالة
+          </button>
+        </div>
+      ) : null}
+
+      {hasContent ? (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              if (!adBanner?.targetUrl) return;
+              window.open(adBanner.targetUrl, "_blank", "noopener,noreferrer");
+            }}
+            className="mx-auto block h-[230px] w-full max-w-[608px] overflow-hidden rounded-xl bg-[#F7F3EC]"
+          >
+            <img
+              src={adBanner.imageUrl}
+              alt={adBanner.alt || adBanner.title || "companies-ad-banner"}
+              loading="lazy"
+              className="h-full w-full object-cover"
+            />
+          </button>
+          {adBanner.title ? (
+            <p className="mt-2 text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+              {adBanner.title}
+            </p>
+          ) : null}
+        </>
+      ) : canManageAds ? (
+        <div className="mx-auto flex h-[230px] w-full max-w-[608px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#d4a843]/35 bg-[#fff9ec] px-4 py-5 text-center">
+          <p className="text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+            مساحة إعلانية
+          </p>
+        </div>
+      ) : (
+        <AdSenseUnit />
+      )}
+    </div>
+  );
+}
+
 export default function CompaniesPanel({
   companies, company, selectedCompanyId, selectedProjectId,
   onSelectCompany, onSelectProject, onAddCompany, onAddProject,
-  navigationBridge, settings,
+  navigationBridge, settings, sessionMeta, authMode, initialCountry,
 }) {
   const copy = getCompaniesCopy(settings?.language);
+  const { profile: adminProfile } = useAdminSession({
+    uid: sessionMeta?.uid,
+    email: settings?.userEmail,
+    displayName: settings?.userName,
+  });
+  const canManageAds = authMode !== "guest" && (
+    adminProfile?.canAccessAdmin === true ||
+    String(settings?.userEmail || "").toLowerCase() === SUPER_ADMIN_EMAIL
+  );
   const countryOptions = useMemo(() => ([
     { value: COUNTRY_VALUES.sa, label: copy.saudiArabia },
     { value: COUNTRY_VALUES.eg, label: copy.egypt },
     { value: COUNTRY_VALUES.ae, label: copy.uae },
   ]), [copy.egypt, copy.saudiArabia, copy.uae]);
-  const [activeCountry, setActiveCountry] = useState(normalizeCountry(settings?.country || COUNTRY_VALUES.sa));
+  const [activeCountry, setActiveCountry] = useState(normalizeCountry(initialCountry || settings?.country || COUNTRY_VALUES.sa));
   const [query, setQuery] = useState("");
   const [companyForm, setCompanyForm] = useState({
     name: "", type: "Contractor",
-    country: normalizeCountry(settings?.country || COUNTRY_VALUES.sa),
+    country: normalizeCountry(initialCountry || settings?.country || COUNTRY_VALUES.sa),
     specialization: "", headquarters: "",
   });
   const [projectForm, setProjectForm] = useState({
     name: "", location: "", stage: copy.pricingStage, budget: "",
   });
   const [directoryPage, setDirectoryPage] = useState(1);
+  const [companiesAdBanner, setCompaniesAdBanner] = useState(null);
   const nav = useBackStack({
     initialEntry: { section: "directory", detailCompanyId: null },
     registerBackHandler: navigationBridge?.registerBackHandler,
@@ -405,6 +509,83 @@ export default function CompaniesPanel({
     }
   }, [activeCountry, countryOptions]);
 
+  useEffect(() => {
+    const nextCountry = normalizeCountry(initialCountry || settings?.country || COUNTRY_VALUES.sa);
+    setActiveCountry(nextCountry);
+    setCompanyForm((current) => ({ ...current, country: nextCountry }));
+  }, [initialCountry, settings?.country]);
+
+  useEffect(() => {
+    const unsubscribe = listenAdBanner(
+      (data) => setCompaniesAdBanner(data),
+      AD_SLOT_IDS.companiesAfterPagination
+    );
+    return () => unsubscribe?.();
+  }, []);
+
+  const handleToggleAdVisibility = useCallback(async (nextEnabled) => {
+    if (!canManageAds) return;
+    try {
+      await saveAdBanner(
+        adminProfile,
+        { ...(companiesAdBanner || DEFAULT_AD_BANNER), enabled: Boolean(nextEnabled) },
+        AD_SLOT_IDS.companiesAfterPagination
+      );
+    } catch {
+      window.alert("تعذر تحديث حالة الإعلان");
+    }
+  }, [adminProfile, canManageAds, companiesAdBanner]);
+
+  const handleEditAd = useCallback(async () => {
+    if (!canManageAds) return;
+
+    const current = { ...(companiesAdBanner || DEFAULT_AD_BANNER) };
+    const title = window.prompt("عنوان الإعلان", current.title || "");
+    if (title === null) return;
+    const imageUrl = window.prompt("رابط صورة الإعلان", current.imageUrl || "");
+    if (imageUrl === null) return;
+    const targetUrl = window.prompt("رابط التحويل عند الضغط", current.targetUrl || "");
+    if (targetUrl === null) return;
+    const alt = window.prompt("نص بديل للصورة (اختياري)", current.alt || "");
+    if (alt === null) return;
+
+    try {
+      await saveAdBanner(
+        adminProfile,
+        {
+          ...current,
+          title: title.trim(),
+          imageUrl: imageUrl.trim(),
+          targetUrl: targetUrl.trim(),
+          alt: alt.trim(),
+        },
+        AD_SLOT_IDS.companiesAfterPagination
+      );
+    } catch {
+      window.alert("تعذر حفظ تعديل الإعلان");
+    }
+  }, [adminProfile, canManageAds, companiesAdBanner]);
+
+  const handleRemoveAd = useCallback(async () => {
+    if (!canManageAds) return;
+    try {
+      await saveAdBanner(
+        adminProfile,
+        {
+          ...DEFAULT_AD_BANNER,
+          enabled: false,
+          title: "",
+          imageUrl: "",
+          targetUrl: "",
+          alt: "",
+        },
+        AD_SLOT_IDS.companiesAfterPagination
+      );
+    } catch {
+      window.alert("تعذر إزالة الإعلان");
+    }
+  }, [adminProfile, canManageAds]);
+
   const submitCompany = (e) => {
     e.preventDefault();
     if (!companyForm.name.trim() || !companyForm.country.trim() || !companyForm.specialization.trim()) return;
@@ -431,20 +612,20 @@ export default function CompaniesPanel({
             <div className="space-y-2.5">
               {/* Search */}
               <div className="relative">
-                <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#9A8A6A]" />
+                <SearchIcon className="absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9A8A6A]" />
                 <input
                   value={query}
                   onChange={(e) => { setQuery(e.target.value); setDirectoryPage(1); }}
                   placeholder={copy.searchPlaceholder}
-                  className="min-h-[52px] w-full rounded-2xl border-2 border-[#E2D8C4] bg-white pr-12 pl-4 text-[14px] font-medium text-[#082555] outline-none transition focus:border-[#C9A84C] shadow-sm"
+                  className="h-11 w-full rounded-xl border border-[#E2D8C4] bg-white ps-10 pe-4 text-[12px] font-medium text-[#082555] outline-none transition-all duration-150 hover:border-[#C9A84C]/50 focus:border-[#C9A84C] focus:ring-2 focus:ring-[#C9A84C]/20 shadow-sm placeholder:text-slate-300"
                   style={{ fontFamily: AR }}
                 />
               </div>
               {/* Stats */}
-              <div className="flex gap-2.5">
-                <StatBadge label={copy.totalCompanies} value={summary.total} />
-                <StatBadge label={copy.contractors} value={summary.contractors} />
-                <StatBadge label={copy.consultants} value={summary.consultants} />
+              <div className="grid grid-cols-3 gap-2">
+                <StatBadge label={copy.totalCompanies} value={summary.total} index={0} />
+                <StatBadge label={copy.contractors} value={summary.contractors} index={1} />
+                <StatBadge label={copy.consultants} value={summary.consultants} index={2} />
               </div>
             </div>
           )}
@@ -469,12 +650,15 @@ export default function CompaniesPanel({
       {/* Directory */}
       {activeSection === "directory" && (
         <div className="space-y-2.5">
-          <div className="flex items-center justify-between rounded-2xl border-2 border-[#E2D8C4] bg-white px-4 py-2.5 shadow-sm">
-            <span className="text-[12px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
-              {copy.currentShowing} <strong className="text-[#082555]">{pagedCompanies.length}</strong> {copy.outOf} <strong className="text-[#082555]">{filteredCompanies.length}</strong>
+          <div className="flex items-center justify-between rounded-xl border border-[#E2D8C4] bg-[#FAFAF8] px-3.5 py-2 shadow-sm">
+            <span className="text-[11px] text-[#9A8A6A]" style={{ fontFamily: AR }}>
+              {copy.currentShowing}{" "}
+              <strong className="text-[#082555]">{pagedCompanies.length}</strong>
+              {" "}{copy.outOf}{" "}
+              <strong className="text-[#082555]">{filteredCompanies.length}</strong>
             </span>
-            <span className="text-[11px] font-bold text-[#C9A84C]" style={{ fontFamily: MONO }}>
-              {copy.page} {directoryPage} / {totalPages}
+            <span className="rounded-full bg-[#082555] px-2.5 py-0.5 text-[10px] font-bold text-white" style={{ fontFamily: MONO }}>
+              {directoryPage} / {totalPages}
             </span>
           </div>
 
@@ -488,22 +672,39 @@ export default function CompaniesPanel({
           ))}
 
           {/* Pagination */}
-          <div className="flex items-center gap-3 pt-1">
+          {totalPages > 1 && (
+          <div className="flex items-center gap-2">
             <button type="button" onClick={() => setDirectoryPage((p) => Math.max(1, p - 1))}
               disabled={directoryPage === 1}
-              className={`flex-1 min-h-[48px] rounded-2xl py-2 text-[13px] font-bold transition shadow-sm ${
-                directoryPage === 1 ? "bg-white border-2 border-[#E2D8C4] text-[#E2D8C4] cursor-not-allowed" : "border-2 border-[#C9A84C] bg-white text-[#C9A84C] hover:bg-[#F5EDD8]"
+              className={`flex h-10 flex-1 items-center justify-center rounded-xl text-[12px] font-bold transition-all duration-150 ${
+                directoryPage === 1
+                  ? "border border-[#E2D8C4] bg-white text-[#D4C9B0] cursor-not-allowed"
+                  : "border border-[#C9A84C] bg-white text-[#C9A84C] hover:bg-[#FFF9EC] active:scale-[0.98]"
               }`} style={{ fontFamily: AR }}>
               {copy.previous}
             </button>
+            <div className="flex h-10 min-w-[56px] items-center justify-center rounded-xl bg-[#082555] px-3 text-[11px] font-bold text-white" style={{ fontFamily: MONO }}>
+              {directoryPage} / {totalPages}
+            </div>
             <button type="button" onClick={() => setDirectoryPage((p) => Math.min(totalPages, p + 1))}
               disabled={directoryPage === totalPages}
-              className={`flex-1 min-h-[48px] rounded-2xl py-2 text-[13px] font-bold transition shadow-lg ${
-                directoryPage === totalPages ? "bg-white border-2 border-[#E2D8C4] text-[#E2D8C4] cursor-not-allowed" : "bg-[#082555] text-white hover:bg-[#2D2821]"
+              className={`flex h-10 flex-1 items-center justify-center rounded-xl text-[12px] font-bold transition-all duration-150 ${
+                directoryPage === totalPages
+                  ? "border border-[#E2D8C4] bg-white text-[#D4C9B0] cursor-not-allowed"
+                  : "bg-gradient-to-r from-[#082555] to-[#0d3070] text-white shadow-md hover:shadow-lg active:scale-[0.98]"
               }`} style={{ fontFamily: AR }}>
               {copy.next}
             </button>
           </div>
+          )}
+
+          <InlineAdBanner
+            adBanner={companiesAdBanner}
+            canManageAds={canManageAds}
+            onEdit={handleEditAd}
+            onToggleVisibility={handleToggleAdVisibility}
+            onRemove={handleRemoveAd}
+          />
         </div>
       )}
 
@@ -581,30 +782,28 @@ export default function CompaniesPanel({
 
       {/* Create view */}
       {activeSection === "create" && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Add Company */}
-          <div className="overflow-hidden rounded-3xl border-2 border-[#E2D8C4] bg-white shadow-xl">
-            <div className="flex items-center gap-3 bg-[#082555] px-6 py-4">
-              <PlusIcon className="h-5 w-5 text-[#C9A84C]" />
-              <p className="text-[14px] font-bold text-white uppercase tracking-wider" style={{ fontFamily: AR }}>
-                {copy.addCompany}
-              </p>
+          <div className="overflow-hidden rounded-2xl border border-[#E2D8C4] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+            <div className="flex items-center gap-3 bg-gradient-to-r from-[#082555] to-[#0d3070] px-5 py-4">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#C9A84C]/20 text-base">🏢</span>
+              <p className="text-[13px] font-bold text-white" style={{ fontFamily: AR }}>{copy.addCompany}</p>
             </div>
-            <form onSubmit={submitCompany} className="space-y-4 p-6">
+            <form onSubmit={submitCompany} className="space-y-3.5 p-5">
               <FormField label={copy.companyName} value={companyForm.name}
                 onChange={(e) => setCompanyForm((c) => ({ ...c, name: e.target.value }))}
                 placeholder={copy.enterCompanyName} />
               <FormField label={copy.specialization} value={companyForm.specialization}
                 onChange={(e) => setCompanyForm((c) => ({ ...c, specialization: e.target.value }))}
                 placeholder={copy.enterSpecialization} />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <label className="block">
-                  <span className="mb-2 block text-[12px] font-bold text-[#082555] mr-1" style={{ fontFamily: AR }}>
+                  <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500" style={{ fontFamily: AR }}>
                     {copy.type}
                   </span>
                   <select value={companyForm.type}
                     onChange={(e) => setCompanyForm((c) => ({ ...c, type: e.target.value }))}
-                    className="min-h-[48px] w-full rounded-xl border-2 border-[#E2D8C4] bg-[#F7F3EC] px-4 py-2.5 text-[14px] font-bold text-[#082555] outline-none transition focus:border-[#C9A84C]"
+                    className="min-h-[44px] w-full rounded-xl border border-[#E2D8C4] bg-white px-3.5 py-2.5 text-[13px] font-bold text-[#082555] outline-none transition-all duration-150 hover:border-[#C9A84C]/60 focus:border-[#C9A84C] focus:ring-2 focus:ring-[#C9A84C]/20"
                     style={{ fontFamily: AR }}>
                     <option value="Contractor">{copy.contracting}</option>
                     <option value="Consultant">{copy.consulting}</option>
@@ -618,7 +817,7 @@ export default function CompaniesPanel({
                 onChange={(e) => setCompanyForm((c) => ({ ...c, headquarters: e.target.value }))}
                 placeholder={copy.citiesPlaceholder} />
               <button type="submit"
-                className="w-full min-h-[52px] rounded-2xl bg-[#082555] py-3 text-[14px] font-bold text-white shadow-lg transition hover:bg-[#2D2821] active:scale-[0.98]"
+                className="w-full h-11 rounded-xl bg-gradient-to-r from-[#082555] to-[#0d3070] text-[13px] font-bold text-white shadow-md transition-all duration-150 hover:shadow-lg active:scale-[0.98]"
                 style={{ fontFamily: AR }}>
                 {copy.saveCompany}
               </button>
@@ -626,23 +825,21 @@ export default function CompaniesPanel({
           </div>
 
           {/* Add Project */}
-          <div className="overflow-hidden rounded-3xl border-2 border-[#E2D8C4] bg-white shadow-xl">
-            <div className="flex items-center justify-between bg-[#C9A84C] px-6 py-4">
+          <div className="overflow-hidden rounded-2xl border border-[#E2D8C4] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+            <div className="flex items-center justify-between bg-gradient-to-r from-[#b8893d] to-[#C9A84C] px-5 py-4">
               <div className="flex items-center gap-3">
-                <PlusIcon className="h-5 w-5 text-[#082555]" />
-                <p className="text-[14px] font-bold text-[#082555] uppercase tracking-wider" style={{ fontFamily: AR }}>
-                  {copy.addProject}
-                </p>
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#082555]/15 text-base">📁</span>
+                <p className="text-[13px] font-bold text-[#082555]" style={{ fontFamily: AR }}>{copy.addProject}</p>
               </div>
-              <span className="text-[11px] font-bold text-[#082555]/70" style={{ fontFamily: AR }}>
+              <span className="rounded-full bg-[#082555]/12 px-2.5 py-1 text-[10px] font-bold text-[#082555]" style={{ fontFamily: AR }}>
                 {company?.name || copy.chooseCompanyFirst}
               </span>
             </div>
-            <form onSubmit={submitProject} className="space-y-4 p-6">
+            <form onSubmit={submitProject} className="space-y-3.5 p-5">
               <FormField label={copy.projectName} value={projectForm.name}
                 onChange={(e) => setProjectForm((c) => ({ ...c, name: e.target.value }))}
                 placeholder={copy.enterProjectName} />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <FormField label={copy.location} value={projectForm.location}
                   onChange={(e) => setProjectForm((c) => ({ ...c, location: e.target.value }))}
                   placeholder={settings?.language === "en" ? "Riyadh" : "الرياض"} />
@@ -654,10 +851,10 @@ export default function CompaniesPanel({
                 onChange={(e) => setProjectForm((c) => ({ ...c, budget: e.target.value }))}
                 placeholder="0" type="number" />
               <button type="submit" disabled={!company}
-                className={`w-full min-h-[52px] rounded-2xl py-3 text-[14px] font-bold transition active:scale-[0.98] shadow-lg ${
+                className={`w-full h-11 rounded-xl text-[13px] font-bold transition-all duration-150 active:scale-[0.98] shadow-md ${
                   company
-                    ? "bg-[#C9A84C] text-[#082555] hover:bg-[#E8C97A]"
-                    : "cursor-not-allowed bg-[#F7F3EC] text-[#9A8A6A] border-2 border-[#E2D8C4]"
+                    ? "bg-gradient-to-r from-[#b8893d] to-[#C9A84C] text-[#082555] hover:shadow-lg"
+                    : "cursor-not-allowed bg-[#F7F3EC] text-[#C0B89A] border border-[#E2D8C4]"
                 }`} style={{ fontFamily: AR }}>
                 {copy.saveProject}
               </button>

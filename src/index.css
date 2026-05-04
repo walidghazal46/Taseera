@@ -23,6 +23,8 @@
 html {
   scroll-behavior: smooth;
   height: 100%;
+  width: 100%;
+  max-width: 100%;
   overflow: hidden;
 }
 
@@ -32,6 +34,9 @@ body {
   background: var(--color-navy);
   color: #082555;
   height: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -39,7 +44,25 @@ body {
 
 #root {
   height: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   overflow: hidden;
+}
+
+img,
+video,
+canvas,
+svg,
+iframe {
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  max-width: 100%;
 }
 
 button {

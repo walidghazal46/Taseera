@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getAppText } from "../data/appText";
 import { auth, googleProvider } from "../firebase";
 import {
   createUserWithEmailAndPassword,
+  getRedirectResult,
   signInWithEmailAndPassword,
+  signInWithRedirect,
   signInWithPopup,
   updateProfile,
 } from "firebase/auth";
@@ -17,6 +19,46 @@ export default function LoginScreen({
   const [loading, setLoading] = useState(false);
   const text = getAppText(language);
   const isLight = theme === "light";
+
+  const mapGoogleError = useCallback((code) => {
+    const fallback = language === "en" ? "Google sign-in failed." : "فشل تسجيل الدخول بجوجل.";
+    const byCode = {
+      "auth/unauthorized-domain": language === "en"
+        ? "This domain is not authorized in Firebase Auth."
+        : "هذا الدومين غير مصرح به في Firebase Auth.",
+      "auth/operation-not-allowed": language === "en"
+        ? "Google provider is disabled in Firebase Authentication."
+        : "تسجيل الدخول بجوجل غير مفعّل في Firebase Authentication.",
+      "auth/popup-blocked": language === "en"
+        ? "Popup blocked. Switching to redirect sign-in..."
+        : "تم حظر النافذة المنبثقة. جارٍ التحويل لتسجيل الدخول...",
+      "auth/web-storage-unsupported": language === "en"
+        ? "Browser storage is blocked."
+        : "تخزين المتصفح غير متاح.",
+      "auth/network-request-failed": language === "en"
+        ? "Network error. Check your connection and retry."
+        : "خطأ في الشبكة. تحقق من الاتصال وحاول مرة أخرى.",
+    };
+    return byCode[code] || fallback;
+  }, [language]);
+
+  useEffect(() => {
+    let active = true;
+    getRedirectResult(auth)
+      .then((cred) => {
+        if (!active || !cred?.user) return;
+        onLogin("authenticated", {
+          uid: cred.user.uid,
+          userName: cred.user.displayName || cred.user.email?.split("@")[0] || "User",
+          userEmail: cred.user.email,
+        });
+      })
+      .catch((err) => {
+        if (!active) return;
+        setError(mapGoogleError(err?.code));
+      });
+    return () => { active = false; };
+  }, [mapGoogleError, onLogin]);
 
   const updateField = (field, value) => {
     setForm((c) => ({ ...c, [field]: value }));
@@ -37,10 +79,10 @@ export default function LoginScreen({
       if (mode === "register") {
         const cred = await createUserWithEmailAndPassword(auth, form.email.trim(), form.password);
         await updateProfile(cred.user, { displayName: form.fullName.trim() });
-        onLogin("authenticated", { userName: form.fullName.trim(), userEmail: form.email.trim() });
+        onLogin("authenticated", { uid: cred.user.uid, userName: form.fullName.trim(), userEmail: form.email.trim() });
       } else {
         const cred = await signInWithEmailAndPassword(auth, form.email.trim(), form.password);
-        onLogin("authenticated", { userName: cred.user.displayName || cred.user.email.split("@")[0], userEmail: cred.user.email });
+        onLogin("authenticated", { uid: cred.user.uid, userName: cred.user.displayName || cred.user.email.split("@")[0], userEmail: cred.user.email });
       }
     } catch (err) {
       const msgs = {
@@ -64,13 +106,17 @@ export default function LoginScreen({
           window.removeEventListener("taseera:google-signin-success", handleSuccess);
           window.removeEventListener("taseera:google-signin-error", handleError);
           setLoading(false);
-          onLogin("authenticated", { userName: e.detail.displayName, userEmail: e.detail.email });
+          onLogin("authenticated", { uid: e.detail.uid, userName: e.detail.displayName, userEmail: e.detail.email });
         };
-        const handleError = () => {
+        const handleError = (e) => {
           window.removeEventListener("taseera:google-signin-success", handleSuccess);
           window.removeEventListener("taseera:google-signin-error", handleError);
           setLoading(false);
-          setError(language === "en" ? "Google sign-in failed." : "فشل تسجيل الدخول بجوجل.");
+          const nativeMessage = e?.detail?.error;
+          setError(
+            nativeMessage ||
+            (language === "en" ? "Google sign-in failed." : "فشل تسجيل الدخول بجوجل.")
+          );
         };
         window.addEventListener("taseera:google-signin-success", handleSuccess);
         window.addEventListener("taseera:google-signin-error", handleError);
@@ -79,10 +125,22 @@ export default function LoginScreen({
     } else {
       try {
         const cred = await signInWithPopup(auth, googleProvider);
-        onLogin("authenticated", { userName: cred.user.displayName || cred.user.email.split("@")[0], userEmail: cred.user.email });
+        onLogin("authenticated", { uid: cred.user.uid, userName: cred.user.displayName || cred.user.email.split("@")[0], userEmail: cred.user.email });
       } catch (err) {
-        if (err.code !== "auth/popup-closed-by-user") {
-          setError(language === "en" ? "Google sign-in failed." : "فشل تسجيل الدخول بجوجل.");
+        if (err.code === "auth/popup-closed-by-user") {
+          // User cancelled popup intentionally.
+        } else if (
+          err.code === "auth/popup-blocked" ||
+          err.code === "auth/cancelled-popup-request" ||
+          err.code === "auth/operation-not-supported-in-this-environment"
+        ) {
+          try {
+            await signInWithRedirect(auth, googleProvider);
+          } catch (redirectErr) {
+            setError(mapGoogleError(redirectErr?.code || err?.code));
+          }
+        } else {
+          setError(mapGoogleError(err?.code));
         }
       } finally { setLoading(false); }
     }
