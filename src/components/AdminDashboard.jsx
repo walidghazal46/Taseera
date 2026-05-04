@@ -267,6 +267,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
   const [qsRejectReason, setQsRejectReason] = useState("");
   const [qsRefundNotes, setQsRefundNotes] = useState("");
   const [qsFilter, setQsFilter] = useState("all");
+  const [qsDetailModal, setQsDetailModal] = useState(null); // selected request object
 
   useEffect(() => {
     const hasMenuTab = MENU.some((tab) => tab.id === initialTab);
@@ -469,10 +470,9 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
     if (activeTab === "logs") loadLogs();
   }, [activeTab, adminProfile?.canAccessAdmin, loadAdmins, loadLogs, loadPayments, loadUsers]);
 
-  // QS Premium real-time listener (debounced against StrictMode double-invoke)
+  // QS Premium real-time listener — always active when admin is logged in (for badge)
   useEffect(() => {
     if (!adminProfile?.canAccessAdmin) return;
-    if (activeTab !== "qspremium") return;
     setQsLoading(true);
     let active = true;
     let unsubFn = null;
@@ -490,7 +490,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
       clearTimeout(timer);
       if (unsubFn) unsubFn();
     };
-  }, [activeTab, adminProfile?.canAccessAdmin]);
+  }, [adminProfile?.canAccessAdmin]);
 
   useEffect(() => {
     if (activeTab === "users") {
@@ -629,20 +629,30 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
         <div className="grid grid-cols-1 gap-0 md:grid-cols-[220px_minmax(0,1fr)]">
           <aside className="border-b border-[#e2e8f0] bg-[#f8fafc] p-3 md:border-b-0 md:border-r">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-1">
-              {MENU.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setActiveTab(item.id)}
-                  className={`rounded-xl border px-3 py-2 text-left text-[11px] font-bold transition ${
-                    activeTab === item.id
-                      ? "border-[#1d4ed8] bg-[#dbeafe] text-[#1e3a8a]"
-                      : "border-[#dbe2ea] bg-white text-slate-600 hover:border-[#93c5fd]"
-                  }`}
-                >
-                  {isEn ? item.labelEn : item.labelAr}
-                </button>
-              ))}
+              {MENU.map((item) => {
+                const pendingQsBadge = item.id === "qspremium" && activeTab !== "qspremium"
+                  ? qsRequests.filter((r) => r.status === "pending").length
+                  : 0;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setActiveTab(item.id)}
+                    className={`relative rounded-xl border px-3 py-2 text-left text-[11px] font-bold transition ${
+                      activeTab === item.id
+                        ? "border-[#1d4ed8] bg-[#dbeafe] text-[#1e3a8a]"
+                        : "border-[#dbe2ea] bg-white text-slate-600 hover:border-[#93c5fd]"
+                    }`}
+                  >
+                    {isEn ? item.labelEn : item.labelAr}
+                    {pendingQsBadge > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-extrabold text-white shadow">
+                        {pendingQsBadge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </aside>
 
@@ -1203,113 +1213,38 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                       };
                       const statusColor = statusColors[req.status] || statusColors.pending;
                       return (
-                        <div key={req.id} className="rounded-2xl border border-[#e2e8f0] bg-white p-3 shadow-sm">
+                        <button
+                          key={req.id}
+                          type="button"
+                          className="w-full text-left rounded-2xl border border-[#e2e8f0] bg-white p-3 shadow-sm hover:border-[#1d4ed8] hover:shadow-md transition-all active:scale-[0.99]"
+                          onClick={() => setQsDetailModal(req)}
+                        >
                           <div className="flex flex-wrap items-start justify-between gap-2">
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <p className="text-[13px] font-bold text-[#0f172a]">{req.userName || req.userEmail}</p>
+                                <p className="text-[13px] font-extrabold text-[#0f172a]">
+                                  {req.userName || "—"}
+                                </p>
                                 <span className={`rounded-lg border px-2 py-0.5 text-[10px] font-bold ${statusColor}`}>
                                   {req.status}
                                 </span>
                                 {req.refundRequest?.status === "pending_review" && (
                                   <span className="rounded-lg border border-orange-200 bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700">
-                                    Refund Pending
+                                    💰 Refund
                                   </span>
                                 )}
                               </div>
-                              <p className="mt-0.5 text-[11px] text-slate-500">{req.userEmail}</p>
+                              <p className="mt-0.5 text-[11px] font-bold text-[#1d4ed8]">{req.userEmail || "—"}</p>
                               <div className="mt-1 flex flex-wrap gap-3 text-[10px] text-slate-500">
+                                {req.orderId && <span className="font-mono font-bold text-slate-700">{req.orderId}</span>}
                                 <span>Country: <strong>{(req.country || "").toUpperCase()}</strong></span>
                                 <span>Price: <strong>{req.price} {req.currency}</strong></span>
                                 <span>Requested: <strong>{fmtDate(req.requestedAt)}</strong></span>
-                                {req.activatedAt && <span>Activated: <strong>{fmtDate(req.activatedAt)}</strong></span>}
-                                {req.trialEndsAt && <span>Trial ends: <strong>{fmtDate(req.trialEndsAt)}</strong></span>}
-                                <span>Trial items: <strong>{(req.trialItemsUsed || []).length}/10</strong></span>
                               </div>
-                              {req.rejectionReason && (
-                                <p className="mt-1 text-[10px] text-rose-600">Rejection: {req.rejectionReason}</p>
-                              )}
                             </div>
-
-                            {/* Action buttons */}
-                            <div className="flex flex-col gap-1.5 shrink-0">
-                              <div className="flex flex-wrap gap-1.5">
-                              {req.status === "pending" && (
-                                <>
-                                  <button
-                                    type="button"
-                                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white"
-                                    onClick={async () => {
-                                      try {
-                                        await adminApproveQSPremium(adminProfile, req.id);
-                                        onToast?.("Approved", "success");
-                                      } catch (e) { onToast?.(e.message, "warning"); }
-                                    }}
-                                  >
-                                    ✓ Approve
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="rounded-lg bg-rose-600 px-3 py-1.5 text-[11px] font-bold text-white"
-                                    onClick={() => { setQsRejectModal(req.id); setQsRejectReason(""); }}
-                                  >
-                                    ✗ Reject
-                                  </button>
-                                </>
-                              )}
-                              {req.status === "active" && (
-                                <button
-                                  type="button"
-                                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-bold text-slate-700"
-                                  onClick={async () => {
-                                    try {
-                                      await adminDeactivateQSPremium(adminProfile, req.id);
-                                      onToast?.("Deactivated", "success");
-                                    } catch (e) { onToast?.(e.message, "warning"); }
-                                  }}
-                                >
-                                  ⊘ Deactivate
-                                </button>
-                              )}
-                              {(req.status === "deactivated" || req.status === "rejected") && (
-                                <button
-                                  type="button"
-                                  className="rounded-lg bg-indigo-600 px-3 py-1.5 text-[11px] font-bold text-white"
-                                  onClick={async () => {
-                                    try {
-                                      await adminReactivateQSPremium(adminProfile, req.id);
-                                      onToast?.("Reactivated", "success");
-                                    } catch (e) { onToast?.(e.message, "warning"); }
-                                  }}
-                                >
-                                  ↺ Reactivate
-                                </button>
-                              )}
-                              {req.refundRequest?.status === "pending_review" && (
-                                <button
-                                  type="button"
-                                  className="rounded-lg bg-orange-500 px-3 py-1.5 text-[11px] font-bold text-white"
-                                  onClick={() => { setQsRefundModal(req.id); setQsRefundNotes(""); }}
-                                >
-                                  💰 Review Refund
-                                </button>
-                              )}
-                              </div>
-                              <button
-                                type="button"
-                                className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-[11px] font-bold text-rose-700"
-                                onClick={async () => {
-                                  try {
-                                    await adminDeleteQSPremium(adminProfile, req.id);
-                                    onToast?.("Request deleted", "success");
-                                  } catch (e) { onToast?.(e.message, "warning"); }
-                                }}
-                              >
-                                🗑 Delete request
-                              </button>
-                            </div>
+                            <div className="text-[11px] text-slate-400 shrink-0 mt-0.5">›</div>
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
 
@@ -1921,6 +1856,183 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
           </div>
         </Modal>
       )}
+
+      {/* QS Premium — Detail modal */}
+      {qsDetailModal && (() => {
+        const req = qsRequests.find((r) => r.id === qsDetailModal.id) || qsDetailModal;
+        const statusColors = {
+          pending: "bg-amber-100 text-amber-700 border-amber-200",
+          active: "bg-emerald-100 text-emerald-700 border-emerald-200",
+          rejected: "bg-rose-100 text-rose-700 border-rose-200",
+          deactivated: "bg-slate-100 text-slate-600 border-slate-200",
+        };
+        const statusColor = statusColors[req.status] || statusColors.pending;
+        return (
+          <div
+            className="fixed inset-0 z-[500] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4"
+            onClick={() => setQsDetailModal(null)}
+          >
+            <div
+              className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-y-auto max-h-[92vh]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="sticky top-0 bg-[#082555] text-white px-4 py-4 rounded-t-3xl sm:rounded-t-3xl flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">QS Premium Request</p>
+                  <p className="text-[15px] font-extrabold mt-0.5">{req.userName || req.userEmail || req.id}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setQsDetailModal(null)}
+                  className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="p-4 space-y-3">
+                {/* Status */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`rounded-lg border px-3 py-1 text-[11px] font-bold ${statusColor}`}>
+                    {req.status}
+                  </span>
+                  {req.refundRequest?.status === "pending_review" && (
+                    <span className="rounded-lg border border-orange-200 bg-orange-100 px-3 py-1 text-[11px] font-bold text-orange-700">
+                      💰 Refund Pending
+                    </span>
+                  )}
+                </div>
+
+                {/* Info grid */}
+                <div className="rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] divide-y divide-[#e2e8f0]">
+                  {[
+                    { label: "الاسم / Name", value: req.userName || "—" },
+                    { label: "الإيميل / Email", value: req.userEmail || "—", mono: true },
+                    { label: "رقم الطلب / Order ID", value: req.orderId || "—", mono: true },
+                    { label: "الدولة / Country", value: (req.country || "—").toUpperCase() },
+                    { label: "المبلغ / Amount", value: req.price ? `${req.price} ${req.currency}` : "—" },
+                    { label: "تاريخ الطلب / Requested", value: fmtDate(req.requestedAt) },
+                    { label: "تفعيل / Activated", value: fmtDate(req.activatedAt) },
+                    { label: "انتهاء التجربة / Trial Ends", value: fmtDate(req.trialEndsAt) },
+                    { label: "البنود المستخدمة / Trial Items", value: `${(req.trialItemsUsed || []).length} / 10` },
+                    { label: "User ID", value: req.userId || req.id || "—", mono: true },
+                  ].map(({ label, value, mono }) => (
+                    <div key={label} className="flex items-start justify-between gap-3 px-3 py-2">
+                      <span className="text-[10px] font-bold text-slate-500 shrink-0 mt-0.5">{label}</span>
+                      <span className={`text-[11px] font-bold text-[#0f172a] text-right break-all ${mono ? "font-mono" : ""}`}>{value}</span>
+                    </div>
+                  ))}
+                  {req.rejectionReason && (
+                    <div className="flex items-start justify-between gap-3 px-3 py-2">
+                      <span className="text-[10px] font-bold text-rose-500 shrink-0 mt-0.5">سبب الرفض</span>
+                      <span className="text-[11px] font-bold text-rose-700 text-right">{req.rejectionReason}</span>
+                    </div>
+                  )}
+                  {req.adminNotes && (
+                    <div className="flex items-start justify-between gap-3 px-3 py-2">
+                      <span className="text-[10px] font-bold text-slate-500 shrink-0 mt-0.5">Admin Notes</span>
+                      <span className="text-[11px] text-slate-700 text-right">{req.adminNotes}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Email button */}
+                {req.userEmail && (
+                  <a
+                    href={`mailto:${req.userEmail}?subject=${encodeURIComponent(`بخصوص طلب QS Premium #${req.orderId || ""}`)}&body=${encodeURIComponent(`السلام عليكم ${req.userName || ""},\n\nبخصوص طلب اشتراكك QS Premium رقم ${req.orderId || ""}...\n\nشكراً،\nفريق تسعيرة`)}`}
+                    className="flex items-center justify-center gap-2 w-full rounded-xl border border-[#1d4ed8] bg-[#eff6ff] py-2.5 text-[12px] font-bold text-[#1d4ed8] hover:bg-[#dbeafe] transition"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    ✉ مراسلة المستخدم / Email User
+                  </a>
+                )}
+
+                {/* Action buttons */}
+                <div className="space-y-2">
+                  {req.status === "pending" && (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        className="flex-1 rounded-xl bg-emerald-600 py-2.5 text-[12px] font-bold text-white hover:bg-emerald-700 transition"
+                        onClick={async () => {
+                          try {
+                            await adminApproveQSPremium(adminProfile, req.id);
+                            onToast?.("✓ تم القبول", "success");
+                            setQsDetailModal(null);
+                          } catch (e) { onToast?.(e.message, "warning"); }
+                        }}
+                      >
+                        ✓ قبول / Approve
+                      </button>
+                      <button
+                        type="button"
+                        className="flex-1 rounded-xl bg-rose-600 py-2.5 text-[12px] font-bold text-white hover:bg-rose-700 transition"
+                        onClick={() => { setQsRejectModal(req.id); setQsRejectReason(""); setQsDetailModal(null); }}
+                      >
+                        ✗ رفض / Reject
+                      </button>
+                    </div>
+                  )}
+                  {req.status === "active" && (
+                    <button
+                      type="button"
+                      className="w-full rounded-xl border border-slate-300 py-2.5 text-[12px] font-bold text-slate-700 hover:bg-slate-50 transition"
+                      onClick={async () => {
+                        try {
+                          await adminDeactivateQSPremium(adminProfile, req.id);
+                          onToast?.("Deactivated", "success");
+                          setQsDetailModal(null);
+                        } catch (e) { onToast?.(e.message, "warning"); }
+                      }}
+                    >
+                      ⊘ إيقاف / Deactivate
+                    </button>
+                  )}
+                  {(req.status === "deactivated" || req.status === "rejected") && (
+                    <button
+                      type="button"
+                      className="w-full rounded-xl bg-indigo-600 py-2.5 text-[12px] font-bold text-white hover:bg-indigo-700 transition"
+                      onClick={async () => {
+                        try {
+                          await adminReactivateQSPremium(adminProfile, req.id);
+                          onToast?.("Reactivated", "success");
+                          setQsDetailModal(null);
+                        } catch (e) { onToast?.(e.message, "warning"); }
+                      }}
+                    >
+                      ↺ إعادة تفعيل / Reactivate
+                    </button>
+                  )}
+                  {req.refundRequest?.status === "pending_review" && (
+                    <button
+                      type="button"
+                      className="w-full rounded-xl bg-orange-500 py-2.5 text-[12px] font-bold text-white hover:bg-orange-600 transition"
+                      onClick={() => { setQsRefundModal(req.id); setQsRefundNotes(""); setQsDetailModal(null); }}
+                    >
+                      💰 مراجعة الاسترداد / Review Refund
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="w-full rounded-xl border border-rose-300 bg-rose-50 py-2.5 text-[12px] font-bold text-rose-700 hover:bg-rose-100 transition"
+                    onClick={async () => {
+                      if (!window.confirm("Are you sure you want to delete this request?")) return;
+                      try {
+                        await adminDeleteQSPremium(adminProfile, req.id);
+                        onToast?.("Deleted", "success");
+                        setQsDetailModal(null);
+                      } catch (e) { onToast?.(e.message, "warning"); }
+                    }}
+                  >
+                    🗑 حذف الطلب / Delete Request
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* QS Premium — Refund review modal */}
       {qsRefundModal && (
