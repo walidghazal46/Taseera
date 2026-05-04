@@ -2336,6 +2336,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             userName={sessionMeta?.displayName}
             onOpenAuthScreen={onOpenAuthScreen}
             systemBridge={systemBridge}
+            isAdminUnlocked={isAdminUnlocked}
           >
             <ScreenProtection enabled={true}>
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">

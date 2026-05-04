@@ -576,7 +576,16 @@ function RefundModal({ onSubmit, onCancel }) {
 // ---------------------------------------------------------------------------
 // Main Gate Component
 // ---------------------------------------------------------------------------
-export default function QSPremiumGate({ country, userId, userEmail, userName, children, onOpenAuthScreen, systemBridge }) {
+export default function QSPremiumGate({
+  country,
+  userId,
+  userEmail,
+  userName,
+  children,
+  onOpenAuthScreen,
+  systemBridge,
+  isAdminUnlocked = false,
+}) {
   const [subscription, setSubscription] = useState(undefined); // undefined = loading
   const [showInfo, setShowInfo] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -585,8 +594,13 @@ export default function QSPremiumGate({ country, userId, userEmail, userName, ch
 
   const countryKey = (country || "").toLowerCase();
   const priceInfo = PRICES[countryKey] || PRICES.ae;
+  const hasAdminAccess = Boolean(isAdminUnlocked);
 
   useEffect(() => {
+    if (hasAdminAccess) {
+      setSubscription(null);
+      return;
+    }
     if (!userId) {
       setSubscription(null);
       return;
@@ -606,27 +620,28 @@ export default function QSPremiumGate({ country, userId, userEmail, userName, ch
       clearTimeout(timer);
       if (unsubFn) unsubFn();
     };
-  }, [userId]);
+  }, [hasAdminAccess, userId]);
 
   // Derived state
-  const status = subscription?.status || "none";
+  const status = hasAdminAccess ? "active" : (subscription?.status || "none");
   const now = Date.now();
   const trialEndsAt = subscription?.trialEndsAt;
   const activatedAt = subscription?.activatedAt;
-  const isTrial = status === "active" && trialEndsAt
+  const isTrial = !hasAdminAccess && status === "active" && trialEndsAt
     ? (typeof trialEndsAt.toDate === "function" ? trialEndsAt.toDate() : new Date(trialEndsAt)) > now
     : false;
   const trialDaysLeft = isTrial ? daysBetween(trialEndsAt) : 0;
   const trialItemsUsed = subscription?.trialItemsUsed || [];
   const trialItemsCount = trialItemsUsed.length;
-  const isActive = status === "active";
-  const canUseItem = isActive && (!isTrial || trialItemsCount < 10);
+  const isActive = hasAdminAccess || status === "active";
+  const canUseItem = hasAdminAccess || (isActive && (!isTrial || trialItemsCount < 10));
 
   const onItemUsed = useCallback(async (itemKey) => {
+    if (hasAdminAccess) return;
     if (!userId || !isActive || !isTrial) return;
     if (trialItemsCount >= 10) return;
     await addTrialItem(userId, itemKey);
-  }, [userId, isActive, isTrial, trialItemsCount]);
+  }, [hasAdminAccess, userId, isActive, isTrial, trialItemsCount]);
 
   const contextValue = {
     subscription,
@@ -639,7 +654,7 @@ export default function QSPremiumGate({ country, userId, userEmail, userName, ch
   };
 
   // -- Loading --
-  if (subscription === undefined) {
+  if (!hasAdminAccess && subscription === undefined) {
     return (
       <div style={{ ...styles.root, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "200px" }}>
         <div style={{ textAlign: "center", color: "#64748b" }}>
@@ -732,7 +747,7 @@ export default function QSPremiumGate({ country, userId, userEmail, userName, ch
             <div style={{ marginBottom: "12px" }}>
               <div style={styles.premiumBadge}>
                 <span>💎</span>
-                <span>QS Premium — وصول كامل</span>
+                <span>{hasAdminAccess ? "QS Premium — وصول الأدمن الكامل" : "QS Premium — وصول كامل"}</span>
               </div>
             </div>
           )}
