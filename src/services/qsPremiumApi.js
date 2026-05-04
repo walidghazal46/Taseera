@@ -169,12 +169,16 @@ export async function adminApproveQSPremium(adminProfile, userId) {
     throw new Error("No permission to approve QS Premium subscriptions.");
   }
   const now = Timestamp.now();
-  const trialEndsAt = Timestamp.fromMillis(now.toMillis() + 3 * 24 * 60 * 60 * 1000);
+  // Trial = 48 hours from activation
+  const trialEndsAt = Timestamp.fromMillis(now.toMillis() + 48 * 60 * 60 * 1000);
+  // No-refund deadline = 7 days from activation
+  const noRefundAfter = Timestamp.fromMillis(now.toMillis() + 7 * 24 * 60 * 60 * 1000);
   const ref = doc(db, "qsPremiumSubscriptions", userId);
   await updateDoc(ref, {
     status: "active",
     activatedAt: serverTimestamp(),
     trialEndsAt,
+    noRefundAfter,
     updatedAt: serverTimestamp(),
   });
 }

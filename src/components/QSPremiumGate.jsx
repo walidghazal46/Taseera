@@ -269,6 +269,13 @@ function daysBetween(ts) {
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
 
+function hoursBetween(ts) {
+  if (!ts) return 0;
+  const d = typeof ts.toDate === "function" ? ts.toDate() : new Date(ts);
+  const diff = d - Date.now();
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60)));
+}
+
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
@@ -285,11 +292,33 @@ function InfoModal({ onClose }) {
             باقة التسعير الاحترافية مصممة للمهندسين والمقاولين الذين يحتاجون إلى تحليل دقيق للتكاليف
             باستخدام أسلوب First Principle مع بيانات شاملة لجميع أقسام CSI.
           </p>
-          <div style={{ fontWeight: "700", color: "#ffd700", marginBottom: "6px" }}>سياسة الاسترداد:</div>
-          <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "12px", lineHeight: "1.8" }}>
-            تجربة مجانية 3 أيام — حتى 10 بنود. إذا طلبت استرداد المبلغ خلال 3 أيام بسبب واضح،
-            يُخصم 5 دولار رسوم إدارية. بعد 3 أيام، لا يمكن استرداد المبلغ.
-          </p>
+          <div style={{ fontWeight: "700", color: "#ffd700", marginBottom: "8px" }}>📋 سياسة الاسترداد:</div>
+          <div style={{
+            background: "rgba(255,255,255,0.06)",
+            borderRadius: "10px",
+            padding: "12px 14px",
+            fontSize: "12px",
+            lineHeight: "1.9",
+            display: "flex",
+            flexDirection: "column",
+            gap: "6px",
+          }}>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <span style={{ color: "#4ade80", flexShrink: 0 }}>✅</span>
+              <span><strong style={{ color: "#fff" }}>خلال 48 ساعة من الفتح:</strong> يمكن طلب استرداد المبلغ مع خصم <strong style={{ color: "#ffd700" }}>5 دولار</strong> رسوم إدارية فقط</span>
+            </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <span style={{ color: "#facc15", flexShrink: 0 }}>⚠️</span>
+              <span><strong style={{ color: "#fff" }}>بعد 48 ساعة حتى 7 أيام:</strong> يمكن طلب الاسترداد مع خصم <strong style={{ color: "#ffd700" }}>20 دولار</strong> رسوم الاستخدام</span>
+            </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <span style={{ color: "#f87171", flexShrink: 0 }}>🚫</span>
+              <span><strong style={{ color: "#fff" }}>بعد مرور 7 أيام:</strong> لا يمكن استرداد المبلغ نهائياً</span>
+            </div>
+          </div>
+          <div style={{ marginTop: "10px", fontSize: "11px", color: "rgba(255,255,255,0.55)", lineHeight: "1.6" }}>
+            ⏱ فترة التجربة 48 ساعة — وصول كامل لجميع البنود والباقتين المتاحتين في التطبيق
+          </div>
         </div>
         <button
           type="button"
@@ -487,6 +516,39 @@ function RequestForm({ country, userId, userEmail, userName, systemBridge, onSuc
           />
         </div>
 
+        {/* Refund policy — shown before submit */}
+        <div style={{
+          background: "rgba(255,215,0,0.07)",
+          border: "1px solid rgba(255,215,0,0.25)",
+          borderRadius: "10px",
+          padding: "12px 14px",
+          marginBottom: "14px",
+          fontSize: "11px",
+          lineHeight: "1.9",
+          direction: "rtl",
+          color: "rgba(255,255,255,0.8)",
+        }}>
+          <div style={{ fontWeight: "800", color: "#ffd700", marginBottom: "6px", fontSize: "12px" }}>
+            📋 سياسة الاسترداد — يرجى القراءة قبل التأكيد
+          </div>
+          <div style={{ display: "flex", gap: "6px", marginBottom: "3px" }}>
+            <span style={{ color: "#4ade80", flexShrink: 0 }}>✅</span>
+            <span>بعد الفتح مباشرةً — فترة تجربة <strong style={{ color: "#fff" }}>48 ساعة</strong> بوصول كامل لجميع البنود والباقتين</span>
+          </div>
+          <div style={{ display: "flex", gap: "6px", marginBottom: "3px" }}>
+            <span style={{ color: "#4ade80", flexShrink: 0 }}>✅</span>
+            <span>طلب استرداد خلال الـ 48 ساعة → خصم <strong style={{ color: "#ffd700" }}>5 دولار</strong> فقط</span>
+          </div>
+          <div style={{ display: "flex", gap: "6px", marginBottom: "3px" }}>
+            <span style={{ color: "#facc15", flexShrink: 0 }}>⚠️</span>
+            <span>استرداد بعد 48 ساعة وحتى 7 أيام → خصم <strong style={{ color: "#ffd700" }}>20 دولار</strong></span>
+          </div>
+          <div style={{ display: "flex", gap: "6px" }}>
+            <span style={{ color: "#f87171", flexShrink: 0 }}>🚫</span>
+            <span>بعد مرور <strong style={{ color: "#fff" }}>7 أيام</strong> من الفتح → لا يمكن الاسترداد نهائياً</span>
+          </div>
+        </div>
+
         {error && (
           <div style={{ color: "#fca5a5", fontSize: "12px", marginBottom: "12px" }}>{error}</div>
         )}
@@ -497,7 +559,7 @@ function RequestForm({ country, userId, userEmail, userName, systemBridge, onSuc
           disabled={loading}
           style={{ ...styles.ctaButton, opacity: loading ? 0.7 : 1, cursor: loading ? "not-allowed" : "pointer" }}
         >
-          {loading ? "جاري الإرسال..." : "تأكيد طلب الاشتراك"}
+          {loading ? "جاري الإرسال..." : "تأكيد طلب الاشتراك — أفهم سياسة الاسترداد"}
         </button>
         <button
           type="button"
@@ -540,8 +602,28 @@ function RefundModal({ onSubmit, onCancel }) {
         <div style={{ fontSize: "16px", fontWeight: "800", color: "#ffd700", marginBottom: "8px" }}>
           طلب استرداد المبلغ
         </div>
-        <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.7)", marginBottom: "16px", lineHeight: "1.6" }}>
-          سيُخصم 5 دولار رسوم إدارية من مبلغ الاسترداد. يرجى ذكر سبب واضح لمعالجة الطلب.
+        <div style={{
+          background: "rgba(255,255,255,0.06)",
+          borderRadius: "10px",
+          padding: "10px 14px",
+          fontSize: "12px",
+          color: "rgba(255,255,255,0.8)",
+          lineHeight: "1.8",
+          marginBottom: "16px",
+          direction: "rtl",
+        }}>
+          <div style={{ display: "flex", gap: "8px", marginBottom: "4px" }}>
+            <span style={{ color: "#4ade80", flexShrink: 0 }}>✅</span>
+            <span><strong style={{ color: "#fff" }}>خلال 48 ساعة:</strong> خصم 5 دولار فقط</span>
+          </div>
+          <div style={{ display: "flex", gap: "8px", marginBottom: "4px" }}>
+            <span style={{ color: "#facc15", flexShrink: 0 }}>⚠️</span>
+            <span><strong style={{ color: "#fff" }}>بعد 48 ساعة حتى 7 أيام:</strong> خصم 20 دولار</span>
+          </div>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <span style={{ color: "#f87171", flexShrink: 0 }}>🚫</span>
+            <span><strong style={{ color: "#fff" }}>بعد 7 أيام:</strong> لا يمكن الاسترداد</span>
+          </div>
         </div>
         <div style={{ marginBottom: "14px" }}>
           <label style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", display: "block", marginBottom: "6px" }}>
@@ -624,32 +706,42 @@ export default function QSPremiumGate({
 
   // Derived state
   const status = hasAdminAccess ? "active" : (subscription?.status || "none");
-  const now = Date.now();
+  const nowMs = Date.now();
   const trialEndsAt = subscription?.trialEndsAt;
   const activatedAt = subscription?.activatedAt;
+  const noRefundAfter = subscription?.noRefundAfter;
   const isTrial = !hasAdminAccess && status === "active" && trialEndsAt
-    ? (typeof trialEndsAt.toDate === "function" ? trialEndsAt.toDate() : new Date(trialEndsAt)) > now
+    ? (typeof trialEndsAt.toDate === "function" ? trialEndsAt.toDate() : new Date(trialEndsAt)) > nowMs
     : false;
-  const trialDaysLeft = isTrial ? daysBetween(trialEndsAt) : 0;
+  const trialHoursLeft = isTrial ? hoursBetween(trialEndsAt) : 0;
   const trialItemsUsed = subscription?.trialItemsUsed || [];
   const trialItemsCount = trialItemsUsed.length;
   const isActive = hasAdminAccess || status === "active";
-  const canUseItem = hasAdminAccess || (isActive && (!isTrial || trialItemsCount < 10));
+  // During trial, all items are accessible (no item limit)
+  const canUseItem = hasAdminAccess || isActive;
+  // Refund window helpers
+  const isWithin48h = isTrial; // trial = first 48h
+  const noRefundAt = noRefundAfter
+    ? (typeof noRefundAfter.toDate === "function" ? noRefundAfter.toDate() : new Date(noRefundAfter))
+    : null;
+  const canRefund = noRefundAt ? noRefundAt > nowMs : isTrial;
 
   const onItemUsed = useCallback(async (itemKey) => {
     if (hasAdminAccess) return;
-    if (!userId || !isActive || !isTrial) return;
-    if (trialItemsCount >= 10) return;
+    if (!userId || !isActive) return;
+    // Still track for analytics (no limit enforced)
     await addTrialItem(userId, itemKey);
-  }, [hasAdminAccess, userId, isActive, isTrial, trialItemsCount]);
+  }, [hasAdminAccess, userId, isActive]);
 
   const contextValue = {
     subscription,
     isActive,
     isTrial,
-    trialDaysLeft,
+    trialHoursLeft,
     trialItemsCount,
     canUseItem,
+    canRefund,
+    isWithin48h,
     onItemUsed,
   };
 
@@ -708,42 +800,56 @@ export default function QSPremiumGate({
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
 
           {isTrial ? (
-            <>
-              {/* Trial banner */}
-              <div style={styles.trialBanner}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ fontSize: "16px" }}>⏱</span>
-                  <span>
-                    أنت في فترة التجربة ({trialDaysLeft} {trialDaysLeft === 1 ? "يوم متبقي" : "أيام متبقية"})
-                    — {trialItemsCount}/10 بنود مستخدمة
-                  </span>
-                </div>
-                {!hasRefundRequest && !refundSent && (
-                  <button
-                    type="button"
-                    style={styles.refundBtn}
-                    onClick={() => setShowRefund(true)}
-                  >
-                    طلب استرداد المبلغ
-                  </button>
-                )}
-                {(hasRefundRequest || refundSent) && (
-                  <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)" }}>
-                    {refundStatus === "pending_review" || refundSent ? "طلب الاسترداد قيد المراجعة" :
-                     refundStatus === "approved" ? "تمت الموافقة على الاسترداد" :
-                     refundStatus === "rejected" ? "تم رفض طلب الاسترداد" : ""}
-                  </span>
-                )}
+            /* Trial banner (first 48h) */
+            <div style={styles.trialBanner}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "16px" }}>⏱</span>
+                <span>
+                  أنت في فترة التجربة ({trialHoursLeft} ساعة متبقية) — وصول كامل لجميع البنود والباقتين
+                </span>
               </div>
-
-              {trialItemsCount >= 10 && (
+              {!hasRefundRequest && !refundSent && (
+                <button
+                  type="button"
+                  style={styles.refundBtn}
+                  onClick={() => setShowRefund(true)}
+                >
+                  طلب استرداد المبلغ
+                </button>
+              )}
+              {(hasRefundRequest || refundSent) && (
+                <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)" }}>
+                  {refundStatus === "pending_review" || refundSent ? "طلب الاسترداد قيد المراجعة" :
+                   refundStatus === "approved" ? "تمت الموافقة على الاسترداد" :
+                   refundStatus === "rejected" ? "تم رفض طلب الاسترداد" : ""}
+                </span>
+              )}
+            </div>
+          ) : canRefund && !hasAdminAccess ? (
+            /* After 48h trial but still within 7-day refund window */
+            <>
+              <div style={{ marginBottom: "12px" }}>
+                <div style={styles.premiumBadge}>
+                  <span>💎</span>
+                  <span>QS Premium — وصول كامل</span>
+                </div>
+              </div>
+              {!hasRefundRequest && !refundSent && (
+                <div style={{ ...styles.warningBanner, display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                  <span>⚠️ انتهت فترة التجربة — يمكنك الاسترداد مع خصم 20 دولار حتى 7 أيام من الفتح</span>
+                  <button type="button" style={{ ...styles.refundBtn, background: "rgba(245,158,11,0.3)", borderColor: "rgba(245,158,11,0.5)", color: "#92400e" }} onClick={() => setShowRefund(true)}>استرداد</button>
+                </div>
+              )}
+              {(hasRefundRequest || refundSent) && (
                 <div style={styles.warningBanner}>
-                  ⚠️ وصلت للحد الأقصى (10 بنود) خلال فترة التجربة. يمكنك الاستمرار في عرض البيانات.
+                  {refundStatus === "pending_review" || refundSent ? "⏳ طلب الاسترداد قيد المراجعة" :
+                   refundStatus === "approved" ? "✅ تمت الموافقة على الاسترداد" :
+                   refundStatus === "rejected" ? "❌ تم رفض طلب الاسترداد" : ""}
                 </div>
               )}
             </>
           ) : (
-            /* Full access badge */
+            /* Full access — no more refund window */
             <div style={{ marginBottom: "12px" }}>
               <div style={styles.premiumBadge}>
                 <span>💎</span>
@@ -881,9 +987,11 @@ export default function QSPremiumGate({
           textAlign: "center",
           fontSize: "11px",
           color: "rgba(255,255,255,0.5)",
-          lineHeight: "1.6",
+          lineHeight: "1.7",
         }}>
-          🛡 تجربة مجانية 3 أيام | حتى 10 بنود | استرداد جزئي خلال فترة التجربة
+          ⏱ تجربة 48 ساعة — وصول كامل لجميع البنود والباقتين
+          <br />
+          🛡 استرداد بخصم 5$ خلال 48 ساعة • 20$ حتى 7 أيام • لا استرداد بعد 7 أيام
         </div>
       </div>
 
