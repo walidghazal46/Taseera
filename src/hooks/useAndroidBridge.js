@@ -133,15 +133,13 @@ export default function useAndroidBridge() {
       return;
     }
 
-    const params = new URLSearchParams();
-    if (subject) {
-      params.set("subject", subject);
-    }
-    if (body) {
-      params.set("body", body);
-    }
+    // URLSearchParams encodes spaces as "+" which mailto: clients show literally.
+    // Use encodeURIComponent instead — it encodes spaces as "%20" (RFC 6068 compliant).
+    const parts = [];
+    if (subject) parts.push(`subject=${encodeURIComponent(subject)}`);
+    if (body)    parts.push(`body=${encodeURIComponent(body)}`);
 
-    window.location.href = `mailto:${email}?${params.toString()}`;
+    window.location.href = `mailto:${email}${parts.length ? `?${parts.join("&")}` : ""}`;
   }, []);
 
   const shareText = useCallback(async (title, text) => {

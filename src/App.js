@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import AppShell from "./components/AppShell";
 import LoginScreen from "./components/LoginScreen";
+import MobilePrototypeDemo from "./components/MobilePrototypeDemo";
 import Modal from "./components/Modal";
 import useAndroidBridge from "./hooks/useAndroidBridge";
 import usePersistentState from "./hooks/usePersistentState";
@@ -533,6 +534,10 @@ export default function App() {
       </div>
     </Modal>
   );
+
+  if (forcedScreen === "mobile-demo") {
+    return <MobilePrototypeDemo />;
+  }
 
   return (
     <>

@@ -761,7 +761,7 @@ function AccountTab({
             {text.settings.version} {settings.appVersion}
           </p>
           <div className="my-3 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-          <p className="text-[9px] text-white/25 leading-relaxed" style={{ fontFamily: F }}>
+          <p className="text-[9px] text-white leading-relaxed" style={{ fontFamily: F }}>
             {text.settings.disclaimer}
           </p>
         </div>

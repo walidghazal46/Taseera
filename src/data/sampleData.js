@@ -33,7 +33,7 @@ export const sampleSettings = {
   userName: "أحمد العتيبي",
   userEmail: "walidghazal46@gmail.com",
   appName: "Taseera",
-  appVersion: "2",
+  appVersion: "1.0.0.26",
   settingsPanelSection: "account",
 };
 

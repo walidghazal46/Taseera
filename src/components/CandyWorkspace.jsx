@@ -307,30 +307,32 @@ function AnalysisView({ item, division, country, onBack }) {
   const reportFileBase = `${(item.num || "item").replace(/[^\w\u0600-\u06FF-]+/g, "_")}_${(item.ar || "analysis").replace(/[^\w\u0600-\u06FF-]+/g, "_")}`;
 
   const openHtmlExport = useCallback(({ title, html, filename, autoPrint = false }) => {
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const blobUrl = URL.createObjectURL(blob);
-    const exportWin = window.open(blobUrl, "_blank", "width=960,height=760");
+    // Open empty window then write HTML — avoids blob:// URL issues on mobile
+    // (fixes "تعذر فتح التطبيق المطلوب" on Android/iOS browsers)
+    const exportWin = window.open("", "_blank", "width=960,height=760");
 
     if (exportWin) {
+      exportWin.document.open();
+      exportWin.document.write(html);
+      exportWin.document.close();
+      exportWin.focus();
       if (autoPrint) {
-        exportWin.addEventListener("load", () => {
-          setTimeout(() => {
-            try {
-              exportWin.print();
-            } catch (_) {}
-            setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-          }, 350);
-        });
-      } else {
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+        setTimeout(() => {
+          try { exportWin.print(); } catch (_) {}
+        }, 600);
       }
       return true;
     }
 
+    // Popup blocked — fallback: download as HTML file
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = blobUrl;
     a.download = filename;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
     return false;
   }, []);

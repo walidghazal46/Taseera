@@ -2054,22 +2054,28 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
         </html>
       `;
 
-      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-      const blobUrl = URL.createObjectURL(blob);
-      const printWin = window.open(blobUrl, "_blank", "width=900,height=700");
+      // Open empty window first then write HTML — works on mobile browsers
+      // that block blob:// URLs (avoids "تعذر فتح التطبيق" error on Android/iOS)
+      const printWin = window.open("", "_blank", "width=900,height=700");
       if (printWin) {
-        printWin.addEventListener("load", () => {
-          setTimeout(() => {
-            printWin.print();
-            setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-          }, 300);
-        });
+        printWin.document.open();
+        printWin.document.write(html);
+        printWin.document.close();
+        printWin.focus();
+        setTimeout(() => {
+          try { printWin.print(); } catch (_) {}
+        }, 600);
         showToast("اختر «حفظ كـ PDF» من قائمة الطباعة");
       } else {
+        // Popup blocked — fallback: download as HTML file
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        const blobUrl = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = blobUrl;
         a.download = `تحليل_بند_${selectedItem.num.replace(/\s/g, "_")}.html`;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
         showToast("تم تحميل ملف التقرير");
       }
