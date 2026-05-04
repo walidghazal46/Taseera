@@ -370,8 +370,8 @@ export async function adminRestoreSubscription(adminProfile, userId) {
 export function listenActiveSubscriptions(callback) {
   const q = query(
     collection(db, "users"),
-    where("isPaid", "==", true),
-    orderBy("paymentDate", "desc")
+    where("isPaid", "==", true)
+    // No orderBy — avoids composite index requirement
   );
   return onSnapshot(
     q,

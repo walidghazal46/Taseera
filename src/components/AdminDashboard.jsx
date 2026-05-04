@@ -29,6 +29,12 @@ import {
   listenPaymentSettings,
   saveAdBanner,
   savePaymentSettings,
+  adminApproveCancellation,
+  adminRejectCancellation,
+  adminApproveAccountDeletion,
+  adminRejectAccountDeletion,
+  listenCancellationRequests,
+  listenDeletionRequests,
 } from "../services/subscriptionApi";
 import {
   listenAllQSPremiumRequests,
@@ -266,9 +272,10 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
   // Subscriptions (Taseera Pro) state
   const [activeSubs, setActiveSubs] = useState([]);
   const [subsLoading, setSubsLoading] = useState(false);
-  const [subsFilter, setSubsFilter] = useState("active"); // "active" | "all"
-  const [subsDetail, setSubsDetail] = useState(null); // selected user object
+  const [subsDetail, setSubsDetail] = useState(null);
   const [subsSearch, setSubsSearch] = useState("");
+  const [cancelReqs, setCancelReqs] = useState([]);
+  const [deleteReqs, setDeleteReqs] = useState([]);
 
   // QS Premium state
   const [qsRequests, setQsRequests] = useState([]);
@@ -503,26 +510,35 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
     };
   }, [adminProfile?.canAccessAdmin]);
 
-  // Active subscriptions real-time listener
+  // Active subscriptions + pending cancellation/deletion requests (always active for badges)
   useEffect(() => {
     if (!adminProfile?.canAccessAdmin) return;
-    if (activeTab !== "subscriptions") return;
-    setSubsLoading(true);
     let active = true;
-    let unsubFn = null;
-    const timer = setTimeout(() => {
+    const unsubs = [];
+
+    const t1 = setTimeout(() => {
       if (!active) return;
-      unsubFn = listenActiveSubscriptions((items) => {
-        if (active) {
-          setActiveSubs(items);
-          setSubsLoading(false);
-        }
-      });
-    }, 100);
+      unsubs.push(listenCancellationRequests((items) => { if (active) setCancelReqs(items); }));
+      unsubs.push(listenDeletionRequests((items) => { if (active) setDeleteReqs(items); }));
+    }, 150);
+
+    // Active subs only when on tab
+    let t2 = null;
+    if (activeTab === "subscriptions") {
+      setSubsLoading(true);
+      t2 = setTimeout(() => {
+        if (!active) return;
+        unsubs.push(listenActiveSubscriptions((items) => {
+          if (active) { setActiveSubs(items); setSubsLoading(false); }
+        }));
+      }, 100);
+    }
+
     return () => {
       active = false;
-      clearTimeout(timer);
-      if (unsubFn) unsubFn();
+      clearTimeout(t1);
+      if (t2) clearTimeout(t2);
+      unsubs.forEach((fn) => fn?.());
     };
   }, [activeTab, adminProfile?.canAccessAdmin]);
 
@@ -667,6 +683,9 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                 const pendingQsBadge = item.id === "qspremium" && activeTab !== "qspremium"
                   ? qsRequests.filter((r) => r.status === "pending").length
                   : 0;
+                const subsBadge = item.id === "subscriptions" && activeTab !== "subscriptions"
+                  ? cancelReqs.length + deleteReqs.length
+                  : 0;
                 return (
                   <button
                     key={item.id}
@@ -682,6 +701,11 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                     {pendingQsBadge > 0 && (
                       <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-extrabold text-white shadow">
                         {pendingQsBadge}
+                      </span>
+                    )}
+                    {subsBadge > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] font-extrabold text-white shadow">
+                        {subsBadge}
                       </span>
                     )}
                   </button>
@@ -1195,6 +1219,281 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                 {!logsLoading && logs.length === 0 && <p className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-3 text-[12px] font-bold text-slate-500">{t.noData}</p>}
               </div>
             )}
+
+            {activeTab === "subscriptions" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[15px] font-extrabold text-[#082555]">Taseera Pro — Active Subscriptions</h3>
+                  {subsLoading && <span className="text-[11px] text-slate-500">Loading...</span>}
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <StatCard label="Active Now" value={activeSubs.length} tone="green" />
+                  <StatCard label="This Month" value={activeSubs.filter((u) => {
+                    const d = u.paymentDate?.toDate?.() || (u.paymentDate ? new Date(u.paymentDate) : null);
+                    if (!d) return false;
+                    const now = new Date();
+                    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                  }).length} tone="blue" />
+                  <StatCard label="Full Access" value={activeSubs.filter((u) => u.subscriptionType === "full_access").length} tone="green" />
+                </div>
+
+                {/* Search */}
+                <input
+                  value={subsSearch}
+                  onChange={(e) => setSubsSearch(e.target.value)}
+                  placeholder="Search by name / email / order ID..."
+                  className="w-full rounded-xl border border-[#dbe2ea] px-3 py-2 text-[12px] outline-none focus:border-[#1d4ed8]"
+                />
+
+                {/* List */}
+                <div className="space-y-2">
+                  {activeSubs
+                    .filter((u) => {
+                      if (!subsSearch.trim()) return true;
+                      const q = subsSearch.trim().toLowerCase();
+                      return [u.displayName, u.email, u.orderId, u.userSerial]
+                        .map((v) => String(v || "").toLowerCase())
+                        .some((v) => v.includes(q));
+                    })
+                    .map((user) => (
+                      <button
+                        key={user.id}
+                        type="button"
+                        className="w-full text-left rounded-2xl border border-[#e2e8f0] bg-white p-3 shadow-sm hover:border-[#1d4ed8] hover:shadow-md transition-all active:scale-[0.99]"
+                        onClick={() => setSubsDetail(user)}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-[13px] font-extrabold text-[#0f172a]">{user.displayName || user.email || user.id}</p>
+                              <span className="rounded-lg border border-emerald-200 bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                                ✓ مفعل
+                              </span>
+                            </div>
+                            <p className="mt-0.5 text-[11px] font-bold text-[#1d4ed8]">{user.email || "—"}</p>
+                            <div className="mt-1 flex flex-wrap gap-3 text-[10px] text-slate-500">
+                              <span>Type: <strong>{user.subscriptionType || "full_access"}</strong></span>
+                              <span>Paid: <strong>{fmtDate(user.paymentDate)}</strong></span>
+                              {user.userSerial && <span className="font-mono font-bold text-slate-600">{user.userSerial}</span>}
+                            </div>
+                          </div>
+                          <span className="text-[11px] text-slate-400 shrink-0 mt-0.5">›</span>
+                        </div>
+                      </button>
+                    ))}
+                  {!subsLoading && activeSubs.filter((u) => {
+                    if (!subsSearch.trim()) return true;
+                    const q = subsSearch.trim().toLowerCase();
+                    return [u.displayName, u.email, u.orderId, u.userSerial]
+                      .map((v) => String(v || "").toLowerCase())
+                      .some((v) => v.includes(q));
+                  }).length === 0 && (
+                    <p className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-3 text-[12px] font-bold text-slate-500">
+                      No active subscriptions found.
+                    </p>
+                  )}
+                </div>
+
+                {/* ── Cancellation Requests ── */}
+                {cancelReqs.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="flex items-center gap-2 text-[13px] font-extrabold text-rose-700">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-100 text-[10px]">⊘</span>
+                      طلبات إلغاء الاشتراك
+                      <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[9px] font-bold text-white">{cancelReqs.length}</span>
+                    </h4>
+                    {cancelReqs.map((u) => (
+                      <div key={u.id} className="rounded-2xl border border-rose-200 bg-rose-50 p-3 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-[13px] font-extrabold text-[#0f172a]">{u.displayName || "—"}</p>
+                            <p className="text-[11px] font-bold text-[#1d4ed8]">{u.email || "—"}</p>
+                            <p className="mt-0.5 text-[10px] text-slate-500">
+                              طلب الإلغاء: <strong>{fmtDate(u.cancellationRequest?.requestedAt)}</strong>
+                              {u.cancellationRequest?.reason && <> — {u.cancellationRequest.reason}</>}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button type="button"
+                            className="flex-1 rounded-xl bg-rose-600 py-2 text-[11px] font-bold text-white hover:bg-rose-700 transition"
+                            onClick={async () => {
+                              try { await adminApproveCancellation(adminProfile, u.id); onToast?.("✓ تم إلغاء الاشتراك", "success"); }
+                              catch (e) { onToast?.(e.message, "warning"); }
+                            }}>✓ موافقة — إلغاء الاشتراك</button>
+                          <button type="button"
+                            className="flex-1 rounded-xl border border-slate-300 py-2 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition"
+                            onClick={async () => {
+                              try { await adminRejectCancellation(adminProfile, u.id); onToast?.("رُفض طلب الإلغاء", "success"); }
+                              catch (e) { onToast?.(e.message, "warning"); }
+                            }}>✗ رفض — إبقاء الاشتراك</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* ── Account Deletion Requests ── */}
+                {deleteReqs.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="flex items-center gap-2 text-[13px] font-extrabold text-red-800">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-100 text-[10px]">🗑</span>
+                      طلبات حذف الحساب
+                      <span className="rounded-full bg-red-600 px-2 py-0.5 text-[9px] font-bold text-white">{deleteReqs.length}</span>
+                    </h4>
+                    {deleteReqs.map((u) => (
+                      <div key={u.id} className="rounded-2xl border border-red-300 bg-red-50 p-3 space-y-2">
+                        <div>
+                          <p className="text-[13px] font-extrabold text-[#0f172a]">{u.displayName || u.deletionRequest?.displayName || "—"}</p>
+                          <p className="text-[11px] font-bold text-[#1d4ed8]">{u.email || u.deletionRequest?.email || "—"}</p>
+                          <div className="mt-1 flex flex-wrap gap-2 text-[10px] text-slate-500">
+                            <span>User ID: <strong className="font-mono">{u.id}</strong></span>
+                            <span>طلب: <strong>{fmtDate(u.deletionRequest?.requestedAt)}</strong></span>
+                            {u.isPaid && <span className="font-bold text-amber-700">⚠️ مشترك</span>}
+                          </div>
+                          {u.deletionRequest?.reason && (
+                            <p className="mt-1 text-[10px] text-slate-600">السبب: {u.deletionRequest.reason}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <button type="button"
+                            className="flex-1 rounded-xl bg-red-700 py-2 text-[11px] font-bold text-white hover:bg-red-800 transition"
+                            onClick={async () => {
+                              if (!window.confirm(`Approve deletion for ${u.email || u.id}?`)) return;
+                              try { await adminApproveAccountDeletion(adminProfile, u.id); onToast?.("✓ تمت الموافقة على الحذف", "success"); }
+                              catch (e) { onToast?.(e.message, "warning"); }
+                            }}>🗑 موافقة على الحذف</button>
+                          <button type="button"
+                            className="flex-1 rounded-xl border border-slate-300 py-2 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition"
+                            onClick={async () => {
+                              try { await adminRejectAccountDeletion(adminProfile, u.id); onToast?.("رُفض طلب الحذف", "success"); }
+                              catch (e) { onToast?.(e.message, "warning"); }
+                            }}>✗ رفض الطلب</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Subscription Detail Modal */}
+            {subsDetail && (() => {
+              const user = activeSubs.find((u) => u.id === subsDetail.id) || subsDetail;
+              return (
+                <div
+                  className="fixed inset-0 z-[500] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4"
+                  onClick={() => setSubsDetail(null)}
+                >
+                  <div
+                    className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-y-auto max-h-[92vh]"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* Header */}
+                    <div className="sticky top-0 bg-[#082555] text-white px-4 py-4 rounded-t-3xl flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">Taseera Pro Subscription</p>
+                        <p className="text-[15px] font-extrabold mt-0.5">{user.displayName || user.email || user.id}</p>
+                      </div>
+                      <button type="button" onClick={() => setSubsDetail(null)} className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition">✕</button>
+                    </div>
+
+                    <div className="p-4 space-y-3">
+                      {/* Status badge */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {user.isPaid ? (
+                          <span className="rounded-lg border border-emerald-200 bg-emerald-100 px-3 py-1 text-[11px] font-bold text-emerald-700">✓ الاشتراك مفعل</span>
+                        ) : (
+                          <span className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-[11px] font-bold text-slate-600">⊘ غير مفعل</span>
+                        )}
+                        {user.subscriptionType && (
+                          <span className="rounded-lg border border-blue-200 bg-blue-100 px-3 py-1 text-[11px] font-bold text-blue-700">{user.subscriptionType}</span>
+                        )}
+                      </div>
+
+                      {/* Info grid */}
+                      <div className="rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] divide-y divide-[#e2e8f0]">
+                        {[
+                          { label: "الاسم / Name", value: user.displayName || "—" },
+                          { label: "الإيميل / Email", value: user.email || "—", mono: true },
+                          { label: "User ID", value: user.id, mono: true },
+                          { label: "السيريال / Serial", value: user.userSerial || "—", mono: true },
+                          { label: "نوع الاشتراك", value: user.subscriptionType || "—" },
+                          { label: "تاريخ الدفع", value: fmtDate(user.paymentDate) },
+                          { label: "آخر تحديث", value: fmtDate(user.updatedAt) },
+                          { label: "الحالة", value: user.status || "—" },
+                          { label: "الدولة", value: user.country || "—" },
+                          { label: "رقم الهاتف", value: user.phone || "—" },
+                        ].map(({ label, value, mono }) => (
+                          <div key={label} className="flex items-start justify-between gap-3 px-3 py-2">
+                            <span className="text-[10px] font-bold text-slate-500 shrink-0 mt-0.5">{label}</span>
+                            <span className={`text-[11px] font-bold text-[#0f172a] text-right break-all ${mono ? "font-mono" : ""}`}>{value}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Email button */}
+                      {user.email && (
+                        <a
+                          href={`mailto:${user.email}?subject=${encodeURIComponent("بخصوص اشتراكك في Taseera Pro")}&body=${encodeURIComponent(`السلام عليكم ${user.displayName || ""},\n\nبخصوص اشتراكك في Taseera Pro...\n\nشكراً،\nفريق تسعيرة`)}`}
+                          className="flex items-center justify-center gap-2 w-full rounded-xl border border-[#1d4ed8] bg-[#eff6ff] py-2.5 text-[12px] font-bold text-[#1d4ed8] hover:bg-[#dbeafe] transition"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          ✉ مراسلة المشترك / Email Subscriber
+                        </a>
+                      )}
+
+                      {/* Actions */}
+                      <div className="space-y-2">
+                        {user.isPaid ? (
+                          <button
+                            type="button"
+                            className="w-full rounded-xl border border-rose-300 bg-rose-50 py-2.5 text-[12px] font-bold text-rose-700 hover:bg-rose-100 transition"
+                            onClick={async () => {
+                              if (!window.confirm(`Revoke subscription for ${user.email || user.id}?`)) return;
+                              try {
+                                await adminRevokeSubscription(adminProfile, user.id);
+                                onToast?.("✓ تم إيقاف الاشتراك", "success");
+                                setSubsDetail(null);
+                              } catch (e) { onToast?.(e.message, "warning"); }
+                            }}
+                          >
+                            ⊘ إيقاف الاشتراك / Revoke
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="w-full rounded-xl bg-emerald-600 py-2.5 text-[12px] font-bold text-white hover:bg-emerald-700 transition"
+                            onClick={async () => {
+                              try {
+                                await adminRestoreSubscription(adminProfile, user.id);
+                                onToast?.("✓ تم إعادة تفعيل الاشتراك", "success");
+                                setSubsDetail(null);
+                              } catch (e) { onToast?.(e.message, "warning"); }
+                            }}
+                          >
+                            ↺ إعادة تفعيل الاشتراك / Restore
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="w-full rounded-xl border border-slate-300 py-2.5 text-[12px] font-bold text-slate-700 hover:bg-slate-50 transition"
+                          onClick={() => {
+                            setSubsDetail(null);
+                            setActiveTab("users");
+                            setQueryText(user.email || "");
+                          }}
+                        >
+                          👤 عرض ملف المستخدم / View User Profile
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {activeTab === "qspremium" && (
               <div className="space-y-4">

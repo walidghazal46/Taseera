@@ -4,6 +4,10 @@ import {
   requestQSPremium,
   addTrialItem,
   requestRefund,
+  listenFreeTrial,
+  startFreeTrial,
+  recordFreeTrialItem,
+  FREE_TRIAL_LIMIT,
 } from "../services/qsPremiumApi";
 
 // ---------------------------------------------------------------------------
@@ -673,6 +677,8 @@ export default function QSPremiumGate({
   const [showForm, setShowForm] = useState(false);
   const [showRefund, setShowRefund] = useState(false);
   const [refundSent, setRefundSent] = useState(false);
+  const [freeTrial, setFreeTrial] = useState(null);   // null = not started, { started, itemsUsed } = active
+  const [freeTrialLoading, setFreeTrialLoading] = useState(false);
 
   const countryKey = (country || "").toLowerCase();
   const priceInfo = PRICES[countryKey] || PRICES.ae;
@@ -704,6 +710,16 @@ export default function QSPremiumGate({
     };
   }, [hasAdminAccess, userId]);
 
+  // Free trial listener
+  useEffect(() => {
+    if (!userId || hasAdminAccess) return;
+    let active = true;
+    const unsub = listenFreeTrial(userId, (data) => {
+      if (active) setFreeTrial(data);
+    });
+    return () => { active = false; unsub?.(); };
+  }, [userId, hasAdminAccess]);
+
   // Derived state
   const status = hasAdminAccess ? "active" : (subscription?.status || "none");
   const nowMs = Date.now();
@@ -717,10 +733,19 @@ export default function QSPremiumGate({
   const trialItemsUsed = subscription?.trialItemsUsed || [];
   const trialItemsCount = trialItemsUsed.length;
   const isActive = hasAdminAccess || status === "active";
-  // During trial, all items are accessible (no item limit)
-  const canUseItem = hasAdminAccess || isActive;
+
+  // Free trial derived
+  const freeTrialStarted = Boolean(freeTrial?.started);
+  const freeTrialItems = freeTrial?.itemsUsed || [];
+  const freeTrialCount = freeTrialItems.length;
+  const freeTrialExhausted = freeTrialStarted && freeTrialCount >= FREE_TRIAL_LIMIT;
+  const inFreeTrial = freeTrialStarted && !freeTrialExhausted && !isActive;
+
+  // canUseItem: full subscription, admin, OR actively in free trial (item not counted yet or already used)
+  const canUseItem = hasAdminAccess || isActive || inFreeTrial;
+
   // Refund window helpers
-  const isWithin48h = isTrial; // trial = first 48h
+  const isWithin48h = isTrial;
   const noRefundAt = noRefundAfter
     ? (typeof noRefundAfter.toDate === "function" ? noRefundAfter.toDate() : new Date(noRefundAfter))
     : null;
@@ -728,10 +753,9 @@ export default function QSPremiumGate({
 
   const onItemUsed = useCallback(async (itemKey) => {
     if (hasAdminAccess) return;
-    if (!userId || !isActive) return;
-    // Still track for analytics (no limit enforced)
-    await addTrialItem(userId, itemKey);
-  }, [hasAdminAccess, userId, isActive]);
+    if (isActive && userId) { await addTrialItem(userId, itemKey); return; }
+    if (inFreeTrial && userId) { await recordFreeTrialItem(userId, itemKey); }
+  }, [hasAdminAccess, userId, isActive, inFreeTrial]);
 
   const contextValue = {
     subscription,
@@ -740,6 +764,9 @@ export default function QSPremiumGate({
     trialHoursLeft,
     trialItemsCount,
     canUseItem,
+    inFreeTrial,
+    freeTrialCount,
+    freeTrialExhausted,
     canRefund,
     isWithin48h,
     onItemUsed,
@@ -880,8 +907,27 @@ export default function QSPremiumGate({
     <div style={styles.root}>
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       <div style={styles.paywallWrap}>
-        {/* Info button */}
-        <button type="button" style={styles.infoBtn} onClick={() => setShowInfo(true)}>ⓘ</button>
+        {/* Policy button */}
+        <button type="button" onClick={() => setShowInfo(true)} style={{
+          position: "absolute",
+          top: "16px",
+          left: "16px",
+          background: "rgba(255,255,255,0.12)",
+          border: "1px solid rgba(255,255,255,0.25)",
+          borderRadius: "20px",
+          padding: "4px 10px",
+          color: "#fff",
+          cursor: "pointer",
+          fontSize: "11px",
+          fontWeight: "700",
+          fontFamily: AR,
+          display: "flex",
+          alignItems: "center",
+          gap: "4px",
+          whiteSpace: "nowrap",
+        }}>
+          📋 سياسة الباقة
+        </button>
 
         {/* Crown icon */}
         <div style={styles.crown}>💎</div>
@@ -966,19 +1012,78 @@ export default function QSPremiumGate({
             }}
             onMouseLeave={e => {
               e.currentTarget.style.background = "rgba(220,38,38,0.12)";
-              e.currentTarget.style.boxShadow = "0 0 18px rgba(220,38,38,0.25), inset 0 1px 0 rgba(255,255,255,0.06)";
+              e.currentTarget.style.boxShadow = "0 0 18px rgba(220,38,68,0.25), inset 0 1px 0 rgba(255,255,255,0.06)";
             }}
           >
             🔐 يجب تسجيل الدخول أولاً — اضغط هنا لتسجيل الدخول
           </button>
         ) : (
-          <button
-            type="button"
-            style={styles.ctaButton}
-            onClick={() => setShowForm(true)}
-          >
-            {status === "rejected" || status === "deactivated" ? "طلب اشتراك جديد" : "طلب الاشتراك"}
-          </button>
+          <>
+            <button
+              type="button"
+              style={styles.ctaButton}
+              onClick={() => setShowForm(true)}
+            >
+              {status === "rejected" || status === "deactivated" ? "طلب اشتراك جديد" : "طلب الاشتراك"}
+            </button>
+
+            {/* Free Trial button — only show if trial not started yet and no pending/active request */}
+            {!freeTrialStarted && status !== "pending" && status !== "active" && (
+              <button
+                type="button"
+                onClick={async () => {
+                  try { await startFreeTrial(userId); } catch (e) { console.warn(e); }
+                }}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  marginTop: "10px",
+                  padding: "11px 16px",
+                  background: "rgba(16,185,129,0.10)",
+                  border: "1.5px solid rgba(16,185,129,0.35)",
+                  borderRadius: "12px",
+                  boxShadow: "0 0 18px rgba(16,185,129,0.15), inset 0 1px 0 rgba(255,255,255,0.05)",
+                  cursor: "pointer",
+                  textAlign: "center",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  color: "#6ee7b7",
+                  letterSpacing: "0.01em",
+                  fontFamily: AR,
+                  transition: "box-shadow 0.2s, background 0.2s",
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.background = "rgba(16,185,129,0.20)";
+                  e.currentTarget.style.boxShadow = "0 0 28px rgba(16,185,129,0.30), inset 0 1px 0 rgba(255,255,255,0.08)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.background = "rgba(16,185,129,0.10)";
+                  e.currentTarget.style.boxShadow = "0 0 18px rgba(16,185,129,0.15), inset 0 1px 0 rgba(255,255,255,0.05)";
+                }}
+              >
+                🎁 تجربة مجانية — {FREE_TRIAL_LIMIT} بنود مجانية
+              </button>
+            )}
+
+            {/* Free trial exhausted notice */}
+            {freeTrialExhausted && (
+              <div style={{
+                marginTop: "10px",
+                padding: "10px 14px",
+                background: "rgba(245,158,11,0.10)",
+                border: "1px solid rgba(245,158,11,0.30)",
+                borderRadius: "10px",
+                textAlign: "center",
+                fontSize: "12px",
+                color: "#fcd34d",
+                fontFamily: AR,
+              }}>
+                🔒 انتهت التجربة المجانية ({FREE_TRIAL_LIMIT}/{FREE_TRIAL_LIMIT} بنود)
+                <br />
+                <span style={{ fontSize: "11px", opacity: 0.75 }}>اشترك في الباقة للوصول الكامل</span>
+              </div>
+            )}
+          </>
         )}
 
         {/* Refund policy hint */}
