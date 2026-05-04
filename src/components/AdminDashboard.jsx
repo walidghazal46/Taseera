@@ -17,6 +17,9 @@ import {
   setUserSuspended,
   updateUserByAdmin,
   upsertLimitedAdmin,
+  adminRevokeSubscription,
+  adminRestoreSubscription,
+  listenActiveSubscriptions,
 } from "../services/adminApi";
 import {
   AD_SLOT_IDS,
@@ -44,6 +47,7 @@ const MENU = [
   { id: "users", labelAr: "Users", labelEn: "Users" },
   { id: "pending", labelAr: "Pending Approvals", labelEn: "Pending Approvals" },
   { id: "payments", labelAr: "Payments", labelEn: "Payments" },
+  { id: "subscriptions", labelAr: "Subscriptions", labelEn: "Subscriptions" },
   { id: "admins", labelAr: "Admins", labelEn: "Admins" },
   { id: "logs", labelAr: "Logs", labelEn: "Logs" },
   { id: "settings", labelAr: "Settings", labelEn: "Settings" },
@@ -258,6 +262,13 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
   const [confirmRemoveAdmin, setConfirmRemoveAdmin] = useState(null);
   const [pendingRejectRequest, setPendingRejectRequest] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
+
+  // Subscriptions (Taseera Pro) state
+  const [activeSubs, setActiveSubs] = useState([]);
+  const [subsLoading, setSubsLoading] = useState(false);
+  const [subsFilter, setSubsFilter] = useState("active"); // "active" | "all"
+  const [subsDetail, setSubsDetail] = useState(null); // selected user object
+  const [subsSearch, setSubsSearch] = useState("");
 
   // QS Premium state
   const [qsRequests, setQsRequests] = useState([]);
@@ -491,6 +502,29 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
       if (unsubFn) unsubFn();
     };
   }, [adminProfile?.canAccessAdmin]);
+
+  // Active subscriptions real-time listener
+  useEffect(() => {
+    if (!adminProfile?.canAccessAdmin) return;
+    if (activeTab !== "subscriptions") return;
+    setSubsLoading(true);
+    let active = true;
+    let unsubFn = null;
+    const timer = setTimeout(() => {
+      if (!active) return;
+      unsubFn = listenActiveSubscriptions((items) => {
+        if (active) {
+          setActiveSubs(items);
+          setSubsLoading(false);
+        }
+      });
+    }, 100);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      if (unsubFn) unsubFn();
+    };
+  }, [activeTab, adminProfile?.canAccessAdmin]);
 
   useEffect(() => {
     if (activeTab === "users") {

@@ -7,6 +7,7 @@ import {
   getDoc,
   getDocs,
   limit,
+  onSnapshot,
   orderBy,
   query,
   runTransaction,
@@ -321,6 +322,62 @@ export async function rejectPaymentRequest(adminProfile, requestId, reason) {
     targetCollection: "paymentRequests",
     newData: { requestStatus: "rejected", reason: reason || "No reason provided" },
   });
+}
+
+/**
+ * Revoke an active subscription (set isPaid = false on the user).
+ */
+export async function adminRevokeSubscription(adminProfile, userId) {
+  requirePermission(adminProfile, "approvePayments");
+  const userRef = doc(db, "users", userId);
+  await updateDoc(userRef, {
+    isPaid: false,
+    subscriptionType: "free",
+    status: "rejected",
+    updatedAt: serverTimestamp(),
+  });
+  await createAdminLog(adminProfile, {
+    actionType: "revoke_subscription",
+    targetUserId: userId,
+    targetCollection: "users",
+    newData: { isPaid: false },
+  });
+}
+
+/**
+ * Restore a revoked subscription (set isPaid = true on the user).
+ */
+export async function adminRestoreSubscription(adminProfile, userId) {
+  requirePermission(adminProfile, "approvePayments");
+  const userRef = doc(db, "users", userId);
+  await updateDoc(userRef, {
+    isPaid: true,
+    subscriptionType: "full_access",
+    status: "approved",
+    updatedAt: serverTimestamp(),
+  });
+  await createAdminLog(adminProfile, {
+    actionType: "restore_subscription",
+    targetUserId: userId,
+    targetCollection: "users",
+    newData: { isPaid: true },
+  });
+}
+
+/**
+ * Real-time listener for all users with isPaid = true.
+ */
+export function listenActiveSubscriptions(callback) {
+  const q = query(
+    collection(db, "users"),
+    where("isPaid", "==", true),
+    orderBy("paymentDate", "desc")
+  );
+  return onSnapshot(
+    q,
+    (snap) => callback(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    (err) => { console.warn("[subscriptions] listener error:", err); callback([]); }
+  );
 }
 
 export async function listAdmins() {
