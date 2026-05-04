@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { CSI_DIVISIONS, MARKET_RATES, RESOURCE_PRICES, getDefaultResources } from "../data/csiData";
 
 const AR   = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
@@ -265,6 +265,125 @@ function Section({ title, icon, accent, extra, children, defaultOpen = true }) {
   );
 }
 
+// ─── IN-APP EXPORT PREVIEW MODAL ───────────────────────────────────────────────
+function CandyExportModal({ data, onClose }) {
+  useEffect(() => {
+    if (!data) return;
+    window.history.pushState({ candyExportModal: true }, "");
+    const handler = () => onClose();
+    window.addEventListener("popstate", handler);
+    return () => window.removeEventListener("popstate", handler);
+  }, [data, onClose]);
+
+  if (!data) return null;
+  const { item, division, cur, qty, finalRate, boqAmt, mats, labs, plts, assum, transpAmt, now } = data;
+
+  const fmt = (n) => Number(n || 0).toLocaleString("en-US", { maximumFractionDigits: 0 });
+
+  const ResourceSection = ({ title, rows }) => {
+    if (!rows?.length) return null;
+    return (
+      <div className="bg-white rounded-2xl border border-[#E2D8C4] overflow-hidden">
+        <div className="px-4 py-2 bg-[#082555]">
+          <h4 className="text-[12px] font-black text-[#d4a843]">{title}</h4>
+        </div>
+        <div className="divide-y divide-[#E2D8C4]">
+          {rows.map((r, i) => (
+            <div key={i} className="px-4 py-3 flex items-start justify-between gap-2">
+              <p className="text-[13px] font-black text-[#082555] shrink-0">
+                {fmt(r.qty * r.rate)} {cur}
+              </p>
+              <div className="text-right flex-1">
+                <p className="text-[12px] font-bold text-[#082555]">{r.resource}</p>
+                <p className="text-[10px] text-slate-400">{r.qty} {r.unit} × {fmt(r.rate)} {cur}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-[300] overflow-y-auto bg-[#F7F3EC]" dir="rtl" style={{ fontFamily: AR }}>
+      {/* Top bar */}
+      <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-[#082555] shadow-md print:hidden">
+        <button
+          onClick={() => { window.history.back(); onClose(); }}
+          className="flex items-center gap-2 text-white text-[14px] font-bold active:opacity-70"
+        >
+          <span className="text-lg">←</span> رجوع
+        </button>
+        <span className="text-[12px] font-bold text-[#d4a843] tracking-wide">تحليل البند</span>
+        <button
+          onClick={() => window.print()}
+          className="hidden sm:block text-[12px] text-[#d4a843] font-bold active:opacity-70"
+        >
+          🖨️ طباعة
+        </button>
+        <div className="sm:hidden w-10" />
+      </div>
+
+      <div className="mx-auto max-w-lg px-4 pt-5 pb-20 space-y-4">
+        {/* Header */}
+        <div className="bg-[#082555] rounded-3xl px-5 py-4 text-right">
+          <p className="text-[11px] font-bold text-[#d4a843]/70 uppercase tracking-widest">TASEERA · تسعيرة</p>
+          <h1 className="mt-1 text-[17px] font-black text-white leading-snug">{item.ar}</h1>
+          <p className="mt-0.5 text-[11px] text-white/50">{item.num} · {division.ar} · {item.unit}</p>
+          <p className="mt-0.5 text-[10px] text-white/30">{now}</p>
+        </div>
+
+        {/* Key metrics */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white rounded-2xl p-4 text-right border border-[#E2D8C4] shadow-sm">
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">سعر الوحدة</p>
+            <p className="mt-1 text-[24px] font-black text-[#082555] leading-none">{fmt(finalRate)}</p>
+            <p className="text-[11px] text-[#d4a843] font-bold mt-1">{cur} / {item.unit}</p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 text-right border border-[#E2D8C4] shadow-sm">
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">إجمالي البند</p>
+            <p className="mt-1 text-[24px] font-black text-[#082555] leading-none">{fmt(boqAmt)}</p>
+            <p className="text-[11px] text-slate-400 font-bold mt-1">{cur} · {qty} {item.unit}</p>
+          </div>
+        </div>
+
+        {/* Assumptions */}
+        <div className="bg-white rounded-2xl px-4 py-3 border border-[#E2D8C4]">
+          <h3 className="text-[13px] font-black text-[#082555] text-right mb-2">الافتراضات</h3>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { l: "هالك", v: `${assum.waste}%` },
+              { l: "نقل", v: `${fmt(transpAmt)} ${cur}` },
+              { l: "أعباء موقع", v: `${assum.siteOH}%` },
+              { l: "إدارة", v: `${assum.hoOH}%` },
+              { l: "مخاطر", v: `${assum.risk}%` },
+              { l: "ربح", v: `${assum.profit}%` },
+            ].map(({ l, v }) => (
+              <div key={l} className="bg-[#F7F3EC] border border-[#E2D8C4] rounded-xl p-2 text-center">
+                <p className="text-[9px] text-slate-400 font-bold">{l}</p>
+                <p className="text-[11px] font-black text-[#082555]">{v}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Resources */}
+        <ResourceSection title="المواد" rows={mats} />
+        <ResourceSection title="العمالة" rows={labs} />
+        <ResourceSection title="المعدات" rows={plts} />
+
+        {/* Screenshot hint */}
+        <div className="flex items-center justify-center rounded-2xl bg-[#082555]/8 border border-[#082555]/10 py-3 print:hidden">
+          <span className="text-[12px] text-slate-500 font-bold">📸 التقط صورة للشاشة لحفظ التحليل</span>
+        </div>
+
+        <p className="text-center text-[9px] text-slate-300 pb-4">TASEERA · PRICING INTELLIGENCE</p>
+      </div>
+      <style>{`@media print { .print\\:hidden { display:none!important; } }`}</style>
+    </div>
+  );
+}
+
 // ─── ANALYSIS VIEW ─────────────────────────────────────────────────────────────
 function AnalysisView({ item, division, country, onBack }) {
   const cur = CUR[country] || "ر.س";
@@ -285,6 +404,7 @@ function AnalysisView({ item, division, country, onBack }) {
   const [qty,  setQty]    = useState(1);
   const [assum, setAssum] = useState(() => defaultAssumptions(division.rateKey, country));
   const [notes, setNotes] = useState("");
+  const [exportModal, setExportModal] = useState(null);
 
   const scope = useMemo(() => buildScope(item, division), [item, division]);
   const accent = DIV_COLORS[division.rateKey] || "#082555";
@@ -448,18 +568,12 @@ function AnalysisView({ item, division, country, onBack }) {
       `تم التصدير من تطبيق Taseera — تسعيرة`,
     ].join('\n');
 
-    const onEmailFallback = () => {
-      window.location.href = `mailto:?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`;
-    };
-
-    openHtmlExport({
-      title: `تحليل بند — ${item.ar}`,
-      html,
-      filename: `تحليل_بند_${reportFileBase}.html`,
-      autoPrint: true,
-      onEmailFallback,
+    // Show in-app export preview modal (no external browser opened)
+    setExportModal({
+      item, division, cur, qty, finalRate, boqAmt, mats, labs, plts, assum, transpAmt,
+      now: new Date().toLocaleDateString("ar-SA"),
     });
-  }, [assum.hoOH, assum.profit, assum.risk, assum.siteOH, assum.waste, boqAmt, cur, division.ar, finalRate, item.ar, item.num, item.unit, labs, mats, notes, openHtmlExport, plts, qty, reportFileBase, transpAmt]);
+  }, [assum, boqAmt, cur, division, finalRate, item, labs, mats, plts, qty, transpAmt]);
 
   const handleRequestQuote = useCallback(async () => {
     const rfqText = [
@@ -523,6 +637,9 @@ function AnalysisView({ item, division, country, onBack }) {
 
   return (
     <div style={{ fontFamily: AR, direction: "rtl" }}>
+
+      {/* In-app export preview modal */}
+      <CandyExportModal data={exportModal} onClose={() => setExportModal(null)} />
 
       {/* ── Header ── */}
       <div style={{
