@@ -169,12 +169,16 @@ export async function adminApproveQSPremium(adminProfile, userId) {
     throw new Error("No permission to approve QS Premium subscriptions.");
   }
   const now = Timestamp.now();
-  const trialEndsAt = Timestamp.fromMillis(now.toMillis() + 3 * 24 * 60 * 60 * 1000);
+  // Trial = 48 hours from activation
+  const trialEndsAt = Timestamp.fromMillis(now.toMillis() + 48 * 60 * 60 * 1000);
+  // No-refund deadline = 7 days from activation
+  const noRefundAfter = Timestamp.fromMillis(now.toMillis() + 7 * 24 * 60 * 60 * 1000);
   const ref = doc(db, "qsPremiumSubscriptions", userId);
   await updateDoc(ref, {
     status: "active",
     activatedAt: serverTimestamp(),
     trialEndsAt,
+    noRefundAfter,
     updatedAt: serverTimestamp(),
   });
 }
@@ -246,6 +250,68 @@ export async function adminHandleRefund(adminProfile, userId, approved, notes) {
     "refundRequest.status": newStatus,
     "refundRequest.adminNotes": notes || "",
     ...(approved ? { status: "deactivated" } : {}),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Free Trial (pre-subscription, stored on users/{uid})
+// ---------------------------------------------------------------------------
+export const FREE_TRIAL_LIMIT = 10;
+
+/**
+ * Start the free trial for a user — writes freeTrialQS on users/{uid}.
+ * No-op if already started.
+ */
+export async function startFreeTrial(userId) {
+  if (!userId) throw new Error("userId required");
+  const ref = doc(db, "users", userId);
+  const snap = await getDoc(ref);
+  if (snap.exists() && snap.data()?.freeTrialQS?.started) {
+    return; // already started, do nothing
+  }
+  await updateDoc(ref, {
+    freeTrialQS: {
+      started: true,
+      startedAt: serverTimestamp(),
+      itemsUsed: [],
+    },
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Real-time listener for the user's free trial state.
+ * Calls callback({ started, itemsUsed }) or null if no trial.
+ */
+export function listenFreeTrial(userId, callback) {
+  if (!userId) { callback(null); return () => {}; }
+  const ref = doc(db, "users", userId);
+  return onSnapshot(
+    ref,
+    (snap) => {
+      if (!snap.exists()) { callback(null); return; }
+      const data = snap.data();
+      callback(data?.freeTrialQS || null);
+    },
+    () => callback(null)
+  );
+}
+
+/**
+ * Record that the user accessed an item during free trial.
+ */
+export async function recordFreeTrialItem(userId, itemKey) {
+  if (!userId || !itemKey) return;
+  const ref = doc(db, "users", userId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const trial = snap.data()?.freeTrialQS;
+  if (!trial?.started) return;
+  if ((trial.itemsUsed || []).includes(itemKey)) return;
+  if ((trial.itemsUsed || []).length >= FREE_TRIAL_LIMIT) return;
+  await updateDoc(ref, {
+    "freeTrialQS.itemsUsed": arrayUnion(itemKey),
     updatedAt: serverTimestamp(),
   });
 }

@@ -21,6 +21,7 @@ import SuppliersPage from "./pages/SuppliersPage";
 import { getAppText } from "./data/appText";
 
 const APP_STORAGE_PREFIX = "taseera.v3";
+const APP_VERSION = "1.0.0.26"; // always reflects current build — overrides localStorage
 
 function makeSeedMergeKey(entry) {
   const name = String(entry?.name || "").trim().toLowerCase();
@@ -204,6 +205,8 @@ export default function App() {
   const [authSession, setAuthSession] = usePersistentState(`${APP_STORAGE_PREFIX}.authSession`, null);
   const [activePage, setActivePage] = usePersistentState(`${APP_STORAGE_PREFIX}.activePage`, "companies");
   const [settings, setSettings] = usePersistentState(`${APP_STORAGE_PREFIX}.settings`, sampleSettings);
+  // Always inject current build version — never rely on localStorage value
+  const settingsWithVersion = { ...settings, appVersion: APP_VERSION };
   const [companies, setCompanies] = usePersistentState(`${APP_STORAGE_PREFIX}.companies`, sampleCompanies);
   const [suppliers, setSuppliers] = usePersistentState(`${APP_STORAGE_PREFIX}.suppliers`, sampleSuppliers);
   const [savedAnalyses, setSavedAnalyses] = usePersistentState(`${APP_STORAGE_PREFIX}.savedAnalyses`, []);
@@ -508,7 +511,7 @@ export default function App() {
   const navigationBridge = useMemo(() => ({ registerBackHandler: registerPageBackHandler, pushHistoryEntry, onEntryChange: notifySubpageNavigation }), [notifySubpageNavigation, pushHistoryEntry, registerPageBackHandler]);
 
   const pageProps = {
-    authMode, companies: mergedCompanies, suppliers: mergedSuppliers, settings, pricingCatalog, importedPricingSource, savedAnalyses, rfqRequests, systemBridge: bridge, navigationBridge,
+    authMode, companies: mergedCompanies, suppliers: mergedSuppliers, settings: settingsWithVersion, pricingCatalog, importedPricingSource, savedAnalyses, rfqRequests, systemBridge: bridge, navigationBridge,
     selectedPricingItemId, selectedCompanyId, selectedProjectId, company: selectedCompany, project: selectedProject,
     onSelectPricingItem: setSelectedPricingItemId, onSelectCompany: selectCompany, onSelectProject: selectProject, onAddCompany: addCompany, onAddProject: addProject, onAddSupplier: addSupplier, onUpdateSetting: updateSetting, onLogout: handleLogout, onShowStatus: showStatus, onSaveAnalysis: handleSaveAnalysis, onCreateRfq: handleCreateRfq, onContactSupplier: handleContactSupplier, onSettingsAction: handleSettingsAction, onOpenAuthScreen: openAuthScreen, sessionMeta: authSession,
     onOpenSubscription: handleOpenSubscription,

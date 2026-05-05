@@ -4,6 +4,7 @@ import {
   DEFAULT_PAYMENT_SETTINGS,
   listMyPaymentRequests,
   listenPaymentSettings,
+  requestSubscriptionCancellation,
 } from "../services/subscriptionApi";
 import { listenQSPremiumStatus } from "../services/qsPremiumApi";
 
@@ -389,6 +390,9 @@ export default function SubscriptionPanel({
   const [paymentMethod, setPaymentMethod] = useState(DEFAULT_PAYMENT_SETTINGS.acceptedMethods?.[0] || "");
   const [paymentReference, setPaymentReference] = useState("");
   const [note, setNote] = useState("");
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelSubmitting, setCancelSubmitting] = useState(false);
+  const [cancelSent, setCancelSent] = useState(false);
 
   useEffect(() => {
     const unsubscribe = listenPaymentSettings((data) => {
@@ -604,13 +608,28 @@ export default function SubscriptionPanel({
               {copy.loginToSubscribe}
             </button>
           ) : subscriptionActive ? (
-            <button
-              type="button"
-              disabled
-              className="w-full rounded-2xl bg-emerald-500 py-3.5 text-[13px] font-bold text-white shadow-[0_0_0_1px_rgba(167,243,208,0.28),0_8px_24px_rgba(16,185,129,0.35),0_0_22px_rgba(74,222,128,0.24)]"
-            >
-              {copy.subscribedNow}
-            </button>
+            <div className="space-y-2">
+              <button
+                type="button"
+                disabled
+                className="w-full rounded-2xl bg-emerald-500 py-3.5 text-[13px] font-bold text-white shadow-[0_0_0_1px_rgba(167,243,208,0.28),0_8px_24px_rgba(16,185,129,0.35),0_0_22px_rgba(74,222,128,0.24)]"
+              >
+                {copy.subscribedNow}
+              </button>
+              {!cancelSent ? (
+                <button
+                  type="button"
+                  onClick={() => setShowCancelConfirm(true)}
+                  className="w-full rounded-2xl border border-rose-400/40 bg-rose-500/15 py-2.5 text-[12px] font-bold text-rose-200 hover:bg-rose-500/25 transition-all"
+                >
+                  {isAr ? "إلغاء الباقة" : "Cancel Subscription"}
+                </button>
+              ) : (
+                <div className="rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-2.5 text-center text-[11px] font-bold text-amber-200">
+                  ⏳ {isAr ? "طلب الإلغاء قيد المراجعة" : "Cancellation request pending review"}
+                </div>
+              )}
+            </div>
           ) : !showForm ? (
             <button
               type="button"
@@ -788,6 +807,66 @@ export default function SubscriptionPanel({
           )}
         </div>
       </div>
+
+      {/* ── Cancellation Confirmation Modal ── */}
+      {showCancelConfirm && (
+        <div
+          className="fixed inset-0 z-[400] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          onClick={() => !cancelSubmitting && setShowCancelConfirm(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-3xl bg-[#1a0a0a] border border-rose-500/30 shadow-[0_0_60px_rgba(239,68,68,0.2)] p-6"
+            onClick={(e) => e.stopPropagation()}
+            style={{ fontFamily: AR, direction: "rtl" }}
+          >
+            <div className="text-center mb-5">
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-500/15 text-3xl shadow-[0_0_24px_rgba(239,68,68,0.3)]">
+                ⚠️
+              </div>
+              <p className="text-[17px] font-extrabold text-white">
+                {isAr ? "إلغاء الاشتراك" : "Cancel Subscription"}
+              </p>
+              <p className="mt-2 text-[12px] text-white/60 leading-relaxed">
+                {isAr
+                  ? "هل تريد إرسال طلب إلغاء الباقة؟ سيقوم فريق الإدارة بمراجعة طلبك."
+                  : "Do you want to request subscription cancellation? Admin will review your request."}
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="button"
+                disabled={cancelSubmitting}
+                onClick={async () => {
+                  if (!sessionMeta?.uid) return;
+                  setCancelSubmitting(true);
+                  try {
+                    await requestSubscriptionCancellation(sessionMeta.uid);
+                    setCancelSent(true);
+                    setShowCancelConfirm(false);
+                    onShowStatus?.(isAr ? "تم إرسال طلب الإلغاء — سيتم مراجعته قريباً" : "Cancellation request sent", "success");
+                  } catch (e) {
+                    onShowStatus?.(e.message || "Error", "warning");
+                  } finally {
+                    setCancelSubmitting(false);
+                  }
+                }}
+                className="flex-1 rounded-2xl bg-rose-600 py-3 text-[13px] font-bold text-white hover:bg-rose-700 transition disabled:opacity-60"
+              >
+                {cancelSubmitting ? "⏳..." : (isAr ? "نعم، أرسل الطلب" : "Yes, request")}
+              </button>
+              <button
+                type="button"
+                disabled={cancelSubmitting}
+                onClick={() => setShowCancelConfirm(false)}
+                className="flex-1 rounded-2xl border border-white/15 bg-white/8 py-3 text-[13px] font-bold text-white/70 hover:bg-white/15 transition"
+              >
+                {isAr ? "لا، تراجع" : "No, go back"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

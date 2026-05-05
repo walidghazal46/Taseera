@@ -5,6 +5,7 @@ import useAdminSession from "../hooks/useAdminSession";
 import taseeraLogo from "../assets/taseera-logo.png";
 import AdminDashboard from "./AdminDashboard";
 import SubscriptionPanel from "./SubscriptionPanel";
+import { requestAccountDeletion } from "../services/subscriptionApi";
 
 const F = "'Cairo','Tajawal',sans-serif";
 
@@ -368,6 +369,9 @@ function AccountTab({
   const [showHowToUse, setShowHowToUse] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [showRfqs, setShowRfqs] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteSent, setDeleteSent] = useState(false);
   const text = getAppText(settings.language);
   const copy = getSettingsCopy(settings.language);
   const isAr = settings.language !== "en";
@@ -627,11 +631,90 @@ function AccountTab({
                 <button type="button" onClick={onLogout}
                   className="flex-1 rounded-xl border border-red-500/25 bg-red-500/12 py-2.5 text-[11px] font-bold text-red-300 transition hover:bg-red-500/22 active:scale-[0.97]"
                   style={{ fontFamily: F }}>{text.settings.logout}</button>
+                {deleteSent ? (
+                  <div className="w-full rounded-xl border border-amber-500/30 bg-amber-500/10 py-2.5 text-center text-[10px] font-bold text-amber-300" style={{ fontFamily: F }}>
+                    ⏳ {isAr ? "طلب الحذف قيد المراجعة" : "Deletion request pending"}
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setShowDeleteConfirm(true)}
+                    className="w-full rounded-xl border border-red-600/40 bg-red-600/10 py-2.5 text-[11px] font-bold text-red-400 transition hover:bg-red-600/20 active:scale-[0.97] shadow-[0_0_12px_rgba(220,38,38,0.12)]"
+                    style={{ fontFamily: F }}>
+                    🗑 {isAr ? "حذف الحساب" : "Delete Account"}
+                  </button>
+                )}
               </>
             )}
           </div>
         </div>
       </div>
+
+      {/* ── Delete Account Confirmation Modal ── */}
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 z-[400] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          onClick={() => !deleteSubmitting && setShowDeleteConfirm(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-3xl border border-red-600/40 bg-[#1a0808] shadow-[0_0_80px_rgba(220,38,38,0.25),0_0_30px_rgba(220,38,38,0.12)] p-6"
+            onClick={(e) => e.stopPropagation()}
+            style={{ fontFamily: F, direction: isAr ? "rtl" : "ltr" }}
+          >
+            <div className="text-center mb-5">
+              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-600/15 text-4xl shadow-[0_0_30px_rgba(220,38,38,0.35)]">
+                🗑
+              </div>
+              <p className="text-[18px] font-extrabold text-white">
+                {isAr ? "حذف الحساب" : "Delete Account"}
+              </p>
+              <p className="mt-2 text-[12px] text-white/60 leading-relaxed">
+                {isAr
+                  ? "هل تريد إرسال طلب حذف حسابك؟ سيراجع الأدمن طلبك ويتواصل معك قبل تنفيذ الحذف."
+                  : "Do you want to request account deletion? Admin will review and contact you before proceeding."}
+              </p>
+              <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/8 px-3 py-2 text-[11px] text-red-300/80 leading-relaxed">
+                ⚠️ {isAr ? "لا يمكن التراجع عن هذا الإجراء بعد موافقة الأدمن" : "This action cannot be undone after admin approval"}
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                disabled={deleteSubmitting}
+                onClick={async () => {
+                  if (!sessionMeta?.uid) return;
+                  setDeleteSubmitting(true);
+                  try {
+                    await requestAccountDeletion(sessionMeta.uid, {
+                      displayName: settings.userName || "",
+                      email: settings.userEmail || "",
+                    });
+                    setDeleteSent(true);
+                    setShowDeleteConfirm(false);
+                    onShowStatus?.(
+                      isAr ? "تم إرسال طلب الحذف — سيتم مراجعته قريباً" : "Deletion request sent",
+                      "success"
+                    );
+                  } catch (e) {
+                    onShowStatus?.(e.message || "Error", "warning");
+                  } finally {
+                    setDeleteSubmitting(false);
+                  }
+                }}
+                className="flex-1 rounded-2xl bg-red-600 py-3 text-[13px] font-bold text-white hover:bg-red-700 transition disabled:opacity-60 shadow-[0_0_20px_rgba(220,38,38,0.3)]"
+              >
+                {deleteSubmitting ? "⏳..." : (isAr ? "نعم، أرسل الطلب" : "Yes, request")}
+              </button>
+              <button
+                type="button"
+                disabled={deleteSubmitting}
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 rounded-2xl border border-white/15 bg-white/8 py-3 text-[13px] font-bold text-white/70 hover:bg-white/15 transition"
+              >
+                {isAr ? "إلغاء" : "Cancel"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Language Toggle ── */}
       <GlassCard>

@@ -17,6 +17,9 @@ import {
   setUserSuspended,
   updateUserByAdmin,
   upsertLimitedAdmin,
+  adminRevokeSubscription,
+  adminRestoreSubscription,
+  listenActiveSubscriptions,
 } from "../services/adminApi";
 import {
   AD_SLOT_IDS,
@@ -26,6 +29,12 @@ import {
   listenPaymentSettings,
   saveAdBanner,
   savePaymentSettings,
+  adminApproveCancellation,
+  adminRejectCancellation,
+  adminApproveAccountDeletion,
+  adminRejectAccountDeletion,
+  listenCancellationRequests,
+  listenDeletionRequests,
 } from "../services/subscriptionApi";
 import {
   listenAllQSPremiumRequests,
@@ -44,6 +53,7 @@ const MENU = [
   { id: "users", labelAr: "Users", labelEn: "Users" },
   { id: "pending", labelAr: "Pending Approvals", labelEn: "Pending Approvals" },
   { id: "payments", labelAr: "Payments", labelEn: "Payments" },
+  { id: "subscriptions", labelAr: "Subscriptions", labelEn: "Subscriptions" },
   { id: "admins", labelAr: "Admins", labelEn: "Admins" },
   { id: "logs", labelAr: "Logs", labelEn: "Logs" },
   { id: "settings", labelAr: "Settings", labelEn: "Settings" },
@@ -170,6 +180,114 @@ function TrendChart({ today, week, month }) {
   );
 }
 
+// ── New KPI card with gradient background ─────────────────────────────────
+function KpiCard({ icon, label, value, sub, bg, border, valueColor, labelColor }) {
+  return (
+    <div
+      className="relative overflow-hidden rounded-2xl border p-4"
+      style={{ background: bg, borderColor: border }}
+    >
+      <div className="flex items-start justify-between gap-1">
+        <div className="min-w-0">
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.12em]" style={{ color: labelColor }}>
+            {label}
+          </p>
+          <p className="mt-1 text-[26px] font-extrabold leading-none" style={{ color: valueColor }}>
+            {value}
+          </p>
+          {sub && (
+            <p className="mt-1 text-[10px]" style={{ color: labelColor }}>
+              {sub}
+            </p>
+          )}
+        </div>
+        <span className="shrink-0 text-[26px] opacity-[0.18]">{icon}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Area sparkline for new-user trend ─────────────────────────────────────
+function AreaSparkLine({ points, color, labels }) {
+  const vals = points.map((p) => p.value);
+  const max = Math.max(...vals, 1);
+  const W = 400; const H = 72;
+  const step = vals.length > 1 ? W / (vals.length - 1) : W;
+  const pts = vals.map((v, i) => [i * step, H - (v / max) * (H - 14) - 7]);
+  const linePath = pts.map((p, i) => (i === 0 ? `M${p[0]},${p[1]}` : `L${p[0]},${p[1]}`)).join(" ");
+  const areaPath = `${linePath} L${W},${H} L0,${H} Z`;
+  const uid = `spark${color.replace(/[^a-z0-9]/gi, "")}`;
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: "100%", height: "72px" }}>
+        <defs>
+          <linearGradient id={uid} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.28" />
+            <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+        <path d={areaPath} fill={`url(#${uid})`} />
+        <path d={linePath} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        {pts.map(([x, y], i) => (
+          <circle key={i} cx={x} cy={y} r="4.5" fill={color} stroke="white" strokeWidth="2" />
+        ))}
+      </svg>
+      {labels && (
+        <div
+          className="mt-2 grid text-center text-[10px] font-bold text-slate-500"
+          style={{ gridTemplateColumns: `repeat(${labels.length}, 1fr)` }}
+        >
+          {labels.map((l, i) => (
+            <span key={i}>{l}<br /><span style={{ color, fontSize: "13px", fontWeight: 800 }}>{vals[i]}</span></span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Pending-action feed item ───────────────────────────────────────────────
+function ActionFeedItem({ icon, title, name, color, onGo }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-[#e8edf4] bg-[#fafbfd] p-3">
+      <div
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[17px]"
+        style={{ background: `${color}18`, border: `1.5px solid ${color}40` }}
+      >
+        {icon}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{title}</p>
+        <p className="truncate text-[12px] font-semibold text-slate-800">{name || "—"}</p>
+      </div>
+      <button
+        type="button"
+        onClick={onGo}
+        className="shrink-0 rounded-lg px-3 py-1.5 text-[11px] font-extrabold transition-opacity hover:opacity-80"
+        style={{ background: `${color}18`, color, border: `1px solid ${color}40` }}
+      >
+        Review →
+      </button>
+    </div>
+  );
+}
+
+// ── Horizontal stacked bar ─────────────────────────────────────────────────
+function StackedBar({ segments }) {
+  const total = segments.reduce((s, x) => s + x.value, 0) || 1;
+  return (
+    <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
+      {segments.map((seg) => (
+        <div
+          key={seg.label}
+          style={{ width: `${(seg.value / total) * 100}%`, background: seg.hex }}
+          title={`${seg.label}: ${seg.value}`}
+        />
+      ))}
+    </div>
+  );
+}
+
 export default function AdminDashboard({ language = "ar", adminProfile, onToast, initialTab = "dashboard" }) {
   const isEn = language === "en";
   const t = useMemo(
@@ -259,6 +377,14 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
   const [pendingRejectRequest, setPendingRejectRequest] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
 
+  // Subscriptions (Taseera Pro) state
+  const [activeSubs, setActiveSubs] = useState([]);
+  const [subsLoading, setSubsLoading] = useState(false);
+  const [subsDetail, setSubsDetail] = useState(null);
+  const [subsSearch, setSubsSearch] = useState("");
+  const [cancelReqs, setCancelReqs] = useState([]);
+  const [deleteReqs, setDeleteReqs] = useState([]);
+
   // QS Premium state
   const [qsRequests, setQsRequests] = useState([]);
   const [qsLoading, setQsLoading] = useState(false);
@@ -267,6 +393,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
   const [qsRejectReason, setQsRejectReason] = useState("");
   const [qsRefundNotes, setQsRefundNotes] = useState("");
   const [qsFilter, setQsFilter] = useState("all");
+  const [qsDetailModal, setQsDetailModal] = useState(null); // selected request object
 
   useEffect(() => {
     const hasMenuTab = MENU.some((tab) => tab.id === initialTab);
@@ -469,10 +596,9 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
     if (activeTab === "logs") loadLogs();
   }, [activeTab, adminProfile?.canAccessAdmin, loadAdmins, loadLogs, loadPayments, loadUsers]);
 
-  // QS Premium real-time listener (debounced against StrictMode double-invoke)
+  // QS Premium real-time listener — always active when admin is logged in (for badge)
   useEffect(() => {
     if (!adminProfile?.canAccessAdmin) return;
-    if (activeTab !== "qspremium") return;
     setQsLoading(true);
     let active = true;
     let unsubFn = null;
@@ -489,6 +615,38 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
       active = false;
       clearTimeout(timer);
       if (unsubFn) unsubFn();
+    };
+  }, [adminProfile?.canAccessAdmin]);
+
+  // Active subscriptions + pending cancellation/deletion requests (always active for badges)
+  useEffect(() => {
+    if (!adminProfile?.canAccessAdmin) return;
+    let active = true;
+    const unsubs = [];
+
+    const t1 = setTimeout(() => {
+      if (!active) return;
+      unsubs.push(listenCancellationRequests((items) => { if (active) setCancelReqs(items); }));
+      unsubs.push(listenDeletionRequests((items) => { if (active) setDeleteReqs(items); }));
+    }, 150);
+
+    // Active subs only when on tab
+    let t2 = null;
+    if (activeTab === "subscriptions") {
+      setSubsLoading(true);
+      t2 = setTimeout(() => {
+        if (!active) return;
+        unsubs.push(listenActiveSubscriptions((items) => {
+          if (active) { setActiveSubs(items); setSubsLoading(false); }
+        }));
+      }, 100);
+    }
+
+    return () => {
+      active = false;
+      clearTimeout(t1);
+      if (t2) clearTimeout(t2);
+      unsubs.forEach((fn) => fn?.());
     };
   }, [activeTab, adminProfile?.canAccessAdmin]);
 
@@ -617,6 +775,46 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
 
   const maxBar = Math.max(...summaryBars.map((i) => i.value), 1);
 
+  // ── Live data computed from always-active listeners ──────────────────────
+  const qsActive   = qsRequests.filter((r) => r.status === "active").length;
+  const qsPendingN = qsRequests.filter((r) => r.status === "pending").length;
+  const qsRejected = qsRequests.filter((r) => r.status === "rejected").length;
+  const qsDeacti   = qsRequests.filter((r) => r.status === "deactivated").length;
+
+  const allPendingFeed = [
+    ...cancelReqs.map((r) => ({
+      id: r.id,
+      icon: "🔄",
+      title: "Cancel Subscription",
+      name: r.name || r.email || r.id,
+      tab: "subscriptions",
+      color: "#f59e0b",
+    })),
+    ...deleteReqs.map((r) => ({
+      id: r.id,
+      icon: "🗑",
+      title: "Account Deletion",
+      name: r.name || r.email || r.id,
+      tab: "subscriptions",
+      color: "#ef4444",
+    })),
+    ...qsRequests
+      .filter((r) => r.status === "pending")
+      .map((r) => ({
+        id: r.id,
+        icon: "💎",
+        title: "QS Premium Request",
+        name: r.userName || r.userEmail || r.userId,
+        tab: "qspremium",
+        color: "#8b5cf6",
+      })),
+  ];
+
+  const freeUsers = Math.max(
+    0,
+    (dashboardStats?.totalUsers || 0) - (dashboardStats?.paidUsers || 0) - qsActive
+  );
+
   return (
     <div className="space-y-4" style={{ fontFamily: AR }}>
       <div className="overflow-hidden rounded-3xl border border-[#c7d2fe] bg-white shadow-sm">
@@ -629,75 +827,260 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
         <div className="grid grid-cols-1 gap-0 md:grid-cols-[220px_minmax(0,1fr)]">
           <aside className="border-b border-[#e2e8f0] bg-[#f8fafc] p-3 md:border-b-0 md:border-r">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-1">
-              {MENU.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setActiveTab(item.id)}
-                  className={`rounded-xl border px-3 py-2 text-left text-[11px] font-bold transition ${
-                    activeTab === item.id
-                      ? "border-[#1d4ed8] bg-[#dbeafe] text-[#1e3a8a]"
-                      : "border-[#dbe2ea] bg-white text-slate-600 hover:border-[#93c5fd]"
-                  }`}
-                >
-                  {isEn ? item.labelEn : item.labelAr}
-                </button>
-              ))}
+              {MENU.map((item) => {
+                const pendingQsBadge = item.id === "qspremium" && activeTab !== "qspremium"
+                  ? qsRequests.filter((r) => r.status === "pending").length
+                  : 0;
+                const subsBadge = item.id === "subscriptions" && activeTab !== "subscriptions"
+                  ? cancelReqs.length + deleteReqs.length
+                  : 0;
+                const dashBadge = item.id === "dashboard" && activeTab !== "dashboard"
+                  ? allPendingFeed.length
+                  : 0;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setActiveTab(item.id)}
+                    className={`relative rounded-xl border px-3 py-2 text-left text-[11px] font-bold transition ${
+                      activeTab === item.id
+                        ? "border-[#1d4ed8] bg-[#dbeafe] text-[#1e3a8a]"
+                        : "border-[#dbe2ea] bg-white text-slate-600 hover:border-[#93c5fd]"
+                    }`}
+                  >
+                    {isEn ? item.labelEn : item.labelAr}
+                    {pendingQsBadge > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-extrabold text-white shadow">
+                        {pendingQsBadge}
+                      </span>
+                    )}
+                    {subsBadge > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] font-extrabold text-white shadow">
+                        {subsBadge}
+                      </span>
+                    )}
+                    {dashBadge > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-extrabold text-white shadow">
+                        {dashBadge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </aside>
 
           <section className="min-w-0 p-3 sm:p-4">
             {activeTab === "dashboard" && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[15px] font-extrabold text-[#082555]">Overview</h3>
-                  <button type="button" onClick={loadStats} className="rounded-lg border border-[#dbe2ea] bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600">
-                    {t.refresh}
+              <div className="space-y-5">
+
+                {/* ── Header ───────────────────────────────────────────── */}
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-[16px] font-extrabold text-[#082555]">📊 Command Center</h3>
+                    <p className="text-[11px] text-slate-400">Real-time overview of all platform activity</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={loadStats}
+                    className="shrink-0 rounded-xl border border-[#dbe2ea] bg-white px-3 py-2 text-[11px] font-bold text-slate-600 shadow-sm hover:bg-slate-50"
+                  >
+                    🔄 {t.refresh}
                   </button>
                 </div>
 
                 {statsLoading ? (
-                  <p className="text-[12px] font-bold text-slate-500">{t.loading}</p>
+                  <div className="flex items-center gap-2 rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] p-6">
+                    <span className="animate-spin text-[20px]">⏳</span>
+                    <p className="text-[12px] font-bold text-slate-500">{t.loading}</p>
+                  </div>
                 ) : (
                   <>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                      <StatCard label="Total Users" value={dashboardStats?.totalUsers || 0} tone="blue" />
-                      <StatCard label="Active" value={dashboardStats?.activeUsers || 0} tone="green" />
-                      <StatCard label="Suspended" value={dashboardStats?.suspendedUsers || 0} tone="amber" />
-                      <StatCard label="Paid" value={dashboardStats?.paidUsers || 0} tone="blue" />
-                      <StatCard label="Pending Requests" value={dashboardStats?.pendingRequests || 0} tone="red" />
-                      <StatCard label="New (Today / Week / Month)" value={`${dashboardStats?.newToday || 0} / ${dashboardStats?.newWeek || 0} / ${dashboardStats?.newMonth || 0}`} tone="green" />
+                    {/* ── KPI Cards ──────────────────────────────────────── */}
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+                      <KpiCard
+                        icon="👥" label="Total Users"
+                        value={dashboardStats?.totalUsers || 0}
+                        sub="Registered"
+                        bg="linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%)"
+                        border="#bfdbfe" valueColor="#1e40af" labelColor="#3b82f6"
+                      />
+                      <KpiCard
+                        icon="✅" label="Active"
+                        value={dashboardStats?.activeUsers || 0}
+                        sub="Approved"
+                        bg="linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%)"
+                        border="#bbf7d0" valueColor="#166534" labelColor="#16a34a"
+                      />
+                      <KpiCard
+                        icon="⏸" label="Suspended"
+                        value={dashboardStats?.suspendedUsers || 0}
+                        sub="Blocked"
+                        bg="linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%)"
+                        border="#fde68a" valueColor="#92400e" labelColor="#d97706"
+                      />
+                      <KpiCard
+                        icon="💳" label="Taseera Pro"
+                        value={dashboardStats?.paidUsers || 0}
+                        sub="Active subs"
+                        bg="linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%)"
+                        border="#c7d2fe" valueColor="#3730a3" labelColor="#6366f1"
+                      />
+                      <KpiCard
+                        icon="💎" label="QS Premium"
+                        value={qsActive}
+                        sub="Active subs"
+                        bg="linear-gradient(135deg,#faf5ff 0%,#ede9fe 100%)"
+                        border="#ddd6fe" valueColor="#5b21b6" labelColor="#8b5cf6"
+                      />
+                      <KpiCard
+                        icon="🔔" label="Actions Needed"
+                        value={allPendingFeed.length}
+                        sub={allPendingFeed.length === 0 ? "All clear ✓" : "Requires review"}
+                        bg={allPendingFeed.length > 0
+                          ? "linear-gradient(135deg,#fff1f2 0%,#ffe4e6 100%)"
+                          : "linear-gradient(135deg,#f0fdf4 0%,#dcfce7 100%)"}
+                        border={allPendingFeed.length > 0 ? "#fecdd3" : "#bbf7d0"}
+                        valueColor={allPendingFeed.length > 0 ? "#9f1239" : "#166534"}
+                        labelColor={allPendingFeed.length > 0 ? "#f43f5e" : "#16a34a"}
+                      />
                     </div>
 
-                    <div className="rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] p-3">
-                      <p className="mb-3 text-[12px] font-bold text-[#0f172a]">Users Distribution Chart</p>
-                      <div className="space-y-2">
-                        {summaryBars.map((bar) => (
-                          <div key={bar.label} className="grid grid-cols-[72px_minmax(0,1fr)_34px] items-center gap-2">
-                            <span className="text-[10px] font-bold text-slate-600">{bar.label}</span>
-                            <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-                              <div className={`h-full ${bar.color}`} style={{ width: `${Math.max(4, (bar.value / maxBar) * 100)}%` }} />
-                            </div>
-                            <span className="text-[10px] font-bold text-slate-700">{bar.value}</span>
-                          </div>
-                        ))}
+                    {/* ── New Users Growth ───────────────────────────────── */}
+                    <div className="rounded-2xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+                      <div className="mb-3 flex items-center gap-2">
+                        <p className="text-[13px] font-extrabold text-[#0f172a]">📈 New Users Growth</p>
+                        <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-600">
+                          +{dashboardStats?.newMonth || 0} this month
+                        </span>
+                      </div>
+                      <AreaSparkLine
+                        points={[
+                          { value: dashboardStats?.newToday || 0 },
+                          { value: dashboardStats?.newWeek || 0 },
+                          { value: dashboardStats?.newMonth || 0 },
+                        ]}
+                        color="#2563eb"
+                        labels={["Today", "This Week", "This Month"]}
+                      />
+                    </div>
+
+                    {/* ── Donuts Row ────────────────────────────────────── */}
+                    <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                      <div className="rounded-2xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+                        <p className="mb-1 text-[13px] font-extrabold text-[#0f172a]">👥 User Status Mix</p>
+                        <StackedBar segments={[
+                          { label: "Active",    value: dashboardStats?.activeUsers    || 0, hex: "#10b981" },
+                          { label: "Suspended", value: dashboardStats?.suspendedUsers || 0, hex: "#f59e0b" },
+                          { label: "Pending",   value: dashboardStats?.pendingRequests || 0, hex: "#ef4444" },
+                        ]} />
+                        <DonutChart
+                          title=""
+                          items={[
+                            { label: "Active",    value: dashboardStats?.activeUsers    || 0, hex: "#10b981" },
+                            { label: "Suspended", value: dashboardStats?.suspendedUsers || 0, hex: "#f59e0b" },
+                            { label: "Pending",   value: dashboardStats?.pendingRequests || 0, hex: "#ef4444" },
+                          ]}
+                        />
+                      </div>
+                      <div className="rounded-2xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+                        <p className="mb-1 text-[13px] font-extrabold text-[#0f172a]">💳 Subscription Mix</p>
+                        <StackedBar segments={[
+                          { label: "Taseera Pro", value: dashboardStats?.paidUsers || 0, hex: "#4f46e5" },
+                          { label: "QS Premium",  value: qsActive,                       hex: "#8b5cf6" },
+                          { label: "Free",        value: freeUsers,                      hex: "#e2e8f0" },
+                        ]} />
+                        <DonutChart
+                          title=""
+                          items={[
+                            { label: "Taseera Pro", value: dashboardStats?.paidUsers || 0, hex: "#4f46e5" },
+                            { label: "QS Premium",  value: qsActive,                       hex: "#8b5cf6" },
+                            { label: "Free",        value: freeUsers,                      hex: "#cbd5e1" },
+                          ]}
+                        />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                      <DonutChart
-                        title="Users Status Mix"
-                        items={[
-                          { label: "Active", value: dashboardStats?.activeUsers || 0, hex: "#10b981" },
-                          { label: "Suspended", value: dashboardStats?.suspendedUsers || 0, hex: "#f59e0b" },
-                          { label: "Pending", value: dashboardStats?.pendingRequests || 0, hex: "#ef4444" },
-                        ]}
-                      />
-                      <TrendChart
-                        today={dashboardStats?.newToday || 0}
-                        week={dashboardStats?.newWeek || 0}
-                        month={dashboardStats?.newMonth || 0}
-                      />
+                    {/* ── QS Premium Breakdown ──────────────────────────── */}
+                    <div className="rounded-2xl border border-[#ede9fe] bg-white p-4 shadow-sm">
+                      <p className="mb-3 text-[13px] font-extrabold text-[#0f172a]">💎 QS Premium Breakdown</p>
+                      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        {[
+                          { label: "Active",      value: qsActive,   hex: "#10b981", bg: "#f0fdf4", border: "#bbf7d0" },
+                          { label: "Pending",     value: qsPendingN, hex: "#f59e0b", bg: "#fffbeb", border: "#fde68a" },
+                          { label: "Rejected",    value: qsRejected, hex: "#ef4444", bg: "#fff1f2", border: "#fecdd3" },
+                          { label: "Deactivated", value: qsDeacti,   hex: "#94a3b8", bg: "#f8fafc", border: "#e2e8f0" },
+                        ].map((item) => (
+                          <div
+                            key={item.label}
+                            className="rounded-xl p-3 text-center"
+                            style={{ background: item.bg, border: `1px solid ${item.border}` }}
+                          >
+                            <p className="text-[22px] font-extrabold" style={{ color: item.hex }}>{item.value}</p>
+                            <p className="text-[10px] font-bold text-slate-500">{item.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                      {qsPendingN > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab("qspremium")}
+                          className="mt-3 w-full rounded-xl border border-amber-200 bg-amber-50 py-2 text-[12px] font-bold text-amber-700 hover:bg-amber-100"
+                        >
+                          ⚡ Review {qsPendingN} pending QS Premium request{qsPendingN > 1 ? "s" : ""} →
+                        </button>
+                      )}
+                    </div>
+
+                    {/* ── Pending Actions Feed ──────────────────────────── */}
+                    <div className="rounded-2xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+                      <div className="mb-3 flex items-center gap-2">
+                        <p className="text-[13px] font-extrabold text-[#0f172a]">🔔 Pending Actions</p>
+                        {allPendingFeed.length > 0 && (
+                          <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[10px] font-extrabold text-white shadow-sm">
+                            {allPendingFeed.length}
+                          </span>
+                        )}
+                      </div>
+                      {allPendingFeed.length === 0 ? (
+                        <div className="rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] p-5 text-center">
+                          <p className="text-[22px]">✅</p>
+                          <p className="mt-1 text-[13px] font-bold text-emerald-700">All clear — no pending actions</p>
+                          <p className="text-[11px] text-emerald-600 opacity-70">Everything is up to date</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {allPendingFeed.map((item) => (
+                            <ActionFeedItem
+                              key={`${item.tab}-${item.id}`}
+                              icon={item.icon}
+                              title={item.title}
+                              name={item.name}
+                              color={item.color}
+                              onGo={() => setActiveTab(item.tab)}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ── Users Distribution Bars ───────────────────────── */}
+                    <div className="rounded-2xl border border-[#e2e8f0] bg-white p-4 shadow-sm">
+                      <p className="mb-3 text-[13px] font-extrabold text-[#0f172a]">📊 Users Distribution</p>
+                      <div className="space-y-3">
+                        {summaryBars.map((bar) => (
+                          <div key={bar.label} className="grid grid-cols-[80px_1fr_40px] items-center gap-3">
+                            <span className="text-[11px] font-bold text-slate-600">{bar.label}</span>
+                            <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                              <div
+                                className={`h-full rounded-full ${bar.color}`}
+                                style={{ width: `${Math.max(4, (bar.value / maxBar) * 100)}%`, transition: "width 0.8s ease" }}
+                              />
+                            </div>
+                            <span className="text-right text-[12px] font-extrabold text-slate-700">{bar.value}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </>
                 )}
@@ -1152,6 +1535,281 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
               </div>
             )}
 
+            {activeTab === "subscriptions" && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[15px] font-extrabold text-[#082555]">Taseera Pro — Active Subscriptions</h3>
+                  {subsLoading && <span className="text-[11px] text-slate-500">Loading...</span>}
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <StatCard label="Active Now" value={activeSubs.length} tone="green" />
+                  <StatCard label="This Month" value={activeSubs.filter((u) => {
+                    const d = u.paymentDate?.toDate?.() || (u.paymentDate ? new Date(u.paymentDate) : null);
+                    if (!d) return false;
+                    const now = new Date();
+                    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                  }).length} tone="blue" />
+                  <StatCard label="Full Access" value={activeSubs.filter((u) => u.subscriptionType === "full_access").length} tone="green" />
+                </div>
+
+                {/* Search */}
+                <input
+                  value={subsSearch}
+                  onChange={(e) => setSubsSearch(e.target.value)}
+                  placeholder="Search by name / email / order ID..."
+                  className="w-full rounded-xl border border-[#dbe2ea] px-3 py-2 text-[12px] outline-none focus:border-[#1d4ed8]"
+                />
+
+                {/* List */}
+                <div className="space-y-2">
+                  {activeSubs
+                    .filter((u) => {
+                      if (!subsSearch.trim()) return true;
+                      const q = subsSearch.trim().toLowerCase();
+                      return [u.displayName, u.email, u.orderId, u.userSerial]
+                        .map((v) => String(v || "").toLowerCase())
+                        .some((v) => v.includes(q));
+                    })
+                    .map((user) => (
+                      <button
+                        key={user.id}
+                        type="button"
+                        className="w-full text-left rounded-2xl border border-[#e2e8f0] bg-white p-3 shadow-sm hover:border-[#1d4ed8] hover:shadow-md transition-all active:scale-[0.99]"
+                        onClick={() => setSubsDetail(user)}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-[13px] font-extrabold text-[#0f172a]">{user.displayName || user.email || user.id}</p>
+                              <span className="rounded-lg border border-emerald-200 bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                                ✓ مفعل
+                              </span>
+                            </div>
+                            <p className="mt-0.5 text-[11px] font-bold text-[#1d4ed8]">{user.email || "—"}</p>
+                            <div className="mt-1 flex flex-wrap gap-3 text-[10px] text-slate-500">
+                              <span>Type: <strong>{user.subscriptionType || "full_access"}</strong></span>
+                              <span>Paid: <strong>{fmtDate(user.paymentDate)}</strong></span>
+                              {user.userSerial && <span className="font-mono font-bold text-slate-600">{user.userSerial}</span>}
+                            </div>
+                          </div>
+                          <span className="text-[11px] text-slate-400 shrink-0 mt-0.5">›</span>
+                        </div>
+                      </button>
+                    ))}
+                  {!subsLoading && activeSubs.filter((u) => {
+                    if (!subsSearch.trim()) return true;
+                    const q = subsSearch.trim().toLowerCase();
+                    return [u.displayName, u.email, u.orderId, u.userSerial]
+                      .map((v) => String(v || "").toLowerCase())
+                      .some((v) => v.includes(q));
+                  }).length === 0 && (
+                    <p className="rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-3 text-[12px] font-bold text-slate-500">
+                      No active subscriptions found.
+                    </p>
+                  )}
+                </div>
+
+                {/* ── Cancellation Requests ── */}
+                {cancelReqs.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="flex items-center gap-2 text-[13px] font-extrabold text-rose-700">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-100 text-[10px]">⊘</span>
+                      طلبات إلغاء الاشتراك
+                      <span className="rounded-full bg-rose-500 px-2 py-0.5 text-[9px] font-bold text-white">{cancelReqs.length}</span>
+                    </h4>
+                    {cancelReqs.map((u) => (
+                      <div key={u.id} className="rounded-2xl border border-rose-200 bg-rose-50 p-3 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-[13px] font-extrabold text-[#0f172a]">{u.displayName || "—"}</p>
+                            <p className="text-[11px] font-bold text-[#1d4ed8]">{u.email || "—"}</p>
+                            <p className="mt-0.5 text-[10px] text-slate-500">
+                              طلب الإلغاء: <strong>{fmtDate(u.cancellationRequest?.requestedAt)}</strong>
+                              {u.cancellationRequest?.reason && <> — {u.cancellationRequest.reason}</>}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <button type="button"
+                            className="flex-1 rounded-xl bg-rose-600 py-2 text-[11px] font-bold text-white hover:bg-rose-700 transition"
+                            onClick={async () => {
+                              try { await adminApproveCancellation(adminProfile, u.id); onToast?.("✓ تم إلغاء الاشتراك", "success"); }
+                              catch (e) { onToast?.(e.message, "warning"); }
+                            }}>✓ موافقة — إلغاء الاشتراك</button>
+                          <button type="button"
+                            className="flex-1 rounded-xl border border-slate-300 py-2 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition"
+                            onClick={async () => {
+                              try { await adminRejectCancellation(adminProfile, u.id); onToast?.("رُفض طلب الإلغاء", "success"); }
+                              catch (e) { onToast?.(e.message, "warning"); }
+                            }}>✗ رفض — إبقاء الاشتراك</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* ── Account Deletion Requests ── */}
+                {deleteReqs.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="flex items-center gap-2 text-[13px] font-extrabold text-red-800">
+                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-100 text-[10px]">🗑</span>
+                      طلبات حذف الحساب
+                      <span className="rounded-full bg-red-600 px-2 py-0.5 text-[9px] font-bold text-white">{deleteReqs.length}</span>
+                    </h4>
+                    {deleteReqs.map((u) => (
+                      <div key={u.id} className="rounded-2xl border border-red-300 bg-red-50 p-3 space-y-2">
+                        <div>
+                          <p className="text-[13px] font-extrabold text-[#0f172a]">{u.displayName || u.deletionRequest?.displayName || "—"}</p>
+                          <p className="text-[11px] font-bold text-[#1d4ed8]">{u.email || u.deletionRequest?.email || "—"}</p>
+                          <div className="mt-1 flex flex-wrap gap-2 text-[10px] text-slate-500">
+                            <span>User ID: <strong className="font-mono">{u.id}</strong></span>
+                            <span>طلب: <strong>{fmtDate(u.deletionRequest?.requestedAt)}</strong></span>
+                            {u.isPaid && <span className="font-bold text-amber-700">⚠️ مشترك</span>}
+                          </div>
+                          {u.deletionRequest?.reason && (
+                            <p className="mt-1 text-[10px] text-slate-600">السبب: {u.deletionRequest.reason}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <button type="button"
+                            className="flex-1 rounded-xl bg-red-700 py-2 text-[11px] font-bold text-white hover:bg-red-800 transition"
+                            onClick={async () => {
+                              if (!window.confirm(`Approve deletion for ${u.email || u.id}?`)) return;
+                              try { await adminApproveAccountDeletion(adminProfile, u.id); onToast?.("✓ تمت الموافقة على الحذف", "success"); }
+                              catch (e) { onToast?.(e.message, "warning"); }
+                            }}>🗑 موافقة على الحذف</button>
+                          <button type="button"
+                            className="flex-1 rounded-xl border border-slate-300 py-2 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition"
+                            onClick={async () => {
+                              try { await adminRejectAccountDeletion(adminProfile, u.id); onToast?.("رُفض طلب الحذف", "success"); }
+                              catch (e) { onToast?.(e.message, "warning"); }
+                            }}>✗ رفض الطلب</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Subscription Detail Modal */}
+            {subsDetail && (() => {
+              const user = activeSubs.find((u) => u.id === subsDetail.id) || subsDetail;
+              return (
+                <div
+                  className="fixed inset-0 z-[500] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4"
+                  onClick={() => setSubsDetail(null)}
+                >
+                  <div
+                    className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-y-auto max-h-[92vh]"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* Header */}
+                    <div className="sticky top-0 bg-[#082555] text-white px-4 py-4 rounded-t-3xl flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">Taseera Pro Subscription</p>
+                        <p className="text-[15px] font-extrabold mt-0.5">{user.displayName || user.email || user.id}</p>
+                      </div>
+                      <button type="button" onClick={() => setSubsDetail(null)} className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition">✕</button>
+                    </div>
+
+                    <div className="p-4 space-y-3">
+                      {/* Status badge */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {user.isPaid ? (
+                          <span className="rounded-lg border border-emerald-200 bg-emerald-100 px-3 py-1 text-[11px] font-bold text-emerald-700">✓ الاشتراك مفعل</span>
+                        ) : (
+                          <span className="rounded-lg border border-slate-200 bg-slate-100 px-3 py-1 text-[11px] font-bold text-slate-600">⊘ غير مفعل</span>
+                        )}
+                        {user.subscriptionType && (
+                          <span className="rounded-lg border border-blue-200 bg-blue-100 px-3 py-1 text-[11px] font-bold text-blue-700">{user.subscriptionType}</span>
+                        )}
+                      </div>
+
+                      {/* Info grid */}
+                      <div className="rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] divide-y divide-[#e2e8f0]">
+                        {[
+                          { label: "الاسم / Name", value: user.displayName || "—" },
+                          { label: "الإيميل / Email", value: user.email || "—", mono: true },
+                          { label: "User ID", value: user.id, mono: true },
+                          { label: "السيريال / Serial", value: user.userSerial || "—", mono: true },
+                          { label: "نوع الاشتراك", value: user.subscriptionType || "—" },
+                          { label: "تاريخ الدفع", value: fmtDate(user.paymentDate) },
+                          { label: "آخر تحديث", value: fmtDate(user.updatedAt) },
+                          { label: "الحالة", value: user.status || "—" },
+                          { label: "الدولة", value: user.country || "—" },
+                          { label: "رقم الهاتف", value: user.phone || "—" },
+                        ].map(({ label, value, mono }) => (
+                          <div key={label} className="flex items-start justify-between gap-3 px-3 py-2">
+                            <span className="text-[10px] font-bold text-slate-500 shrink-0 mt-0.5">{label}</span>
+                            <span className={`text-[11px] font-bold text-[#0f172a] text-right break-all ${mono ? "font-mono" : ""}`}>{value}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Email button */}
+                      {user.email && (
+                        <a
+                          href={`mailto:${user.email}?subject=${encodeURIComponent("بخصوص اشتراكك في Taseera Pro")}&body=${encodeURIComponent(`السلام عليكم ${user.displayName || ""},\n\nبخصوص اشتراكك في Taseera Pro...\n\nشكراً،\nفريق تسعيرة`)}`}
+                          className="flex items-center justify-center gap-2 w-full rounded-xl border border-[#1d4ed8] bg-[#eff6ff] py-2.5 text-[12px] font-bold text-[#1d4ed8] hover:bg-[#dbeafe] transition"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          ✉ مراسلة المشترك / Email Subscriber
+                        </a>
+                      )}
+
+                      {/* Actions */}
+                      <div className="space-y-2">
+                        {user.isPaid ? (
+                          <button
+                            type="button"
+                            className="w-full rounded-xl border border-rose-300 bg-rose-50 py-2.5 text-[12px] font-bold text-rose-700 hover:bg-rose-100 transition"
+                            onClick={async () => {
+                              if (!window.confirm(`Revoke subscription for ${user.email || user.id}?`)) return;
+                              try {
+                                await adminRevokeSubscription(adminProfile, user.id);
+                                onToast?.("✓ تم إيقاف الاشتراك", "success");
+                                setSubsDetail(null);
+                              } catch (e) { onToast?.(e.message, "warning"); }
+                            }}
+                          >
+                            ⊘ إيقاف الاشتراك / Revoke
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="w-full rounded-xl bg-emerald-600 py-2.5 text-[12px] font-bold text-white hover:bg-emerald-700 transition"
+                            onClick={async () => {
+                              try {
+                                await adminRestoreSubscription(adminProfile, user.id);
+                                onToast?.("✓ تم إعادة تفعيل الاشتراك", "success");
+                                setSubsDetail(null);
+                              } catch (e) { onToast?.(e.message, "warning"); }
+                            }}
+                          >
+                            ↺ إعادة تفعيل الاشتراك / Restore
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="w-full rounded-xl border border-slate-300 py-2.5 text-[12px] font-bold text-slate-700 hover:bg-slate-50 transition"
+                          onClick={() => {
+                            setSubsDetail(null);
+                            setActiveTab("users");
+                            setQueryText(user.email || "");
+                          }}
+                        >
+                          👤 عرض ملف المستخدم / View User Profile
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {activeTab === "qspremium" && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -1203,113 +1861,38 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                       };
                       const statusColor = statusColors[req.status] || statusColors.pending;
                       return (
-                        <div key={req.id} className="rounded-2xl border border-[#e2e8f0] bg-white p-3 shadow-sm">
+                        <button
+                          key={req.id}
+                          type="button"
+                          className="w-full text-left rounded-2xl border border-[#e2e8f0] bg-white p-3 shadow-sm hover:border-[#1d4ed8] hover:shadow-md transition-all active:scale-[0.99]"
+                          onClick={() => setQsDetailModal(req)}
+                        >
                           <div className="flex flex-wrap items-start justify-between gap-2">
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <p className="text-[13px] font-bold text-[#0f172a]">{req.userName || req.userEmail}</p>
+                                <p className="text-[13px] font-extrabold text-[#0f172a]">
+                                  {req.userName || "—"}
+                                </p>
                                 <span className={`rounded-lg border px-2 py-0.5 text-[10px] font-bold ${statusColor}`}>
                                   {req.status}
                                 </span>
                                 {req.refundRequest?.status === "pending_review" && (
                                   <span className="rounded-lg border border-orange-200 bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700">
-                                    Refund Pending
+                                    💰 Refund
                                   </span>
                                 )}
                               </div>
-                              <p className="mt-0.5 text-[11px] text-slate-500">{req.userEmail}</p>
+                              <p className="mt-0.5 text-[11px] font-bold text-[#1d4ed8]">{req.userEmail || "—"}</p>
                               <div className="mt-1 flex flex-wrap gap-3 text-[10px] text-slate-500">
+                                {req.orderId && <span className="font-mono font-bold text-slate-700">{req.orderId}</span>}
                                 <span>Country: <strong>{(req.country || "").toUpperCase()}</strong></span>
                                 <span>Price: <strong>{req.price} {req.currency}</strong></span>
                                 <span>Requested: <strong>{fmtDate(req.requestedAt)}</strong></span>
-                                {req.activatedAt && <span>Activated: <strong>{fmtDate(req.activatedAt)}</strong></span>}
-                                {req.trialEndsAt && <span>Trial ends: <strong>{fmtDate(req.trialEndsAt)}</strong></span>}
-                                <span>Trial items: <strong>{(req.trialItemsUsed || []).length}/10</strong></span>
                               </div>
-                              {req.rejectionReason && (
-                                <p className="mt-1 text-[10px] text-rose-600">Rejection: {req.rejectionReason}</p>
-                              )}
                             </div>
-
-                            {/* Action buttons */}
-                            <div className="flex flex-col gap-1.5 shrink-0">
-                              <div className="flex flex-wrap gap-1.5">
-                              {req.status === "pending" && (
-                                <>
-                                  <button
-                                    type="button"
-                                    className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[11px] font-bold text-white"
-                                    onClick={async () => {
-                                      try {
-                                        await adminApproveQSPremium(adminProfile, req.id);
-                                        onToast?.("Approved", "success");
-                                      } catch (e) { onToast?.(e.message, "warning"); }
-                                    }}
-                                  >
-                                    ✓ Approve
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="rounded-lg bg-rose-600 px-3 py-1.5 text-[11px] font-bold text-white"
-                                    onClick={() => { setQsRejectModal(req.id); setQsRejectReason(""); }}
-                                  >
-                                    ✗ Reject
-                                  </button>
-                                </>
-                              )}
-                              {req.status === "active" && (
-                                <button
-                                  type="button"
-                                  className="rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-bold text-slate-700"
-                                  onClick={async () => {
-                                    try {
-                                      await adminDeactivateQSPremium(adminProfile, req.id);
-                                      onToast?.("Deactivated", "success");
-                                    } catch (e) { onToast?.(e.message, "warning"); }
-                                  }}
-                                >
-                                  ⊘ Deactivate
-                                </button>
-                              )}
-                              {(req.status === "deactivated" || req.status === "rejected") && (
-                                <button
-                                  type="button"
-                                  className="rounded-lg bg-indigo-600 px-3 py-1.5 text-[11px] font-bold text-white"
-                                  onClick={async () => {
-                                    try {
-                                      await adminReactivateQSPremium(adminProfile, req.id);
-                                      onToast?.("Reactivated", "success");
-                                    } catch (e) { onToast?.(e.message, "warning"); }
-                                  }}
-                                >
-                                  ↺ Reactivate
-                                </button>
-                              )}
-                              {req.refundRequest?.status === "pending_review" && (
-                                <button
-                                  type="button"
-                                  className="rounded-lg bg-orange-500 px-3 py-1.5 text-[11px] font-bold text-white"
-                                  onClick={() => { setQsRefundModal(req.id); setQsRefundNotes(""); }}
-                                >
-                                  💰 Review Refund
-                                </button>
-                              )}
-                              </div>
-                              <button
-                                type="button"
-                                className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-1.5 text-[11px] font-bold text-rose-700"
-                                onClick={async () => {
-                                  try {
-                                    await adminDeleteQSPremium(adminProfile, req.id);
-                                    onToast?.("Request deleted", "success");
-                                  } catch (e) { onToast?.(e.message, "warning"); }
-                                }}
-                              >
-                                🗑 Delete request
-                              </button>
-                            </div>
+                            <div className="text-[11px] text-slate-400 shrink-0 mt-0.5">›</div>
                           </div>
-                        </div>
+                        </button>
                       );
                     })}
 
@@ -1921,6 +2504,183 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
           </div>
         </Modal>
       )}
+
+      {/* QS Premium — Detail modal */}
+      {qsDetailModal && (() => {
+        const req = qsRequests.find((r) => r.id === qsDetailModal.id) || qsDetailModal;
+        const statusColors = {
+          pending: "bg-amber-100 text-amber-700 border-amber-200",
+          active: "bg-emerald-100 text-emerald-700 border-emerald-200",
+          rejected: "bg-rose-100 text-rose-700 border-rose-200",
+          deactivated: "bg-slate-100 text-slate-600 border-slate-200",
+        };
+        const statusColor = statusColors[req.status] || statusColors.pending;
+        return (
+          <div
+            className="fixed inset-0 z-[500] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-0 sm:p-4"
+            onClick={() => setQsDetailModal(null)}
+          >
+            <div
+              className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-y-auto max-h-[92vh]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="sticky top-0 bg-[#082555] text-white px-4 py-4 rounded-t-3xl sm:rounded-t-3xl flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">QS Premium Request</p>
+                  <p className="text-[15px] font-extrabold mt-0.5">{req.userName || req.userEmail || req.id}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setQsDetailModal(null)}
+                  className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="p-4 space-y-3">
+                {/* Status */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`rounded-lg border px-3 py-1 text-[11px] font-bold ${statusColor}`}>
+                    {req.status}
+                  </span>
+                  {req.refundRequest?.status === "pending_review" && (
+                    <span className="rounded-lg border border-orange-200 bg-orange-100 px-3 py-1 text-[11px] font-bold text-orange-700">
+                      💰 Refund Pending
+                    </span>
+                  )}
+                </div>
+
+                {/* Info grid */}
+                <div className="rounded-2xl border border-[#e2e8f0] bg-[#f8fafc] divide-y divide-[#e2e8f0]">
+                  {[
+                    { label: "الاسم / Name", value: req.userName || "—" },
+                    { label: "الإيميل / Email", value: req.userEmail || "—", mono: true },
+                    { label: "رقم الطلب / Order ID", value: req.orderId || "—", mono: true },
+                    { label: "الدولة / Country", value: (req.country || "—").toUpperCase() },
+                    { label: "المبلغ / Amount", value: req.price ? `${req.price} ${req.currency}` : "—" },
+                    { label: "تاريخ الطلب / Requested", value: fmtDate(req.requestedAt) },
+                    { label: "تفعيل / Activated", value: fmtDate(req.activatedAt) },
+                    { label: "انتهاء التجربة / Trial Ends", value: fmtDate(req.trialEndsAt) },
+                    { label: "البنود المستخدمة / Trial Items", value: `${(req.trialItemsUsed || []).length} / 10` },
+                    { label: "User ID", value: req.userId || req.id || "—", mono: true },
+                  ].map(({ label, value, mono }) => (
+                    <div key={label} className="flex items-start justify-between gap-3 px-3 py-2">
+                      <span className="text-[10px] font-bold text-slate-500 shrink-0 mt-0.5">{label}</span>
+                      <span className={`text-[11px] font-bold text-[#0f172a] text-right break-all ${mono ? "font-mono" : ""}`}>{value}</span>
+                    </div>
+                  ))}
+                  {req.rejectionReason && (
+                    <div className="flex items-start justify-between gap-3 px-3 py-2">
+                      <span className="text-[10px] font-bold text-rose-500 shrink-0 mt-0.5">سبب الرفض</span>
+                      <span className="text-[11px] font-bold text-rose-700 text-right">{req.rejectionReason}</span>
+                    </div>
+                  )}
+                  {req.adminNotes && (
+                    <div className="flex items-start justify-between gap-3 px-3 py-2">
+                      <span className="text-[10px] font-bold text-slate-500 shrink-0 mt-0.5">Admin Notes</span>
+                      <span className="text-[11px] text-slate-700 text-right">{req.adminNotes}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Email button */}
+                {req.userEmail && (
+                  <a
+                    href={`mailto:${req.userEmail}?subject=${encodeURIComponent(`بخصوص طلب QS Premium #${req.orderId || ""}`)}&body=${encodeURIComponent(`السلام عليكم ${req.userName || ""},\n\nبخصوص طلب اشتراكك QS Premium رقم ${req.orderId || ""}...\n\nشكراً،\nفريق تسعيرة`)}`}
+                    className="flex items-center justify-center gap-2 w-full rounded-xl border border-[#1d4ed8] bg-[#eff6ff] py-2.5 text-[12px] font-bold text-[#1d4ed8] hover:bg-[#dbeafe] transition"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    ✉ مراسلة المستخدم / Email User
+                  </a>
+                )}
+
+                {/* Action buttons */}
+                <div className="space-y-2">
+                  {req.status === "pending" && (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        className="flex-1 rounded-xl bg-emerald-600 py-2.5 text-[12px] font-bold text-white hover:bg-emerald-700 transition"
+                        onClick={async () => {
+                          try {
+                            await adminApproveQSPremium(adminProfile, req.id);
+                            onToast?.("✓ تم القبول", "success");
+                            setQsDetailModal(null);
+                          } catch (e) { onToast?.(e.message, "warning"); }
+                        }}
+                      >
+                        ✓ قبول / Approve
+                      </button>
+                      <button
+                        type="button"
+                        className="flex-1 rounded-xl bg-rose-600 py-2.5 text-[12px] font-bold text-white hover:bg-rose-700 transition"
+                        onClick={() => { setQsRejectModal(req.id); setQsRejectReason(""); setQsDetailModal(null); }}
+                      >
+                        ✗ رفض / Reject
+                      </button>
+                    </div>
+                  )}
+                  {req.status === "active" && (
+                    <button
+                      type="button"
+                      className="w-full rounded-xl border border-slate-300 py-2.5 text-[12px] font-bold text-slate-700 hover:bg-slate-50 transition"
+                      onClick={async () => {
+                        try {
+                          await adminDeactivateQSPremium(adminProfile, req.id);
+                          onToast?.("Deactivated", "success");
+                          setQsDetailModal(null);
+                        } catch (e) { onToast?.(e.message, "warning"); }
+                      }}
+                    >
+                      ⊘ إيقاف / Deactivate
+                    </button>
+                  )}
+                  {(req.status === "deactivated" || req.status === "rejected") && (
+                    <button
+                      type="button"
+                      className="w-full rounded-xl bg-indigo-600 py-2.5 text-[12px] font-bold text-white hover:bg-indigo-700 transition"
+                      onClick={async () => {
+                        try {
+                          await adminReactivateQSPremium(adminProfile, req.id);
+                          onToast?.("Reactivated", "success");
+                          setQsDetailModal(null);
+                        } catch (e) { onToast?.(e.message, "warning"); }
+                      }}
+                    >
+                      ↺ إعادة تفعيل / Reactivate
+                    </button>
+                  )}
+                  {req.refundRequest?.status === "pending_review" && (
+                    <button
+                      type="button"
+                      className="w-full rounded-xl bg-orange-500 py-2.5 text-[12px] font-bold text-white hover:bg-orange-600 transition"
+                      onClick={() => { setQsRefundModal(req.id); setQsRefundNotes(""); setQsDetailModal(null); }}
+                    >
+                      💰 مراجعة الاسترداد / Review Refund
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="w-full rounded-xl border border-rose-300 bg-rose-50 py-2.5 text-[12px] font-bold text-rose-700 hover:bg-rose-100 transition"
+                    onClick={async () => {
+                      if (!window.confirm("Are you sure you want to delete this request?")) return;
+                      try {
+                        await adminDeleteQSPremium(adminProfile, req.id);
+                        onToast?.("Deleted", "success");
+                        setQsDetailModal(null);
+                      } catch (e) { onToast?.(e.message, "warning"); }
+                    }}
+                  >
+                    🗑 حذف الطلب / Delete Request
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* QS Premium — Refund review modal */}
       {qsRefundModal && (
