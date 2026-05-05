@@ -250,3 +250,141 @@ export async function incrementUsageCounter(uid, counterField) {
     updatedAt: serverTimestamp(),
   });
 }
+
+/**
+ * User requests cancellation of their Taseera Pro subscription.
+ * Writes a cancellationRequest field onto the user document.
+ */
+export async function requestSubscriptionCancellation(uid, reason = "") {
+  if (!uid) throw new Error("userId required");
+  const ref = doc(db, "users", uid);
+  await updateDoc(ref, {
+    cancellationRequest: {
+      status: "pending",
+      requestedAt: serverTimestamp(),
+      reason: reason || "",
+    },
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Admin approves a cancellation request → revoke subscription.
+ */
+export async function adminApproveCancellation(adminProfile, userId) {
+  if (!hasPermission(adminProfile, "approvePayments")) {
+    throw new Error("No permission.");
+  }
+  const ref = doc(db, "users", userId);
+  await updateDoc(ref, {
+    isPaid: false,
+    subscriptionType: "free",
+    status: "rejected",
+    "cancellationRequest.status": "approved",
+    "cancellationRequest.resolvedAt": serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Admin rejects a cancellation request → keep subscription active.
+ */
+export async function adminRejectCancellation(adminProfile, userId) {
+  if (!hasPermission(adminProfile, "approvePayments")) {
+    throw new Error("No permission.");
+  }
+  const ref = doc(db, "users", userId);
+  await updateDoc(ref, {
+    "cancellationRequest.status": "rejected",
+    "cancellationRequest.resolvedAt": serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Account Deletion Requests
+// ---------------------------------------------------------------------------
+
+/**
+ * User requests account deletion.
+ * Stores a deletionRequest field on the user document.
+ */
+export async function requestAccountDeletion(uid, { displayName, email, reason = "" } = {}) {
+  if (!uid) throw new Error("userId required");
+  const ref = doc(db, "users", uid);
+  await updateDoc(ref, {
+    deletionRequest: {
+      status: "pending",
+      requestedAt: serverTimestamp(),
+      reason: reason || "",
+      displayName: displayName || "",
+      email: email || "",
+    },
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Admin approves account deletion → physically deletes the user doc.
+ */
+export async function adminApproveAccountDeletion(adminProfile, userId) {
+  if (!hasPermission(adminProfile, "deleteUsers")) {
+    throw new Error("No permission to delete users.");
+  }
+  const ref = doc(db, "users", userId);
+  // Mark as "deleting" first so UI reflects it, then delete
+  await updateDoc(ref, {
+    "deletionRequest.status": "approved",
+    "deletionRequest.resolvedAt": serverTimestamp(),
+    status: "deleted",
+    updatedAt: serverTimestamp(),
+  });
+  // Soft-delete: keep doc but mark deleted (hard delete requires Firebase Functions for auth cleanup)
+}
+
+/**
+ * Admin rejects account deletion → clear the request.
+ */
+export async function adminRejectAccountDeletion(adminProfile, userId) {
+  if (!hasPermission(adminProfile, "deleteUsers")) {
+    throw new Error("No permission.");
+  }
+  const ref = doc(db, "users", userId);
+  await updateDoc(ref, {
+    "deletionRequest.status": "rejected",
+    "deletionRequest.resolvedAt": serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * Real-time listener for pending deletion requests.
+ */
+export function listenDeletionRequests(callback) {
+  // No orderBy to avoid composite index requirement
+  const q = query(
+    collection(db, "users"),
+    where("deletionRequest.status", "==", "pending")
+  );
+  return onSnapshot(
+    q,
+    (snap) => callback(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    (err) => { console.warn("[deletionRequests] error:", err?.code, err?.message); callback([]); }
+  );
+}
+
+/**
+ * Real-time listener for pending cancellation requests.
+ */
+export function listenCancellationRequests(callback) {
+  // No orderBy to avoid composite index requirement
+  const q = query(
+    collection(db, "users"),
+    where("cancellationRequest.status", "==", "pending")
+  );
+  return onSnapshot(
+    q,
+    (snap) => callback(snap.docs.map((d) => ({ id: d.id, ...d.data() }))),
+    (err) => { console.warn("[cancellationRequests] error:", err?.code, err?.message); callback([]); }
+  );
+}
