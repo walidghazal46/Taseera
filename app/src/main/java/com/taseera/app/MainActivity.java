@@ -454,10 +454,11 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void openEmail(String email, String subject, String body) {
             runOnUiThread(() -> {
+                String uriString = "mailto:" + Uri.encode(email) +
+                    "?subject=" + Uri.encode(subject) +
+                    "&body=" + Uri.encode(body);
                 Intent intent = new Intent(Intent.ACTION_SENDTO);
-                intent.setData(Uri.parse("mailto:" + email));
-                intent.putExtra(Intent.EXTRA_SUBJECT, subject);
-                intent.putExtra(Intent.EXTRA_TEXT, body);
+                intent.setData(Uri.parse(uriString));
                 openIntentSafely(intent);
             });
         }

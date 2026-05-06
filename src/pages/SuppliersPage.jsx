@@ -6,7 +6,7 @@ import { getAppText } from "../data/appText";
 
 export default function SuppliersPage(props) {
   const text = getAppText(props.settings?.language);
-  const [selectedCountry, setSelectedCountry] = useState(props.settings?.country || null);
+  const [selectedCountry, setSelectedCountry] = useState(null);
 
   const handleSelectCountry = (country) => {
     props.onUpdateSetting?.("country", country);
@@ -15,15 +15,13 @@ export default function SuppliersPage(props) {
 
   if (!selectedCountry) {
     return (
-      <div style={{ margin: "-1.5rem -1rem 0" }}>
-        <CountryPicker
-          language={props.settings?.language}
-          onSelect={handleSelectCountry}
-          sessionMeta={props.sessionMeta}
-          authMode={props.authMode}
-          section="suppliers"
-        />
-      </div>
+      <CountryPicker
+        language={props.settings?.language}
+        onSelect={handleSelectCountry}
+        sessionMeta={props.sessionMeta}
+        authMode={props.authMode}
+        section="suppliers"
+      />
     );
   }
 

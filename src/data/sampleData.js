@@ -32,6 +32,7 @@ export const sampleSettings = {
   locationFactor: 1.03,
   userName: "أحمد العتيبي",
   userEmail: "walidghazal46@gmail.com",
+  userPhone: "+966 50 000 0000",
   appName: "Taseera",
   appVersion: "1.0.0.26",
   settingsPanelSection: "account",

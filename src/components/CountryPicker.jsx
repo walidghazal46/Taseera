@@ -322,8 +322,8 @@ export default function CountryPicker({
 
   return (
     <div
-      className="relative flex flex-col items-center justify-center gap-7 py-10 px-4"
-      style={{ minHeight: "calc(100dvh - 64px)" }}
+      className="relative flex flex-col items-center justify-center gap-5 py-4 px-4 overflow-hidden"
+      style={{ minHeight: "calc(100vh - 160px)" }}
     >
       <style>{EFFECTS}</style>
 
@@ -358,9 +358,9 @@ export default function CountryPicker({
           <div
             style={{
               position: "relative",
-              width: 108, height: 108,
+              width: 90, height: 90,
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 72,
+              fontSize: 64,
               filter: "drop-shadow(0 8px 18px rgba(40,80,160,0.22)) drop-shadow(0 2px 6px rgba(0,0,0,0.10))",
             }}
           >
@@ -372,7 +372,7 @@ export default function CountryPicker({
         <div style={{ maxWidth: 310 }}>
           <h2
             style={{
-              fontFamily: AR, fontSize: 28, fontWeight: 900, lineHeight: 1.25,
+              fontFamily: AR, fontSize: 24, fontWeight: 900, lineHeight: 1.25,
               color: "#082555", letterSpacing: "-0.4px",
               margin: 0,
             }}
@@ -381,8 +381,8 @@ export default function CountryPicker({
           </h2>
           <p
             style={{
-              fontFamily: AR, fontSize: 13, lineHeight: 1.6, color: "#7B8A9A",
-              marginTop: 8, marginBottom: 0,
+              fontFamily: AR, fontSize: 12, lineHeight: 1.5, color: "#7B8A9A",
+              marginTop: 6, marginBottom: 0,
             }}
           >
             {isAr
@@ -498,7 +498,7 @@ export default function CountryPicker({
                 <div style={{ flex: 1, minWidth: 0, textAlign: "right" }}>
                   <p
                     style={{
-                      fontFamily: AR, fontSize: 16, fontWeight: 800, lineHeight: 1.3,
+                      fontFamily: AR, fontSize: 15, fontWeight: 800, lineHeight: 1.2,
                       color: country.color, margin: 0,
                     }}
                   >
@@ -506,8 +506,8 @@ export default function CountryPicker({
                   </p>
                   <p
                     style={{
-                      fontFamily: AR, fontSize: 11.5, color: "#9CA3AF",
-                      marginTop: 3, marginBottom: 0, letterSpacing: "0.2px",
+                      fontFamily: AR, fontSize: 10.5, color: "#9CA3AF",
+                      marginTop: 2, marginBottom: 0, letterSpacing: "0.2px",
                     }}
                   >
                     {isAr ? country.labelEn : country.labelAr}
@@ -518,16 +518,16 @@ export default function CountryPicker({
                 <div
                   style={{
                     flexShrink: 0,
-                    width: 50, height: 50,
-                    borderRadius: 14,
+                    width: 44, height: 44,
+                    borderRadius: 12,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     background: country.badgeBg,
                     fontFamily: MONO,
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: 900,
                     color: "#ffffff",
                     letterSpacing: "0.5px",
-                    boxShadow: `0 5px 14px ${country.shadow}, inset 0 1px 0 rgba(255,255,255,0.22)`,
+                    boxShadow: `0 4px 12px ${country.shadow}, inset 0 1px 0 rgba(255,255,255,0.22)`,
                   }}
                 >
                   {country.code}

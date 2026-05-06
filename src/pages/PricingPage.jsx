@@ -16,20 +16,18 @@ export default function PricingPage(props) {
 
   if (!selectedCountry) {
     return (
-      <div style={{ margin: "-1.5rem -1rem 0" }}>
-        <CountryPicker
-          language={props.settings?.language}
-          icon="💰"
-          titleAr="اختر دولة التسعير"
-          titleEn="Select Pricing Country"
-          subtitleAr="اختر الدولة لتحديد أسعار ومعايير التسعير المناسبة"
-          subtitleEn="Choose a country to apply the correct pricing standards"
-          onSelect={handleSelectCountry}
-          sessionMeta={props.sessionMeta}
-          authMode={props.authMode}
-          section="pricing"
-        />
-      </div>
+      <CountryPicker
+        language={props.settings?.language}
+        icon="💰"
+        titleAr="اختر دولة التسعير"
+        titleEn="Select Pricing Country"
+        subtitleAr="اختر الدولة لتحديد أسعار ومعايير التسعير المناسبة"
+        subtitleEn="Choose a country to apply the correct pricing standards"
+        onSelect={handleSelectCountry}
+        sessionMeta={props.sessionMeta}
+        authMode={props.authMode}
+        section="pricing"
+      />
     );
   }
 
