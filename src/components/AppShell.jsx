@@ -10,11 +10,42 @@ import taseeraLogo from "../assets/taseera-logo.png";
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
 
 const navItems = [
-  { id: "companies", label: "الشركات", labelEn: "Companies", icon: BuildingsIcon },
   { id: "pricing", label: "التسعير", labelEn: "Pricing", icon: PricingIcon },
+  { id: "companies", label: "الشركات", labelEn: "Companies", icon: BuildingsIcon },
   { id: "suppliers", label: "الموردين", labelEn: "Suppliers", icon: SuppliersIcon },
   { id: "settings", label: "الإعدادات", labelEn: "Settings", icon: SettingsIcon },
 ];
+
+const tabConfig = {
+  pricing: {
+    activeText: "text-[#38bdf8]",
+    activeBg: "bg-[#38bdf8]/10",
+    activeBorder: "border-[#38bdf8]/40",
+    activeGlow: "shadow-[0_0_15px_rgba(56,189,248,0.3)]",
+    indicator: "bg-[#38bdf8]",
+  },
+  companies: {
+    activeText: "text-[#34d399]",
+    activeBg: "bg-[#34d399]/10",
+    activeBorder: "border-[#34d399]/40",
+    activeGlow: "shadow-[0_0_15px_rgba(52,211,153,0.3)]",
+    indicator: "bg-[#34d399]",
+  },
+  suppliers: {
+    activeText: "text-[#a78bfa]",
+    activeBg: "bg-[#a78bfa]/10",
+    activeBorder: "border-[#a78bfa]/40",
+    activeGlow: "shadow-[0_0_15px_rgba(167,139,250,0.3)]",
+    indicator: "bg-[#a78bfa]",
+  },
+  settings: {
+    activeText: "text-[#d4a843]",
+    activeBg: "bg-[#d4a843]/10",
+    activeBorder: "border-[#d4a843]/40",
+    activeGlow: "shadow-[0_0_15px_rgba(212,168,67,0.3)]",
+    indicator: "bg-[#d4a843]",
+  },
+};
 
 export default function AppShell({
   activePage,
@@ -50,8 +81,8 @@ export default function AppShell({
     >
       {/* Top Brand Bar */}
       <div
-        className="relative z-20 flex shrink-0 items-center justify-between bg-[#082555] px-3 py-3 shadow-xl sm:px-5 sm:py-4"
-        style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}
+        className="relative z-20 flex shrink-0 items-center justify-between bg-[#082555] px-3 pb-3 shadow-xl sm:px-5 sm:py-4"
+        style={{ paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 1rem))" }}
       >
         <div className="flex min-w-0 items-center gap-2.5 sm:gap-3.5">
           <button
@@ -95,65 +126,68 @@ export default function AppShell({
       {/* Main content */}
       <main
         ref={mainRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden bg-[#F7F3EC]"
-        style={{ paddingBottom: "calc(12rem + env(safe-area-inset-bottom))" }}
+        className="flex-1 overflow-y-auto overflow-x-hidden bg-[#F7F3EC] flex flex-col"
       >
-        <div className="mx-auto w-full max-w-2xl px-4 py-6 pb-16">
+        <div className="mx-auto w-full max-w-2xl px-4 py-4 flex-1 flex flex-col">
           {children}
         </div>
       </main>
 
       {/* Bottom Navigation */}
       <nav
-        className="shrink-0 border-t-2 border-[#E2D8C4] bg-[#082555]"
+        className="shrink-0 border-t border-white/5 bg-[#07193a]"
         style={{
           paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
-          boxShadow: "0 -12px 40px rgba(0,0,0,0.3)",
+          boxShadow: "0 -12px 40px rgba(0,0,0,0.4)",
         }}
       >
-        <div className="mx-auto flex w-full max-w-2xl items-stretch px-1 sm:px-2">
+        <div className="mx-auto flex w-full max-w-2xl items-center justify-around px-2 py-2">
           {localizedItems.map((item) => {
             const isActive = item.id === activePage;
+            const config = tabConfig[item.id] || tabConfig.pricing;
             const Icon = item.icon;
-            const iconSize = isActive ? 22 : 20;
 
             return (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => onNavigate(item.id)}
-                className={`relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-0.5 pt-2 pb-1 transition-all duration-300 sm:gap-2 sm:px-1 sm:pt-3 sm:pb-1.5 ${
-                  isActive ? "" : "opacity-40 hover:opacity-80"
-                }`}
+                className={`relative group flex min-w-0 flex-1 flex-col items-center justify-center transition-all duration-300 py-1.5`}
               >
-                {/* Active indicator */}
-                {isActive && (
-                  <span className="absolute top-0 left-1/2 h-1 w-8 -translate-x-1/2 rounded-b-full bg-[#C9A84C] shadow-[0_4px_12px_rgba(201,168,76,0.6)] sm:w-12" />
-                )}
-
-                {/* Icon container */}
-                <span
-                  className={`flex h-9 w-9 items-center justify-center rounded-xl transition-all duration-300 sm:h-12 sm:w-12 sm:rounded-2xl ${
+                {/* Active Highlight Panel */}
+                <div
+                  className={`absolute inset-x-1.5 inset-y-0 rounded-2xl border transition-all duration-300 ${
                     isActive
-                      ? "bg-[#C9A84C] text-[#082555] shadow-[0_8px_20px_rgba(201,168,76,0.4)]"
-                      : "text-white/60"
+                      ? `${config.activeBg} ${config.activeBorder} ${config.activeGlow} scale-100 opacity-100`
+                      : "border-transparent scale-95 opacity-0"
                   }`}
-                  style={isActive ? { width: "44px", height: "44px" } : undefined}
+                />
+
+                {/* Icon */}
+                <span
+                  className={`relative flex h-8 w-8 items-center justify-center transition-all duration-300 ${
+                    isActive ? config.activeText : "text-slate-500/80 group-hover:text-slate-400"
+                  }`}
                 >
-                  <Icon style={{ width: `${iconSize}px`, height: `${iconSize}px` }} />
+                  <Icon className="h-[22px] w-[22px]" />
                 </span>
 
                 {/* Label */}
                 <span
-                  className={`text-center font-bold leading-none uppercase tracking-wide ${
-                    isActive
-                      ? "text-[#C9A84C]"
-                      : "text-white/40"
+                  className={`relative mt-1 text-center font-bold tracking-wide transition-all duration-300 ${
+                    isActive ? config.activeText : "text-slate-500/80 group-hover:text-slate-400"
                   }`}
-                  style={{ fontFamily: AR, fontSize: isActive ? "10px" : "9px" }}
+                  style={{ fontFamily: AR, fontSize: isActive ? "10.5px" : "10px" }}
                 >
                   {item.label}
                 </span>
+
+                {/* Bottom Indicator */}
+                <div
+                   className={`absolute -bottom-1.5 left-1/2 h-1 w-5 -translate-x-1/2 rounded-t-full transition-all duration-300 ${
+                     isActive ? config.indicator : "bg-transparent scale-x-0"
+                   }`}
+                />
               </button>
             );
           })}

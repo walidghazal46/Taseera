@@ -77,7 +77,7 @@ function inferCompanyLogo(specialization = "", type = "Contractor") {
   return "🏢";
 }
 
-function createRoute(authMode, page = "companies") {
+function createRoute(authMode, page = "pricing") {
   if (!authMode) return { kind: "login" };
   return { kind: "app", page };
 }
@@ -203,7 +203,7 @@ export default function App() {
   // Core States
   const [authMode, setAuthMode] = usePersistentState(`${APP_STORAGE_PREFIX}.authMode`, null);
   const [authSession, setAuthSession] = usePersistentState(`${APP_STORAGE_PREFIX}.authSession`, null);
-  const [activePage, setActivePage] = usePersistentState(`${APP_STORAGE_PREFIX}.activePage`, "companies");
+  const [activePage, setActivePage] = usePersistentState(`${APP_STORAGE_PREFIX}.activePage`, "pricing");
   const [settings, setSettings] = usePersistentState(`${APP_STORAGE_PREFIX}.settings`, sampleSettings);
   // Always inject current build version — never rely on localStorage value
   const settingsWithVersion = { ...settings, appVersion: APP_VERSION };
@@ -292,13 +292,13 @@ export default function App() {
       const nextStack = currentStack.slice(0, -1);
       const prevRoute = nextStack[nextStack.length - 1];
       setRouteStack(nextStack);
-      if (prevRoute.kind === "login") { setAuthMode(null); setActivePage("companies"); }
+      if (prevRoute.kind === "login") { setAuthMode(null); setActivePage("pricing"); }
       else setActivePage(prevRoute.page);
       setShowExitPrompt(false); return true;
     }
-    if (activePage !== "companies") {
-      setActivePage("companies");
-      setRouteStack([createRoute(authMode, "companies")]);
+    if (activePage !== "pricing") {
+      setActivePage("pricing");
+      setRouteStack([createRoute(authMode, "pricing")]);
       setShowExitPrompt(false); return true;
     }
     if (bridge.isAndroid) {
@@ -325,7 +325,7 @@ export default function App() {
       const last = current[current.length - 1];
       if (last?.kind === route.kind && last?.page === route.page) return current;
       if (route.kind === "app") {
-        if (route.page === "companies") return [route];
+        if (route.page === "pricing") return [route];
         if (last?.kind === "app") return [last, route];
       }
       return [...current, route];
@@ -355,11 +355,11 @@ export default function App() {
       userEmail: payload.userEmail || settings.userEmail,
       lastLoginAt: new Date().toLocaleString("en-GB"),
     });
-    setActivePage("companies");
+    setActivePage("pricing");
     setShowExitPrompt(false);
     setAuthScreenMode(null);
     clearForcedScreenQuery();
-    setRouteStack([createRoute(mode, "companies")]);
+    setRouteStack([createRoute(mode, "pricing")]);
     setSettings((c) => ({ ...c, userName: payload.userName || c.userName, userEmail: payload.userEmail || c.userEmail }));
     window.history.pushState({ source: "taseera-guard" }, "");
     if (mode !== "guest") showStatus(settings.language === "en" ? "Signed in successfully." : "تم تسجيل الدخول بنجاح.", "success");
@@ -369,10 +369,10 @@ export default function App() {
     pageBackHandlerRef.current = () => false;
     setAuthMode(null);
     setAuthSession(null);
-    setActivePage("companies");
+    setActivePage("pricing");
     setShowExitPrompt(false);
     setAuthScreenMode("login");
-    setRouteStack([createRoute(null)]);
+    setRouteStack([createRoute(null, "pricing")]);
     window.history.pushState({ source: "taseera-guard" }, "");
     showStatus(settings.language === "en" ? "Signed out." : "تم تسجيل الخروج.", "info");
   }, [setActivePage, setAuthMode, setAuthSession, setRouteStack, settings.language, showStatus]);
@@ -381,8 +381,8 @@ export default function App() {
     setShowExitPrompt(false); setExitFromCompanies(false);
     pageBackHandlerRef.current = () => false;
     setAuthMode(null); setAuthSession(null);
-    setActivePage("companies"); setAuthScreenMode("login");
-    setRouteStack([createRoute(null)]);
+    setActivePage("pricing"); setAuthScreenMode("login");
+    setRouteStack([createRoute(null, "pricing")]);
     window.history.pushState({ source: "taseera-guard" }, "");
   }, [setActivePage, setAuthMode, setAuthSession, setRouteStack]);
 
@@ -456,27 +456,42 @@ export default function App() {
     const randPart = Math.random().toString(36).slice(2, 6).toUpperCase();
     const rfqRef = `RFQ-${datePart}-${randPart}`;
 
-    const userName = authSession?.userName || settings.userName || "غير محدد";
-    const userEmail = authSession?.userEmail || settings.userEmail || "غير محدد";
-    const dateStr = now.toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" });
+    const userName = (authSession?.userName || settings.userName || "").trim() || "Not provided";
+    const userEmail = (authSession?.userEmail || settings.userEmail || "").trim() || "Not provided";
+    const userPhone = (settings.userPhone || "").trim() || "Not provided";
+    const city = (settings.city || "").trim() || "Not provided";
+
+    // Selected office/service
+    const selectedOffice = supplier?.name || "Taseera Central Office";
+    const selectedService = item ? `${item.num} - ${item.ar}` : "General construction pricing";
+
+    // Package/Offer Type
+    let offerType = "Standard Offer";
+    if (source === "pricing-workspace") offerType = "Detailed Item Analysis";
+    if (source === "supplier-directory") offerType = "Supplier Quotation";
+    if (item?.mode === "area") offerType = "Building Area Pricing";
+
+    const dateTime = now.toLocaleString("ar-SA", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
 
     const body = [
-      `رقم الطلب: ${rfqRef}`,
-      `التاريخ: ${dateStr}`,
-      "",
-      `الاسم: ${userName}`,
-      `البريد: ${userEmail}`,
-      "",
-      `البند: ${item ? `${item.num} - ${item.ar}` : "طلب عرض سعر عام"}`,
+      `Request ID: ${rfqRef}`,
+      `User Name: ${userName}`,
+      `User Email: ${userEmail}`,
+      `User Phone: ${userPhone}`,
+      `Selected Office/Service: ${selectedOffice} / ${selectedService}`,
+      `City/Location: ${city}`,
+      `Package/Offer Type: ${offerType}`,
+      `Request Date and Time: ${dateTime}`,
+      `Notes: Not provided`,
     ].join("\n");
 
-    const subject = `طلب عرض سعر ${rfqRef}${item ? ` — ${item.ar}` : ""}`;
+    const subject = `Request Offers - Request ID: ${rfqRef}`;
 
     const nextR = { id: createId("rfq"), rfqRef, createdAt: now.toISOString(), source, itemId: item?.num || null, itemName: item?.ar || systemText.genericRequest, supplierName: supplier?.name || systemText.market, status: "draft" };
     setRfqRequests((c) => [nextR, ...c].slice(0, 50));
 
     await bridge.openEmail("walidghazal46@gmail.com", subject, body);
-    showStatus(`تم فتح البريد — مرجع الطلب: ${rfqRef}`, "success");
+    showStatus(`تم إنشاء طلبك — مرجع الطلب: ${rfqRef}`, "success");
   }, [authMode, authSession, bridge, setRfqRequests, settings, systemText, showStatus]);
 
   const handleContactSupplier = useCallback(async (s, channel = "phone") => {

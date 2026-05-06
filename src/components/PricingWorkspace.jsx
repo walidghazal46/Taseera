@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from 'xlsx';
 import AdSenseUnit from "./AdSenseUnit";
 import CandyWorkspace from "./CandyWorkspace";
-import { SaveIcon, TagIcon, BuildingsIcon, PricingIcon, ChevronLeftIcon, ArrowRightIcon, ShareIcon, PrinterIcon, FileIcon } from "./icons";
+import { SaveIcon, TagIcon, BuildingsIcon, PricingIcon, ChevronLeftIcon, ArrowRightIcon, ShareIcon, PrinterIcon, FileIcon, XIcon } from "./icons";
 import { CSI_DIVISIONS, COUNTRIES, CURRENCY_INFO, getDefaultResources, AREA_PRICING_BASE } from "../data/csiData";
 import usePersistentState from "../hooks/usePersistentState";
 import useAdminSession from "../hooks/useAdminSession";
@@ -34,128 +34,316 @@ function ExportPreviewModal({ data, onClose }) {
   useEffect(() => {
     if (!data) return;
     window.history.pushState({ exportModal: true }, "");
-    const handler = () => onClose();
-    window.addEventListener("popstate", handler);
-    return () => window.removeEventListener("popstate", handler);
-  }, [data, onClose]);
+  }, [data]);
 
   if (!data) return null;
 
+  const reportType = data.reportType || "item";
+
+  const Row = ({ label, val, bold, currency }) => (
+    <div className={`flex justify-between items-center py-0.5 ${bold ? "border-t border-[#E2D8C4] mt-0.5 pt-0.5" : ""}`}>
+      <span className={`text-[10px] ${bold ? "font-black text-[#082555]" : "font-bold text-[#082555]"}`}>
+        {fmtNum(val)} {currency}
+      </span>
+      <span className={`text-[9px] ${bold ? "font-bold text-[#082555]" : "text-slate-500"}`}>{label}</span>
+    </div>
+  );
+
+  if (reportType === "area-results") {
+    const { params, results, finishLabel, typeLabel, scopeLabel, c, now } = data;
+    const totalArea = params.area * params.floors;
+    const sections = [
+      { id: 'structural', label: 'الأعمال الإنشاءية', color: '#C9A84C' },
+      { id: 'architectural', label: 'الأعمال المعمارية', color: '#5A4E38' },
+      { id: 'electrical', label: 'الأعمال الكهربائية', color: '#E07B2A' },
+      { id: 'mechanical', label: 'الأعمال الميكانيكية', color: '#6FCF97' },
+    ].filter(s => results.breakdown[s.id] > 0);
+
+    return (
+      <div className="fixed inset-0 z-[300] bg-[#F7F3EC] flex flex-col pt-[4vh]" dir="rtl" style={{ fontFamily: AR }}>
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between px-4 py-1.5 bg-[#082555] shadow-md print:hidden rounded-t-2xl mx-2">
+          <div className="flex items-center gap-2">
+            <button onClick={() => window.print()} className="hidden sm:flex items-center gap-1 text-[9px] text-[#d4a843] font-bold active:opacity-70">
+              <PrinterIcon className="h-4 w-4" /> طباعة
+            </button>
+          </div>
+          <span className="text-[10px] font-bold text-[#d4a843] tracking-wide">ملخص تقدير التكلفة</span>
+          <button onClick={() => { window.history.back(); }} className="flex items-center gap-2 text-white text-[11px] font-bold active:opacity-70">
+            إغلاق <XIcon className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-3 pt-2 pb-40 space-y-2 bg-white/50 mx-2 rounded-b-2xl shadow-inner">
+          <div className="bg-[#082555] rounded-xl px-4 py-2 text-right shadow-md">
+            <p className="text-[7px] font-bold text-[#d4a843]/70 uppercase tracking-widest">TASEERA · تسعيرة</p>
+            <h1 className="mt-0.5 text-[13px] font-black text-white leading-tight">تقدير تكلفة: {typeLabel}</h1>
+            <p className="mt-0.5 text-[8px] text-white/50">{now} · {c.name}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-white rounded-xl p-2 text-right border border-[#E2D8C4] shadow-sm">
+              <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">إجمالي التقدير</p>
+              <p className="mt-0.5 text-[16px] font-black text-[#082555] leading-none">{fmtNum(results.total)}</p>
+              <p className="text-[8px] text-[#d4a843] font-bold">{c.currency}</p>
+            </div>
+            <div className="bg-white rounded-xl p-2 text-right border border-[#E2D8C4] shadow-sm">
+              <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">سعر المتر المربع</p>
+              <p className="mt-0.5 text-[16px] font-black text-[#082555] leading-none">{fmtNum(results.unitPrice)}</p>
+              <p className="text-[8px] text-slate-400 font-bold">{c.currency} / م²</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl px-3 py-1.5 border border-[#E2D8C4] shadow-sm">
+            <h3 className="text-[10px] font-black text-[#082555] text-right mb-1">بيانات المشروع</h3>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="text-right">
+                <p className="text-[7px] text-slate-400">نوع المبنى</p>
+                <p className="text-[9px] font-bold text-[#082555]">{typeLabel}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[7px] text-slate-400">مستوى التشطيب</p>
+                <p className="text-[9px] font-bold text-[#082555]">{finishLabel}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[7px] text-slate-400">نطاق الأعمال</p>
+                <p className="text-[9px] font-bold text-[#082555]">{scopeLabel}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[7px] text-slate-400">المساحة الكلية</p>
+                <p className="text-[9px] font-bold text-[#082555]">{fmtNum(totalArea)} م²</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-[#E2D8C4] overflow-hidden shadow-sm">
+            <div className="px-3 py-0.5 bg-[#082555]">
+              <h4 className="text-[9px] font-black text-[#d4a843]">توزيع التكلفة حسب التخصصات</h4>
+            </div>
+            <div className="divide-y divide-[#E2D8C4]">
+              {sections.map((s, i) => (
+                <div key={i} className="px-3 py-1 flex items-center justify-between gap-2">
+                  <p className="text-[10px] font-black text-[#082555] shrink-0">{fmtNum(results.breakdown[s.id])} {c.currency}</p>
+                  <div className="text-right flex-1">
+                    <p className="text-[9px] font-bold text-[#082555]">{s.label}</p>
+                    <div className="w-full h-1 bg-[#F7F3EC] rounded-full overflow-hidden mt-0.5">
+                      <div className="h-full rounded-full" style={{ width: `${(results.breakdown[s.id]/results.total)*100}%`, backgroundColor: s.color }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="fixed bottom-10 left-0 right-0 z-20 p-4 bg-transparent print:hidden flex justify-center pointer-events-none">
+          <button onClick={() => { window.history.back(); }} className="w-full max-w-xs flex items-center justify-center gap-2 bg-[#082555] text-white py-3.5 rounded-2xl font-bold active:scale-[0.98] transition-all shadow-2xl text-[14px] pointer-events-auto">
+            <ArrowRightIcon className="h-4 w-4 rotate-180" /> رجوع لنتائج التقدير
+          </button>
+        </div>
+        <style>{`@media print { .print\\:hidden { display:none!important; } body { background:#fff; } }`}</style>
+      </div>
+    );
+  }
+
+  if (reportType === "area-section") {
+    const { draft, totalArea, overallShare, c, now } = data;
+    return (
+      <div className="fixed inset-0 z-[300] bg-[#F7F3EC] flex flex-col pt-[4vh]" dir="rtl" style={{ fontFamily: AR }}>
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between px-4 py-1.5 bg-[#082555] shadow-md print:hidden rounded-t-2xl mx-2">
+          <div className="flex items-center gap-2">
+            <button onClick={() => window.print()} className="hidden sm:flex items-center gap-1 text-[9px] text-[#d4a843] font-bold active:opacity-70">
+              <PrinterIcon className="h-4 w-4" /> طباعة
+            </button>
+          </div>
+          <span className="text-[10px] font-bold text-[#d4a843] tracking-wide">تفاصيل التخصص</span>
+          <button onClick={() => { window.history.back(); }} className="flex items-center gap-2 text-white text-[11px] font-bold active:opacity-70">
+            إغلاق <XIcon className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-3 pt-2 pb-40 space-y-2 bg-white/50 mx-2 rounded-b-2xl shadow-inner">
+          <div className="bg-[#082555] rounded-xl px-4 py-2 text-right shadow-md">
+            <p className="text-[7px] font-bold text-[#d4a843]/70 uppercase tracking-widest">TASEERA · تسعيرة</p>
+            <h1 className="mt-0.5 text-[13px] font-black text-white leading-tight">{draft.title}</h1>
+            <p className="mt-0.5 text-[8px] text-white/50">{now}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="bg-white rounded-xl p-2 text-right border border-[#E2D8C4] shadow-sm">
+              <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">إجمالي التخصص</p>
+              <p className="mt-0.5 text-[16px] font-black text-[#082555] leading-none">{fmtNum(draft.sectionTotal)}</p>
+              <p className="text-[8px] text-[#d4a843] font-bold">{c.currency}</p>
+            </div>
+            <div className="bg-white rounded-xl p-2 text-right border border-[#E2D8C4] shadow-sm">
+              <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">سعر المتر</p>
+              <p className="mt-0.5 text-[16px] font-black text-[#082555] leading-none">{fmtNum(draft.unitPrice)}</p>
+              <p className="text-[8px] text-slate-400 font-bold">{c.currency} / م²</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl px-3 py-1.5 border border-[#E2D8C4] shadow-sm">
+            <Row label="المساحة الكلية" val={totalArea} currency="م²" />
+            <Row label="حصة التخصص" val={overallShare} currency="%" bold />
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="bg-white rounded-xl border border-[#E2D8C4] overflow-hidden shadow-sm">
+              <div className="px-3 py-0.5 bg-[#082555]">
+                <h4 className="text-[9px] font-black text-[#d4a843]">البنود التقريبية</h4>
+              </div>
+              <div className="divide-y divide-[#E2D8C4]">
+                {draft.items.map((item, i) => (
+                  <div key={i} className="px-3 py-1 flex items-start justify-between gap-2">
+                    <p className="text-[10px] font-black text-[#082555] shrink-0">{fmtNum(item.total)} {c.currency}</p>
+                    <div className="text-right flex-1">
+                      <p className="text-[9px] font-bold text-[#082555]">{item.label}</p>
+                      <p className="text-[7px] text-slate-400">{fmtNum(item.qty)} {item.unit} × {fmtNum(item.rate)} {c.currency}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {draft.assumptions && draft.assumptions.length > 0 && (
+            <div className="bg-[#F7F3EC] rounded-xl p-3 border border-[#E2D8C4]">
+              <p className="text-[9px] font-black text-[#082555] mb-1">افتراضات هندسية:</p>
+              <ul className="space-y-1">
+                {draft.assumptions.map((a, i) => (
+                  <li key={i} className="text-[8px] text-slate-600 font-medium">• {a}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        <div className="fixed bottom-10 left-0 right-0 z-20 p-4 bg-transparent print:hidden flex justify-center pointer-events-none">
+          <button onClick={() => { window.history.back(); }} className="w-full max-w-xs flex items-center justify-center gap-2 bg-[#082555] text-white py-3.5 rounded-2xl font-bold active:scale-[0.98] transition-all shadow-2xl text-[14px] pointer-events-auto">
+            <ArrowRightIcon className="h-4 w-4 rotate-180" /> رجوع لتفاصيل التخصص
+          </button>
+        </div>
+        <style>{`@media print { .print\\:hidden { display:none!important; } body { background:#fff; } }`}</style>
+      </div>
+    );
+  }
+
+  // DEFAULT: ITEM REPORT
   const {
     item, c, q, f, overhead, profit,
     matT, labT, eqpT, direct, indirect, profitAmt, finalTotal, unitPrice,
     resourcesList, now,
   } = data;
 
-  const Row = ({ label, val, bold }) => (
-    <div className={`flex justify-between items-center py-1.5 ${bold ? "border-t border-[#E2D8C4] mt-1 pt-2.5" : ""}`}>
-      <span className={`text-[13px] ${bold ? "font-black text-[#082555]" : "font-bold text-[#082555]"}`}>
-        {fmtNum(val)} {c.currency}
-      </span>
-      <span className={`text-[12px] ${bold ? "font-bold text-[#082555]" : "text-slate-500"}`}>{label}</span>
-    </div>
-  );
-
   return (
-    <div className="fixed inset-0 z-[300] overflow-y-auto bg-[#F7F3EC]" dir="rtl" style={{ fontFamily: AR }}>
-      {/* ── Sticky top bar ── */}
-      <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-[#082555] shadow-md print:hidden">
+    <div className="fixed inset-0 z-[300] bg-[#F7F3EC] flex flex-col pt-[4vh]" dir="rtl" style={{ fontFamily: AR }}>
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between px-4 py-1.5 bg-[#082555] shadow-md print:hidden rounded-t-2xl mx-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => window.print()}
+            className="hidden sm:flex items-center gap-1 text-[9px] text-[#d4a843] font-bold active:opacity-70"
+          >
+            <PrinterIcon className="h-4 w-4" /> طباعة
+          </button>
+        </div>
+
+        <span className="text-[10px] font-bold text-[#d4a843] tracking-wide">تحليل البند</span>
+
         <button
-          onClick={() => { window.history.back(); onClose(); }}
-          className="flex items-center gap-2 text-white text-[14px] font-bold active:opacity-70"
+          onClick={() => { window.history.back(); }}
+          className="flex items-center gap-2 text-white text-[11px] font-bold active:opacity-70"
         >
-          <ArrowRightIcon className="h-5 w-5" />
-          رجوع
+          إغلاق
+          <XIcon className="h-4 w-4" />
         </button>
-        <span className="text-[12px] font-bold text-[#d4a843] tracking-wide">تحليل البند</span>
-        <button
-          onClick={() => window.print()}
-          className="hidden sm:flex items-center gap-1 text-[12px] text-[#d4a843] font-bold active:opacity-70"
-        >
-          <PrinterIcon className="h-4 w-4" /> طباعة
-        </button>
-        <div className="sm:hidden w-10" />
       </div>
 
-      <div className="mx-auto max-w-lg px-4 pt-5 pb-20 space-y-4">
+      <div className="flex-1 overflow-y-auto px-3 pt-2 pb-40 space-y-2 bg-white/50 mx-2 rounded-b-2xl shadow-inner">
         {/* ── Item header ── */}
-        <div className="bg-[#082555] rounded-3xl px-5 py-4 text-right">
-          <p className="text-[11px] font-bold text-[#d4a843]/70 uppercase tracking-widest">TASEERA · تسعيرة</p>
-          <h1 className="mt-1 text-[17px] font-black text-white leading-snug">{item.ar}</h1>
-          <p className="mt-0.5 text-[11px] text-white/50">{item.num} · {item.divAr} · {item.unit}</p>
-          <p className="mt-0.5 text-[10px] text-white/30">{now}</p>
+        <div className="bg-[#082555] rounded-xl px-4 py-2 text-right shadow-md">
+          <p className="text-[7px] font-bold text-[#d4a843]/70 uppercase tracking-widest">TASEERA · تسعيرة</p>
+          <h1 className="mt-0.5 text-[13px] font-black text-white leading-tight">{item.ar}</h1>
+          <p className="mt-0.5 text-[8px] text-white/50">{item.num} · {item.unit}</p>
         </div>
 
         {/* ── Key metrics ── */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-2xl p-4 text-right border border-[#E2D8C4] shadow-sm">
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">سعر الوحدة النهائي</p>
-            <p className="mt-1 text-[24px] font-black text-[#082555] leading-none">{fmtNum(unitPrice)}</p>
-            <p className="text-[11px] text-[#d4a843] font-bold mt-1">{c.currency} / {item.unit}</p>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="bg-white rounded-xl p-2 text-right border border-[#E2D8C4] shadow-sm">
+            <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">سعر الوحدة النهائي</p>
+            <p className="mt-0.5 text-[16px] font-black text-[#082555] leading-none">{fmtNum(unitPrice)}</p>
+            <p className="text-[8px] text-[#d4a843] font-bold">{c.currency} / {item.unit}</p>
           </div>
-          <div className="bg-white rounded-2xl p-4 text-right border border-[#E2D8C4] shadow-sm">
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">إجمالي العرض</p>
-            <p className="mt-1 text-[24px] font-black text-[#082555] leading-none">{fmtNum(finalTotal)}</p>
-            <p className="text-[11px] text-slate-400 font-bold mt-1">{c.currency}</p>
+          <div className="bg-white rounded-xl p-2 text-right border border-[#E2D8C4] shadow-sm">
+            <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">إجمالي العرض</p>
+            <p className="mt-0.5 text-[16px] font-black text-[#082555] leading-none">{fmtNum(finalTotal)}</p>
+            <p className="text-[8px] text-slate-400 font-bold">{c.currency}</p>
           </div>
         </div>
 
         {/* ── Cost breakdown ── */}
-        <div className="bg-white rounded-2xl px-4 py-3 border border-[#E2D8C4]">
-          <h3 className="text-[13px] font-black text-[#082555] text-right mb-1">تفصيل التكلفة</h3>
-          <Row label="مواد" val={matT} />
-          <Row label="عمالة" val={labT} />
-          <Row label="معدات" val={eqpT} />
-          <Row label="إجمالي مباشر" val={direct} bold />
-          <Row label={`أعباء غير مباشرة (${overhead}%)`} val={indirect} />
-          <Row label={`هامش الربح (${profit}%)`} val={profitAmt} />
+        <div className="bg-white rounded-xl px-3 py-1.5 border border-[#E2D8C4] shadow-sm">
+          <h3 className="text-[10px] font-black text-[#082555] text-right mb-0.5">تفصيل التكلفة</h3>
+          <Row label="مواد" val={matT} currency={c.currency} />
+          <Row label="عمالة" val={labT} currency={c.currency} />
+          <Row label="معدات" val={eqpT} currency={c.currency} />
+          <Row label="إجمالي مباشر" val={direct} currency={c.currency} bold />
+          <Row label={`أعباء غير مباشرة (${overhead}%)`} val={indirect} currency={c.currency} />
+          <Row label={`هامش الربح (${profit}%)`} val={profitAmt} currency={c.currency} />
         </div>
 
         {/* ── Settings row ── */}
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-1">
           {[
             { l: "الكمية", v: fmtNum(q) },
             { l: "Factor", v: f },
             { l: "Overhead", v: `${overhead}%` },
             { l: "Profit", v: `${profit}%` },
           ].map(({ l, v }) => (
-            <div key={l} className="bg-white border border-[#E2D8C4] rounded-xl p-2 text-center">
-              <p className="text-[9px] text-slate-400 font-bold">{l}</p>
-              <p className="text-[13px] font-black text-[#082555]">{v}</p>
+            <div key={l} className="bg-white border border-[#E2D8C4] rounded-lg py-1 text-center shadow-sm">
+              <p className="text-[7px] text-slate-400 font-bold">{l}</p>
+              <p className="text-[10px] font-black text-[#082555]">{v}</p>
             </div>
           ))}
         </div>
 
         {/* ── Resources ── */}
-        {["مواد", "عمالة", "معدات"].map((type) => {
-          const rows = resourcesList.filter((r) => r.type === type);
-          if (!rows.length) return null;
-          return (
-            <div key={type} className="bg-white rounded-2xl border border-[#E2D8C4] overflow-hidden">
-              <div className="px-4 py-2 bg-[#082555]">
-                <h4 className="text-[12px] font-black text-[#d4a843]">{type}</h4>
-              </div>
-              <div className="divide-y divide-[#E2D8C4]">
-                {rows.map((r, i) => (
-                  <div key={i} className="px-4 py-3 flex items-start justify-between gap-2">
-                    <p className="text-[13px] font-black text-[#082555] shrink-0">{fmtNum(r.total)} {c.currency}</p>
-                    <div className="text-right flex-1">
-                      <p className="text-[12px] font-bold text-[#082555]">{r.name}</p>
-                      <p className="text-[10px] text-slate-400">{fmtNum(r.qty)} {r.unit} × {fmtNum(r.rate)} {c.currency}</p>
+        <div className="space-y-1.5">
+          {["مواد", "عمالة", "معدات"].map((type) => {
+            const rows = resourcesList.filter((r) => r.type === type);
+            if (!rows.length) return null;
+            return (
+              <div key={type} className="bg-white rounded-xl border border-[#E2D8C4] overflow-hidden shadow-sm">
+                <div className="px-3 py-0.5 bg-[#082555]">
+                  <h4 className="text-[9px] font-black text-[#d4a843]">{type}</h4>
+                </div>
+                <div className="divide-y divide-[#E2D8C4]">
+                  {rows.map((r, i) => (
+                    <div key={i} className="px-3 py-1 flex items-start justify-between gap-2">
+                      <p className="text-[10px] font-black text-[#082555] shrink-0">{fmtNum(r.total)} {c.currency}</p>
+                      <div className="text-right flex-1">
+                        <p className="text-[9px] font-bold text-[#082555]">{r.name}</p>
+                        <p className="text-[7px] text-slate-400">{fmtNum(r.qty)} {r.unit} × {fmtNum(r.rate)} {c.currency}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          );
-        })}
-
-        {/* ── Screenshot hint ── */}
-        <div className="flex items-center justify-center gap-2 rounded-2xl bg-[#082555]/8 border border-[#082555]/10 py-3 print:hidden">
-          <span className="text-[12px] text-slate-500 font-bold">📸 التقط صورة للشاشة لحفظ التحليل</span>
+            );
+          })}
         </div>
+      </div>
 
-        <p className="text-center text-[9px] text-slate-300 pb-4">TASEERA · PRICING INTELLIGENCE</p>
+      {/* ── Bottom Navigation ── */}
+      <div className="fixed bottom-10 left-0 right-0 z-20 p-4 bg-transparent print:hidden flex justify-center pointer-events-none">
+        <button
+          onClick={() => { window.history.back(); }}
+          className="w-full max-w-xs flex items-center justify-center gap-2 bg-[#082555] text-white py-3.5 rounded-2xl font-bold active:scale-[0.98] transition-all shadow-2xl text-[14px] pointer-events-auto"
+        >
+          <ArrowRightIcon className="h-4 w-4 rotate-180" />
+          رجوع لبيانات البند
+        </button>
       </div>
 
       {/* Print styles */}
@@ -495,7 +683,7 @@ function TaseeraProGate({ country, isGuest, onOpenSubscription, onOpenAuthScreen
 
 function ModeSelection({ onSelect, areaLocked = false, areaMessage = "", onOpenSubscription }) {
   return (
-    <div className="flex flex-col gap-4 py-2 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ fontFamily: AR }}>
+    <div className="flex flex-1 flex-col justify-center gap-4 py-2 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ fontFamily: AR }}>
 
       {/* Header */}
       <div className="px-1">
@@ -1208,10 +1396,11 @@ function AreaPricingForm({ country, onCalculate, adBanner, canManageAds = false,
   );
 }
 
-function AreaResultsView({ country, params, results, onBack, onExport, onSave, onOpenSection, scenarios, currentScenario, suggestedScenario, onAddScenario, onRemoveScenario, adBanner, canManageAds = false, onManageAds, onToggleAdVisibility, onRemoveAd }) {
+function AreaResultsView({ country, params, results, onBack, onExport, onSave, onPrint, onOpenSection, scenarios, currentScenario, suggestedScenario, onAddScenario, onRemoveScenario, adBanner, canManageAds = false, onManageAds, onToggleAdVisibility, onRemoveAd }) {
   const c = COUNTRIES[country] || COUNTRIES.sa;
   const finishLabel = FINISH_LEVELS.find(f => f.id === params.finish)?.ar;
   const typeLabel = BUILDING_TYPES.find(t => t.id === params.type)?.ar;
+  const scopeLabel = SCOPES.find(s => s.id === params.scope)?.ar;
 
   const sections = [
     { id: 'structural', label: 'الأعمال الإنشاءية', icon: '🏗️', color: '#C9A84C', pct: results.dist.structural },
@@ -1220,17 +1409,25 @@ function AreaResultsView({ country, params, results, onBack, onExport, onSave, o
     { id: 'mechanical', label: 'الأعمال الميكانيكية', icon: '🔧', color: '#6FCF97', pct: results.dist.mechanical },
   ].filter(s => results.breakdown[s.id] > 0);
 
+  const handleExportResultsPdf = () => {
+    onPrint({
+      reportType: "area-results",
+      params,
+      results,
+      finishLabel,
+      typeLabel,
+      scopeLabel,
+      c,
+      now: new Date().toLocaleDateString("ar-SA")
+    });
+  };
+
   return (
     <div className="space-y-6 pb-12 animate-in fade-in zoom-in-95 duration-500">
       <div className="flex items-center justify-between px-1">
          <button onClick={onBack} className="flex items-center gap-2 text-[14px] font-bold text-[#9A8A6A] hover:text-[#082555]">
            <ArrowRightIcon className="h-4 w-4" /> تعديل البيانات
          </button>
-         <div className="flex gap-2">
-            <button onClick={onExport} className="h-10 w-10 flex items-center justify-center rounded-xl bg-white border-2 border-[#E2D8C4] text-[#082555] hover:border-[#C9A84C] transition-colors"><PrinterIcon className="h-5 w-5" /></button>
-            <button className="h-10 w-10 flex items-center justify-center rounded-xl bg-white border-2 border-[#E2D8C4] text-[#082555] hover:border-[#C9A84C] transition-colors"><ShareIcon className="h-5 w-5" /></button>
-            <button onClick={onSave} className="h-10 w-10 flex items-center justify-center rounded-xl bg-[#082555] text-[#C9A84C] shadow-lg active:scale-95 transition-transform"><SaveIcon className="h-5 w-5" /></button>
-         </div>
       </div>
 
       <div className="relative overflow-hidden rounded-[32px] bg-[#082555] p-8 shadow-2xl border border-[#C9A84C]/20 text-center">
@@ -1252,6 +1449,15 @@ function AreaResultsView({ country, params, results, onBack, onExport, onSave, o
              <div className="text-[10px] text-[#9A8A6A] font-bold uppercase tracking-wider mb-1">Total Area</div>
              <div className="text-[20px] font-bold text-white" style={{ fontFamily: MONO }}>{params.area * params.floors} <span className="text-[12px] text-[#9A8A6A]">m²</span></div>
            </div>
+        </div>
+
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+          <button onClick={handleExportResultsPdf} className="flex-1 min-h-[56px] rounded-2xl bg-[#C9A84C] text-[#082555] font-bold text-[15px] flex items-center justify-center gap-2 shadow-lg transition hover:bg-[#E8C97A] active:scale-[0.98]">
+            <SaveIcon className="h-5 w-5" /> حفظ / تصدير تقدير التكلفة PDF
+          </button>
+          <button onClick={onSave} className="flex-1 min-h-[56px] rounded-2xl bg-white/5 border border-white/10 text-white font-bold text-[15px] flex items-center justify-center gap-2 transition hover:bg-white/10 active:scale-[0.98]">
+            💾 حفظ في الحساب
+          </button>
         </div>
       </div>
 
@@ -1358,6 +1564,7 @@ function AreaSectionDetailView({
   onReset,
   onUpdateItem,
   onSave,
+  onPrint,
   adBanner,
   canManageAds = false,
   onManageAds,
@@ -1371,75 +1578,14 @@ function AreaSectionDetailView({
   if (!draft) return null;
 
   const handleExportSectionPdf = () => {
-    const now = new Date().toLocaleDateString("ar-SA");
-    const rowsHtml = draft.items.map((item, index) => `
-      <tr>
-        <td>${index + 1}</td>
-        <td>${item.label}</td>
-        <td>${item.basis}</td>
-        <td>${fmtNum(item.qty)} ${item.unit}</td>
-        <td>${fmtNum(item.rate)} ${c.currency}</td>
-        <td>${fmtNum(item.total)} ${c.currency}</td>
-      </tr>
-    `).join("");
-    const assumptionsHtml = draft.assumptions.map((line) => `<li>${line}</li>`).join("");
-
-    const html = `
-      <!doctype html>
-      <html lang="ar" dir="rtl">
-        <head>
-          <meta charset="utf-8" />
-          <title>${draft.title}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 24px; color: #082555; direction: rtl; }
-            h1 { font-size: 22px; margin-bottom: 8px; }
-            .meta { color: #7b6c4a; margin-bottom: 20px; font-size: 13px; }
-            .summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
-            .summary-card { border: 1px solid #e2d8c4; border-radius: 14px; padding: 12px; background: #fcfbf8; }
-            .summary-card strong { display: block; margin-bottom: 6px; color: #9A8A6A; font-size: 12px; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
-            th { background: #082555; color: #E8C97A; padding: 8px; text-align: right; }
-            td { padding: 8px; border-bottom: 1px solid #eee; }
-            .note { background: #F5EDD8; border: 1px solid #E2D8C4; border-radius: 16px; padding: 16px; }
-            ul { margin: 0; padding-right: 18px; }
-            @media print { button { display: none; } }
-          </style>
-        </head>
-        <body>
-          <h1>${draft.title}</h1>
-          <div class="meta">تقرير تفاصيل التخصص • ${now}</div>
-          <div class="summary">
-            <div class="summary-card"><strong>إجمالي التخصص</strong>${fmtNum(draft.sectionTotal)} ${c.currency}</div>
-            <div class="summary-card"><strong>سعر المتر</strong>${fmtNum(draft.unitPrice)} ${c.currency}</div>
-            <div class="summary-card"><strong>حصة التخصص</strong>${overallShare.toFixed(1)}%</div>
-            <div class="summary-card"><strong>المساحة الكلية</strong>${fmtNum(totalArea)} م²</div>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>البند</th>
-                <th>الأساس</th>
-                <th>الكمية</th>
-                <th>سعر الوحدة</th>
-                <th>الإجمالي</th>
-              </tr>
-            </thead>
-            <tbody>${rowsHtml}</tbody>
-          </table>
-          <div class="note">
-            <strong>افتراضات هندسية مستخدمة</strong>
-            <ul>${assumptionsHtml}</ul>
-          </div>
-          <script>window.onload = () => window.print();</script>
-        </body>
-      </html>
-    `;
-
-    const win = window.open("", "_blank");
-    if (!win) return;
-    win.document.write(html);
-    win.document.close();
+    onPrint({
+      reportType: "area-section",
+      draft,
+      totalArea,
+      overallShare,
+      c,
+      now: new Date().toLocaleDateString("ar-SA")
+    });
   };
 
   return (
@@ -1571,18 +1717,18 @@ function AreaSectionDetailView({
             {draft.icon}
           </div>
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() => onSave?.()}
-            className="flex-1 min-h-[56px] rounded-2xl bg-[#C9A84C] text-[#082555] font-bold text-[15px] flex items-center justify-center gap-2 shadow-lg transition hover:bg-[#E8C97A] active:scale-[0.98]"
-          >
-            <SaveIcon className="h-5 w-5" /> حفظ في الحساب
-          </button>
+        <div className="flex flex-col gap-3 sm:flex-row">
           <button
             onClick={handleExportSectionPdf}
-            className="flex-1 min-h-[56px] rounded-2xl bg-white border-2 border-[#082555] text-[#082555] font-bold text-[15px] flex items-center justify-center gap-2 transition hover:bg-[#F5EDD8] active:scale-[0.98]"
+            className="flex-1 min-h-[56px] rounded-2xl bg-[#C9A84C] text-[#082555] font-bold text-[15px] flex items-center justify-center gap-2 shadow-lg transition hover:bg-[#E8C97A] active:scale-[0.98]"
           >
-            <PrinterIcon className="h-5 w-5" /> تصدير PDF
+            <SaveIcon className="h-5 w-5" /> حفظ / تصدير تفاصيل التخصص PDF
+          </button>
+          <button
+            onClick={() => onSave?.()}
+            className="flex-1 min-h-[56px] rounded-2xl bg-[#082555] text-white font-bold text-[15px] flex items-center justify-center gap-2 shadow-lg transition active:scale-[0.98]"
+          >
+            💾 حفظ في الحساب
           </button>
         </div>
       </div>
@@ -2395,6 +2541,11 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   }
 
   const handleWorkspaceBack = useCallback(() => {
+    if (exportPreview) {
+      setExportPreview(null);
+      return true;
+    }
+
     if (mode === "area-section-detail") {
       setMode("area-results");
       return true;
@@ -2428,7 +2579,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     }
 
     return false;
-  }, [mode, tab, confirmDiscardAnalysisChanges]);
+  }, [mode, tab, confirmDiscardAnalysisChanges, exportPreview]);
 
   useEffect(() => navigationBridge?.registerBackHandler?.(handleWorkspaceBack), [handleWorkspaceBack, navigationBridge?.registerBackHandler]);
 
@@ -2617,6 +2768,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             onRemoveScenario={handleRemoveAreaScenario}
             onBack={() => setMode("area")}
             onExport={handleExport}
+            onPrint={(data) => setExportPreview(data)}
             onSave={() => {
               onSaveAnalysis?.({
                 item: { ar: `تسعير مساحة (${BUILDING_TYPES.find(t => t.id === areaParams.type)?.ar})`, num: 'AREA' },
@@ -2659,6 +2811,25 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
               });
               showToast("تم حفظ تحليل السعر بنجاح ✔️");
             }}
+            onPrint={(calc) => {
+              const resourcesList = [];
+              Object.entries(selfPriceResources).forEach(([type, items]) => {
+                items.forEach(r => {
+                  resourcesList.push({ type, ...r, total: r.qty * r.rate * (Number(selfPriceQty)||1) });
+                });
+              });
+              setExportPreview({
+                item: selfPriceItem,
+                c: COUNTRIES[country] || COUNTRIES.sa,
+                q: selfPriceQty,
+                f: 1,
+                overhead: selfPriceOverhead,
+                profit: selfPriceProfit,
+                ...calc,
+                resourcesList,
+                now: new Date().toLocaleDateString('ar-SA')
+              });
+            }}
           />
         )}
 
@@ -2671,6 +2842,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             onBack={() => setMode("area-results")}
             onReset={handleResetAreaSection}
             onUpdateItem={handleUpdateAreaSectionItem}
+            onPrint={(data) => setExportPreview(data)}
             onSave={() => {
               const activeDraft = selectedAreaSection
                 ? areaSectionDrafts[selectedAreaSection] || buildAreaSectionDraft(selectedAreaSection, areaParams, areaResults)
@@ -2779,7 +2951,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
 // Sub-components (Moved from previous implementation or newly added)
 
 // ===== سعر بنفسك Screen =====
-function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhead, setOverhead, profit, setProfit, country, authMode, sessionMeta, settings, onBack, onSave }) {
+function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhead, setOverhead, profit, setProfit, country, authMode, sessionMeta, settings, onBack, onSave, onPrint }) {
   const sym = getCurrencySymbol(country);
   const fmt = (n) => Number(n).toLocaleString("en-US", { maximumFractionDigits: 0 });
 
@@ -2983,37 +3155,21 @@ function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhea
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3 pb-6">
+      <div className="flex flex-col gap-3 pb-6">
         <button
-          onClick={() => onSave({ unitPrice, total, direct, indirect, profitAmt })}
-          className="flex-1 rounded-xl bg-[#082555] py-3 text-[13px] font-bold text-[#C9A84C] shadow-lg hover:bg-[#0d2f5e] transition active:scale-[0.98]">
-          💾 حفظ في الحساب
+          onClick={() => onPrint({
+            matT: matTotal * (Number(qty)||1),
+            labT: labTotal * (Number(qty)||1),
+            eqpT: eqpTotal * (Number(qty)||1),
+            direct, indirect, profitAmt, finalTotal: total, unitPrice
+          })}
+          className="w-full min-h-[56px] rounded-2xl bg-[#C9A84C] text-[#082555] font-bold text-[15px] flex items-center justify-center gap-2 shadow-lg transition hover:bg-[#E8C97A] active:scale-[0.98]">
+          <SaveIcon className="h-5 w-5" /> حفظ / تصدير تحليل البند PDF
         </button>
         <button
-          onClick={() => {
-            const w = window.open("", "_blank");
-            const currency = sym;
-            w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title>تحليل سعر — ${item.ar}</title>
-<style>
-  body{font-family:Arial,sans-serif;padding:24px;color:#082555;direction:rtl}
-  h1{font-size:16px;margin-bottom:4px}
-  .sub{color:#888;font-size:12px;margin-bottom:16px}
-  table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:12px}
-  th{background:#082555;color:#C9A84C;padding:6px 8px;text-align:right}
-  td{padding:5px 8px;border-bottom:1px solid #eee}
-  .total{background:#C9A84C;color:#082555;font-weight:bold;padding:10px 12px;border-radius:8px;display:flex;justify-content:space-between;margin-top:8px;font-size:14px}
-  @media print{button{display:none}}
-</style></head><body>
-<h1>${item.num} — ${item.ar}</h1>
-<p class="sub">${item.divAr} · الوحدة: ${item.unit} · سعر السوق: ${fmt(item.market)} ${currency}</p>
-${GROUP_HEADERS.map(g => `<h3 style="margin-bottom:4px">${g.emoji} ${g.label}</h3><table><tr><th>البند</th><th>الكمية</th><th>الوحدة</th><th>السعر</th><th>الإجمالي</th></tr>${(resources[g.key]||[]).map(r=>`<tr><td>${r.icon||''} ${r.name}</td><td>${r.qty}</td><td>${r.unit||''}</td><td>${fmt(r.rate)} ${currency}</td><td>${fmt((r.qty||0)*(r.rate||0))} ${currency}</td></tr>`).join('')}</table>`).join('')}
-<div class="total"><span>سعر الوحدة النهائي (شامل هامش ${profit}%)</span><span>${fmt(unitPrice)} ${currency}</span></div>
-<button onclick="window.print()" style="margin-top:16px;padding:8px 20px;background:#082555;color:#C9A84C;border:none;border-radius:8px;cursor:pointer;font-size:13px">🖨️ طباعة</button>
-</body></html>`);
-            w.document.close();
-          }}
-          className="flex-1 rounded-xl bg-white border-2 border-[#082555] py-3 text-[13px] font-bold text-[#082555] hover:bg-[#F5EDD8] transition active:scale-[0.98]">
-          🖨️ طباعة
+          onClick={() => onSave({ unitPrice, total, direct, indirect, profitAmt })}
+          className="w-full min-h-[56px] rounded-2xl bg-[#082555] py-3 text-[14px] font-bold text-[#C9A84C] shadow-lg hover:bg-[#0d2f5e] transition active:scale-[0.98]">
+          💾 حفظ في الحساب
         </button>
       </div>
 

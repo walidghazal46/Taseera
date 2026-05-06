@@ -293,6 +293,8 @@ function PricingTab({ settings, onUpdateSetting, copy }) {
             onChange={(v) => onUpdateSetting("country", v)} options={countryOptions} icon="🌍" />
           <PremiumInput label={copy.city} value={settings.city}
             onChange={(v) => onUpdateSetting("city", v)} placeholder={isAr ? "الرياض" : "Riyadh"} icon="📍" />
+          <PremiumInput label={isAr ? "رقم الهاتف" : "Phone Number"} value={settings.userPhone}
+            onChange={(v) => onUpdateSetting("userPhone", v)} placeholder="+966 50..." icon="📱" />
           <PremiumInput label={copy.currency} value={settings.currency}
             onChange={(v) => onUpdateSetting("currency", v)} placeholder="SAR" icon="💲" />
           <PremiumInput label={copy.locationFactor} type="number" value={settings.locationFactor}
@@ -613,7 +615,7 @@ function AccountTab({
           </div>
 
           {/* Auth buttons */}
-          <div className="flex gap-2 px-4 pb-5">
+          <div className="flex flex-wrap gap-2 px-4 pb-5">
             {isGuest ? (
               <>
                 <button type="button" onClick={() => onOpenAuthScreen?.("login")}
@@ -624,25 +626,29 @@ function AccountTab({
                   style={{ fontFamily: F }}>{text.settings.createAccountNow}</button>
               </>
             ) : (
-              <>
+              <div className="grid w-full grid-cols-3 gap-2">
                 <button type="button" onClick={() => onOpenAuthScreen?.("login")}
-                  className="flex-1 rounded-xl border border-white/15 bg-white/8 py-2.5 text-[11px] font-bold text-white transition hover:bg-white/15 active:scale-[0.97]"
-                  style={{ fontFamily: F }}>{text.settings.switchAccount}</button>
+                  className="flex flex-col items-center justify-center gap-1 rounded-xl border border-white/15 bg-white/8 py-2.5 text-center text-[10px] font-bold text-white transition hover:bg-white/15 active:scale-[0.97]"
+                  style={{ fontFamily: F }}>
+                  <span>{text.settings.switchAccount}</span>
+                </button>
                 <button type="button" onClick={onLogout}
-                  className="flex-1 rounded-xl border border-red-500/25 bg-red-500/12 py-2.5 text-[11px] font-bold text-red-300 transition hover:bg-red-500/22 active:scale-[0.97]"
-                  style={{ fontFamily: F }}>{text.settings.logout}</button>
+                  className="flex flex-col items-center justify-center gap-1 rounded-xl border border-red-500/25 bg-red-500/12 py-2.5 text-center text-[10px] font-bold text-red-300 transition hover:bg-red-500/22 active:scale-[0.97]"
+                  style={{ fontFamily: F }}>
+                  <span>{text.settings.logout}</span>
+                </button>
                 {deleteSent ? (
-                  <div className="w-full rounded-xl border border-amber-500/30 bg-amber-500/10 py-2.5 text-center text-[10px] font-bold text-amber-300" style={{ fontFamily: F }}>
-                    ⏳ {isAr ? "طلب الحذف قيد المراجعة" : "Deletion request pending"}
+                  <div className="flex items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10 py-2.5 text-center text-[9px] font-bold text-amber-300 px-1" style={{ fontFamily: F }}>
+                    {isAr ? "طلب حذف معلق" : "Deletion pending"}
                   </div>
                 ) : (
                   <button type="button" onClick={() => setShowDeleteConfirm(true)}
-                    className="w-full rounded-xl border border-red-600/40 bg-red-600/10 py-2.5 text-[11px] font-bold text-red-400 transition hover:bg-red-600/20 active:scale-[0.97] shadow-[0_0_12px_rgba(220,38,38,0.12)]"
+                    className="flex flex-col items-center justify-center gap-1 rounded-xl border border-red-600/40 bg-red-600/10 py-2.5 text-center text-[10px] font-bold text-red-400 transition hover:bg-red-600/20 active:scale-[0.97]"
                     style={{ fontFamily: F }}>
-                    🗑 {isAr ? "حذف الحساب" : "Delete Account"}
+                    <span>{isAr ? "حذف الحساب" : "Delete Account"}</span>
                   </button>
                 )}
-              </>
+              </div>
             )}
           </div>
         </div>
