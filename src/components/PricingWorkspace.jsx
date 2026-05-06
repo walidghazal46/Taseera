@@ -2405,6 +2405,13 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
       return true;
     }
 
+    // سعر بنفسك back → return to items
+    if (mode === "self-price") {
+      setMode("items");
+      setTab("csi");
+      return true;
+    }
+
     if (mode === "area-section-detail") {
       setMode("area-results");
       return true;
@@ -2422,10 +2429,12 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
 
     if (mode === "items") {
       if (tab === "analysis") {
-        return confirmDiscardAnalysisChanges(() => {
+        // always intercept — user either navigates away or stays; never show exit-app dialog
+        confirmDiscardAnalysisChanges(() => {
           setSelectedItem(null);
           setTab("csi");
         });
+        return true;
       }
 
       if (tab !== "csi") {
@@ -2561,7 +2570,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 onOpenAddModal={(type) => setAddModalType(type)}
                 onSave={handleExport}
                 onRfq={() => onCreateRfq?.({ item: selectedItem, source: "pricing-workspace" })}
-                onExport={handleExport}
+                onExport={setExportPreview}
                 toast={showToast}
                 qty={qty} setQty={setQty}
                 overhead={overhead} setOverhead={setOverhead}
@@ -4082,8 +4091,22 @@ function AnalysisScreen({
           </div>
 
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <button onClick={onSave} className="flex-1 min-h-[56px] rounded-2xl bg-[#C9A84C] text-[#082555] font-bold text-[15px] flex items-center justify-center gap-2 shadow-lg transition hover:bg-[#E8C97A] active:scale-[0.98]">
-              <SaveIcon className="h-5 w-5" /> حفظ / تصدير تحليل البند PDF
+            <button
+              onClick={() => {
+                if (!selectedItem || !calc) return;
+                const cObj = COUNTRIES[country] || COUNTRIES.sa;
+                const q = Number(qty) || 1;
+                const f = Number(factor) || 1;
+                const resList = [];
+                (resources["مواد"]  || []).forEach(r => resList.push({ type: "مواد",   name: r.name, qty: r.qty, unit: r.unit, rate: r.rate, total: (Number(r.qty)||0)*(Number(r.rate)||0)*q*f }));
+                (resources["عمالة"] || []).forEach(r => resList.push({ type: "عمالة",  name: r.name, qty: r.qty, unit: r.unit, rate: r.rate, total: (Number(r.qty)||0)*(Number(r.rate)||0)*q*f }));
+                (resources["معدات"] || []).forEach(r => resList.push({ type: "معدات",  name: r.name, qty: r.qty, unit: r.unit, rate: r.rate, total: (Number(r.qty)||0)*(Number(r.rate)||0)*q*f }));
+                const now = new Date().toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" });
+                onExport?.({ item: selectedItem, c: cObj, q, f, overhead: Number(overhead)||0, profit: Number(profit)||0, matT: calc.matT, labT: calc.labT, eqpT: calc.eqpT, direct: calc.direct, indirect: calc.indirect, profitAmt: calc.profitAmt, finalTotal: calc.finalTotal, unitPrice: calc.unitPrice, resourcesList: resList, now });
+              }}
+              className="flex-1 min-h-[56px] rounded-2xl bg-[#C9A84C] text-[#082555] font-bold text-[15px] flex items-center justify-center gap-2 shadow-lg transition hover:bg-[#E8C97A] active:scale-[0.98]"
+            >
+              <PrinterIcon className="h-5 w-5" /> تصدير / طباعة
             </button>
             <button onClick={onRfq} className="flex-1 min-h-[56px] rounded-2xl bg-white/5 border border-white/10 text-white font-bold text-[15px] flex items-center justify-center gap-2 transition hover:bg-white/10 active:scale-[0.98]">
               <TagIcon className="h-5 w-5 text-[#C9A84C]" /> طلب عروض
