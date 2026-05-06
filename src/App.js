@@ -355,11 +355,11 @@ export default function App() {
       userEmail: payload.userEmail || settings.userEmail,
       lastLoginAt: new Date().toLocaleString("en-GB"),
     });
-    setActivePage("companies");
+    setActivePage("pricing");
     setShowExitPrompt(false);
     setAuthScreenMode(null);
     clearForcedScreenQuery();
-    setRouteStack([createRoute(mode, "companies")]);
+    setRouteStack([createRoute(mode, "pricing")]);
     setSettings((c) => ({ ...c, userName: payload.userName || c.userName, userEmail: payload.userEmail || c.userEmail }));
     window.history.pushState({ source: "taseera-guard" }, "");
     if (mode !== "guest") showStatus(settings.language === "en" ? "Signed in successfully." : "تم تسجيل الدخول بنجاح.", "success");

@@ -30,6 +30,31 @@ function fmtNum(n) {
 // In-App Export Preview Modal (replaces window.open on mobile)
 // ---------------------------------------------------------------------------
 function ExportPreviewModal({ data, onClose }) {
+  const contentRef = useRef(null);
+
+  // Auto-scale content to fit one screen
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el || !data) return;
+    const scale = () => {
+      el.style.transform = "";
+      el.style.transformOrigin = "";
+      const available = window.innerHeight - (window.innerHeight * 0.045);
+      const natural = el.scrollHeight;
+      if (natural > available) {
+        const ratio = available / natural;
+        el.style.transformOrigin = "top center";
+        el.style.transform = `scale(${ratio})`;
+        el.parentElement.style.height = Math.round(natural * ratio) + "px";
+      } else {
+        el.parentElement.style.height = "";
+      }
+    };
+    scale();
+    window.addEventListener("resize", scale);
+    return () => window.removeEventListener("resize", scale);
+  }, [data]);
+
   if (!data) return null;
 
   const {
@@ -39,136 +64,150 @@ function ExportPreviewModal({ data, onClose }) {
   } = data;
 
   const Row = ({ label, val, bold }) => (
-    <div className={`flex justify-between items-center py-1.5 ${bold ? "border-t border-[#E2D8C4] mt-1 pt-2.5" : ""}`}>
-      <span className={`text-[13px] ${bold ? "font-black text-[#082555]" : "font-bold text-[#082555]"}`}>
+    <div className={`flex justify-between items-center py-[3px] ${bold ? "border-t border-[#E2D8C4] mt-0.5 pt-1.5" : ""}`}>
+      <span className={`text-[11px] ${bold ? "font-black text-[#082555]" : "font-bold text-[#082555]"}`}>
         {fmtNum(val)} {c.currency}
       </span>
-      <span className={`text-[12px] ${bold ? "font-bold text-[#082555]" : "text-slate-500"}`}>{label}</span>
+      <span className={`text-[10px] ${bold ? "font-bold text-[#082555]" : "text-slate-500"}`}>{label}</span>
     </div>
   );
 
   return (
-    <div className="fixed inset-0 z-[300] overflow-y-auto bg-[#F7F3EC]" dir="rtl" style={{ fontFamily: AR }}>
-      {/* ── Sticky top bar — with safe-area-inset-top so it clears the status bar ── */}
+    <div
+      className="fixed inset-0 z-[300] bg-[#F7F3EC] overflow-hidden"
+      dir="rtl"
+      style={{ fontFamily: AR }}
+    >
+      {/* ── Top bar — NOT sticky, 1.5cm from screen top ── */}
       <div
-        className="sticky top-0 z-10 flex items-center justify-between px-4 bg-[#082555] shadow-md print:hidden"
-        style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))", paddingBottom: "0.75rem" }}
+        className="flex items-center justify-between px-4 bg-[#082555] shadow-md print:hidden"
+        style={{
+          marginTop: "max(1.5cm, env(safe-area-inset-top))",
+          paddingTop: "0.5rem",
+          paddingBottom: "0.5rem",
+        }}
       >
         <button
           onClick={onClose}
-          className="flex items-center gap-2 text-white text-[14px] font-bold active:opacity-70"
+          className="flex items-center gap-1.5 text-white text-[13px] font-bold active:opacity-70"
         >
-          <ArrowRightIcon className="h-5 w-5" />
+          <ArrowRightIcon className="h-4 w-4" />
           رجوع
         </button>
-        <span className="text-[12px] font-bold text-[#d4a843] tracking-wide">تحليل البند</span>
+        <span className="text-[11px] font-bold text-[#d4a843] tracking-wide">تحليل البند</span>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => window.print()}
-            className="hidden sm:flex items-center gap-1 text-[12px] text-[#d4a843] font-bold active:opacity-70"
-          >
-            <PrinterIcon className="h-4 w-4" /> طباعة
-          </button>
+          {/* Print/Save — web only, hidden on Android */}
+          {!window.TaseeraAndroid && (
+            <button
+              onClick={() => window.print()}
+              className="flex items-center gap-1 text-[11px] text-[#d4a843] font-bold active:opacity-70 print:hidden"
+            >
+              <PrinterIcon className="h-4 w-4" /> حفظ
+            </button>
+          )}
+          {/* Screenshot hint — Android only */}
+          {window.TaseeraAndroid && (
+            <span className="text-[10px] text-white/50 font-bold">📸 سكرين شوت</span>
+          )}
           <button
             onClick={onClose}
-            className="flex items-center justify-center w-8 h-8 rounded-full bg-white/10 text-white hover:bg-white/20 active:opacity-70 transition-colors"
+            className="flex items-center justify-center w-7 h-7 rounded-full bg-white/10 text-white hover:bg-white/20 active:opacity-70 transition-colors"
             aria-label="إغلاق"
           >
-            <span className="text-[16px] leading-none">✕</span>
+            <span className="text-[14px] leading-none">✕</span>
           </button>
         </div>
       </div>
 
-      <div className="mx-auto max-w-lg px-4 pt-5 pb-20 space-y-4">
-        {/* ── Item header ── */}
-        <div className="bg-[#082555] rounded-3xl px-5 py-4 text-right">
-          <p className="text-[11px] font-bold text-[#d4a843]/70 uppercase tracking-widest">TASEERA · تسعيرة</p>
-          <h1 className="mt-1 text-[17px] font-black text-white leading-snug">{item.ar}</h1>
-          <p className="mt-0.5 text-[11px] text-white/50">{item.num} · {item.divAr} · {item.unit}</p>
-          <p className="mt-0.5 text-[10px] text-white/30">{now}</p>
-        </div>
+      {/* ── Scalable content wrapper ── */}
+      <div className="overflow-hidden" style={{ position: "relative" }}>
+        <div ref={contentRef} className="mx-auto max-w-lg px-3 pt-2.5 pb-2 space-y-1.5">
 
-        {/* ── Key metrics ── */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-2xl p-4 text-right border border-[#E2D8C4] shadow-sm">
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">سعر الوحدة النهائي</p>
-            <p className="mt-1 text-[24px] font-black text-[#082555] leading-none">{fmtNum(unitPrice)}</p>
-            <p className="text-[11px] text-[#d4a843] font-bold mt-1">{c.currency} / {item.unit}</p>
+          {/* Item header */}
+          <div className="bg-[#082555] rounded-2xl px-4 py-2 text-right">
+            <p className="text-[8px] font-bold text-[#d4a843]/70 uppercase tracking-widest">TASEERA · تسعيرة</p>
+            <h1 className="text-[14px] font-black text-white leading-snug">{item.ar}</h1>
+            <p className="text-[9px] text-white/50">{item.num} · {item.divAr} · {item.unit}</p>
+            <p className="text-[8px] text-white/30">{now}</p>
           </div>
-          <div className="bg-white rounded-2xl p-4 text-right border border-[#E2D8C4] shadow-sm">
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">إجمالي العرض</p>
-            <p className="mt-1 text-[24px] font-black text-[#082555] leading-none">{fmtNum(finalTotal)}</p>
-            <p className="text-[11px] text-slate-400 font-bold mt-1">{c.currency}</p>
-          </div>
-        </div>
 
-        {/* ── Cost breakdown ── */}
-        <div className="bg-white rounded-2xl px-4 py-3 border border-[#E2D8C4]">
-          <h3 className="text-[13px] font-black text-[#082555] text-right mb-1">تفصيل التكلفة</h3>
-          <Row label="مواد" val={matT} />
-          <Row label="عمالة" val={labT} />
-          <Row label="معدات" val={eqpT} />
-          <Row label="إجمالي مباشر" val={direct} bold />
-          <Row label={`أعباء غير مباشرة (${overhead}%)`} val={indirect} />
-          <Row label={`هامش الربح (${profit}%)`} val={profitAmt} />
-        </div>
-
-        {/* ── Settings row ── */}
-        <div className="grid grid-cols-4 gap-2">
-          {[
-            { l: "الكمية", v: fmtNum(q) },
-            { l: "Factor", v: f },
-            { l: "Overhead", v: `${overhead}%` },
-            { l: "Profit", v: `${profit}%` },
-          ].map(({ l, v }) => (
-            <div key={l} className="bg-white border border-[#E2D8C4] rounded-xl p-2 text-center">
-              <p className="text-[9px] text-slate-400 font-bold">{l}</p>
-              <p className="text-[13px] font-black text-[#082555]">{v}</p>
+          {/* Key metrics */}
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="bg-white rounded-xl p-2.5 text-right border border-[#E2D8C4]">
+              <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">سعر الوحدة النهائي</p>
+              <p className="mt-0.5 text-[20px] font-black text-[#082555] leading-none">{fmtNum(unitPrice)}</p>
+              <p className="text-[9px] text-[#d4a843] font-bold mt-0.5">{c.currency} / {item.unit}</p>
             </div>
-          ))}
-        </div>
+            <div className="bg-white rounded-xl p-2.5 text-right border border-[#E2D8C4]">
+              <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">إجمالي العرض</p>
+              <p className="mt-0.5 text-[20px] font-black text-[#082555] leading-none">{fmtNum(finalTotal)}</p>
+              <p className="text-[9px] text-slate-400 font-bold mt-0.5">{c.currency}</p>
+            </div>
+          </div>
 
-        {/* ── Resources ── */}
-        {["مواد", "عمالة", "معدات"].map((type) => {
-          const rows = resourcesList.filter((r) => r.type === type);
-          if (!rows.length) return null;
-          return (
-            <div key={type} className="bg-white rounded-2xl border border-[#E2D8C4] overflow-hidden">
-              <div className="px-4 py-2 bg-[#082555]">
-                <h4 className="text-[12px] font-black text-[#d4a843]">{type}</h4>
+          {/* Cost breakdown */}
+          <div className="bg-white rounded-xl px-3 py-2 border border-[#E2D8C4]">
+            <h3 className="text-[10px] font-black text-[#082555] text-right mb-0.5">تفصيل التكلفة</h3>
+            <Row label="مواد" val={matT} />
+            <Row label="عمالة" val={labT} />
+            <Row label="معدات" val={eqpT} />
+            <Row label="إجمالي مباشر" val={direct} bold />
+            <Row label={`أعباء غير مباشرة (${overhead}%)`} val={indirect} />
+            <Row label={`هامش الربح (${profit}%)`} val={profitAmt} />
+          </div>
+
+          {/* Settings row */}
+          <div className="grid grid-cols-4 gap-1.5">
+            {[
+              { l: "الكمية", v: fmtNum(q) },
+              { l: "Factor", v: f },
+              { l: "Overhead", v: `${overhead}%` },
+              { l: "Profit", v: `${profit}%` },
+            ].map(({ l, v }) => (
+              <div key={l} className="bg-white border border-[#E2D8C4] rounded-lg p-1.5 text-center">
+                <p className="text-[7px] text-slate-400 font-bold">{l}</p>
+                <p className="text-[11px] font-black text-[#082555]">{v}</p>
               </div>
-              <div className="divide-y divide-[#E2D8C4]">
-                {rows.map((r, i) => (
-                  <div key={i} className="px-4 py-3 flex items-start justify-between gap-2">
-                    <p className="text-[13px] font-black text-[#082555] shrink-0">{fmtNum(r.total)} {c.currency}</p>
-                    <div className="text-right flex-1">
-                      <p className="text-[12px] font-bold text-[#082555]">{r.name}</p>
-                      <p className="text-[10px] text-slate-400">{fmtNum(r.qty)} {r.unit} × {fmtNum(r.rate)} {c.currency}</p>
+            ))}
+          </div>
+
+          {/* Resources */}
+          {["مواد", "عمالة", "معدات"].map((type) => {
+            const rows = resourcesList.filter((r) => r.type === type);
+            if (!rows.length) return null;
+            return (
+              <div key={type} className="bg-white rounded-xl border border-[#E2D8C4] overflow-hidden">
+                <div className="px-3 py-1 bg-[#082555]">
+                  <h4 className="text-[10px] font-black text-[#d4a843]">{type}</h4>
+                </div>
+                <div className="divide-y divide-[#E2D8C4]">
+                  {rows.map((r, i) => (
+                    <div key={i} className="px-3 py-1.5 flex items-center justify-between gap-2">
+                      <p className="text-[11px] font-black text-[#082555] shrink-0">{fmtNum(r.total)} {c.currency}</p>
+                      <div className="text-right flex-1 min-w-0">
+                        <p className="text-[10px] font-bold text-[#082555] truncate">{r.name}</p>
+                        <p className="text-[8px] text-slate-400">{fmtNum(r.qty)} {r.unit} × {fmtNum(r.rate)} {c.currency}</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
 
-        {/* ── Screenshot hint + close ── */}
-        <div className="flex items-center justify-between gap-3 rounded-2xl bg-[#082555]/8 border border-[#082555]/10 py-3 px-4 print:hidden">
-          <span className="text-[12px] text-slate-500 font-bold">📸 التقط صورة للشاشة لحفظ التحليل</span>
-          <button
-            onClick={onClose}
-            className="flex items-center gap-1 text-[12px] font-bold text-[#082555]/60 hover:text-[#082555] active:opacity-70 transition-colors shrink-0"
-          >
-            <span className="text-[13px]">✕</span>
-            إغلاق
-          </button>
+          {/* Footer */}
+          <p className="text-center text-[8px] text-slate-300 pt-1">TASEERA · PRICING INTELLIGENCE</p>
         </div>
-
-        <p className="text-center text-[9px] text-slate-300 pb-4">TASEERA · PRICING INTELLIGENCE</p>
       </div>
 
       {/* Print styles */}
-      <style>{`@media print { .print\\:hidden { display:none!important; } body { background:#fff; } }`}</style>
+      <style>{`
+        @media print {
+          .print\\:hidden { display:none!important; }
+          body { background:#F7F3EC; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+          @page { size: auto; margin: 8mm; }
+        }
+      `}</style>
     </div>
   );
 }
