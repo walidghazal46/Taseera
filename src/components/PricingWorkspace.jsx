@@ -30,15 +30,6 @@ function fmtNum(n) {
 // In-App Export Preview Modal (replaces window.open on mobile)
 // ---------------------------------------------------------------------------
 function ExportPreviewModal({ data, onClose }) {
-  // Push history state so Android back-button closes the modal
-  useEffect(() => {
-    if (!data) return;
-    window.history.pushState({ exportModal: true }, "");
-    const handler = () => onClose();
-    window.addEventListener("popstate", handler);
-    return () => window.removeEventListener("popstate", handler);
-  }, [data, onClose]);
-
   if (!data) return null;
 
   const {
@@ -61,20 +52,28 @@ function ExportPreviewModal({ data, onClose }) {
       {/* ── Sticky top bar ── */}
       <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-[#082555] shadow-md print:hidden">
         <button
-          onClick={() => { window.history.back(); onClose(); }}
+          onClick={onClose}
           className="flex items-center gap-2 text-white text-[14px] font-bold active:opacity-70"
         >
           <ArrowRightIcon className="h-5 w-5" />
           رجوع
         </button>
         <span className="text-[12px] font-bold text-[#d4a843] tracking-wide">تحليل البند</span>
-        <button
-          onClick={() => window.print()}
-          className="hidden sm:flex items-center gap-1 text-[12px] text-[#d4a843] font-bold active:opacity-70"
-        >
-          <PrinterIcon className="h-4 w-4" /> طباعة
-        </button>
-        <div className="sm:hidden w-10" />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => window.print()}
+            className="hidden sm:flex items-center gap-1 text-[12px] text-[#d4a843] font-bold active:opacity-70"
+          >
+            <PrinterIcon className="h-4 w-4" /> طباعة
+          </button>
+          <button
+            onClick={onClose}
+            className="flex items-center justify-center w-8 h-8 rounded-full bg-white/10 text-white hover:bg-white/20 active:opacity-70 transition-colors"
+            aria-label="إغلاق"
+          >
+            <span className="text-[16px] leading-none">✕</span>
+          </button>
+        </div>
       </div>
 
       <div className="mx-auto max-w-lg px-4 pt-5 pb-20 space-y-4">
@@ -150,9 +149,16 @@ function ExportPreviewModal({ data, onClose }) {
           );
         })}
 
-        {/* ── Screenshot hint ── */}
-        <div className="flex items-center justify-center gap-2 rounded-2xl bg-[#082555]/8 border border-[#082555]/10 py-3 print:hidden">
+        {/* ── Screenshot hint + close ── */}
+        <div className="flex items-center justify-between gap-3 rounded-2xl bg-[#082555]/8 border border-[#082555]/10 py-3 px-4 print:hidden">
           <span className="text-[12px] text-slate-500 font-bold">📸 التقط صورة للشاشة لحفظ التحليل</span>
+          <button
+            onClick={onClose}
+            className="flex items-center gap-1 text-[12px] font-bold text-[#082555]/60 hover:text-[#082555] active:opacity-70 transition-colors shrink-0"
+          >
+            <span className="text-[13px]">✕</span>
+            إغلاق
+          </button>
         </div>
 
         <p className="text-center text-[9px] text-slate-300 pb-4">TASEERA · PRICING INTELLIGENCE</p>
@@ -2395,6 +2401,12 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   }
 
   const handleWorkspaceBack = useCallback(() => {
+    // If the export preview modal is open, close it first (don't navigate the workspace)
+    if (exportPreview) {
+      setExportPreview(null);
+      return true;
+    }
+
     if (mode === "area-section-detail") {
       setMode("area-results");
       return true;
@@ -2428,7 +2440,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     }
 
     return false;
-  }, [mode, tab, confirmDiscardAnalysisChanges]);
+  }, [mode, tab, exportPreview, setExportPreview, confirmDiscardAnalysisChanges]);
 
   useEffect(() => navigationBridge?.registerBackHandler?.(handleWorkspaceBack), [handleWorkspaceBack, navigationBridge?.registerBackHandler]);
 

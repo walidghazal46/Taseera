@@ -146,143 +146,196 @@ export default function LoginScreen({
     }
   };
 
-  const inputClass = `w-full rounded-2xl border px-4 py-3 text-[12px] outline-none transition
-    ${isLight
-      ? "border-[#d8cdb8] bg-white text-slate-900 placeholder:text-slate-400 focus:border-[#d4a843] focus:ring-2 focus:ring-[#d4a843]/20"
-      : "border-white/15 bg-white/10 text-white placeholder:text-white/40 focus:border-[#d4a843] focus:ring-2 focus:ring-[#d4a843]/20"}`;
+  /* ── field sizing adapts to register mode (more fields = shorter padding) ── */
+  const fieldPy = mode === "register" ? "py-2.5" : "py-3";
+  const inputClass = `w-full rounded-2xl border px-4 ${fieldPy} text-[13px] outline-none transition
+    border-white/15 bg-white/10 text-white placeholder:text-white/40
+    focus:border-[#d4a843] focus:ring-2 focus:ring-[#d4a843]/20`;
+
+  const GoogleIcon = () => (
+    <svg width="17" height="17" viewBox="0 0 48 48" aria-hidden="true" className="shrink-0">
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.16C6.51 42.62 14.62 48 24 48z"/>
+      <path fill="#FBBC05" d="M10.53 28.58A14.9 14.9 0 0 1 9.6 24c0-1.58.27-3.12.93-4.58L2.55 13.26A23.93 23.93 0 0 0 0 24c0 3.77.9 7.34 2.55 10.74l7.98-6.16z"/>
+      <path fill="#EA4335" d="M24 9.52c3.53 0 6.69 1.22 9.19 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.55 13.26l7.98 6.16C12.43 13.74 17.74 9.52 24 9.52z"/>
+    </svg>
+  );
 
   return (
     <div
       dir={language === "ar" ? "rtl" : "ltr"}
-      className={`flex h-[100dvh] flex-col overflow-hidden ${
-        isLight
-          ? "bg-gradient-to-b from-[#0d2545] via-[#163352] to-[#1a3a60]"
-          : "bg-gradient-to-b from-[#061422] via-[#0a1e3d] to-[#0f2650]"
-      }`}
+      className="flex h-[100dvh] flex-col overflow-hidden bg-gradient-to-b from-[#07162b] via-[#0a1e3d] to-[#0f2650]"
       style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}
     >
-      {/* Background pattern */}
+      {/* ── Ambient glows ── */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-[#d4a843]/5 blur-3xl" />
-        <div className="absolute top-1/2 -left-40 h-80 w-80 rounded-full bg-[#d4a843]/4 blur-3xl" />
+        <div className="absolute -top-32 -right-32 h-72 w-72 rounded-full bg-[#d4a843]/6 blur-3xl" />
+        <div className="absolute bottom-0 -left-32 h-72 w-72 rounded-full bg-[#1a4a8a]/30 blur-3xl" />
       </div>
 
-      <div className="relative flex flex-1 flex-col overflow-y-auto px-5"
-        style={{ paddingTop: "max(2rem, env(safe-area-inset-top))", paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}>
-
-        {/* Logo section */}
-        <div className="flex flex-col items-center pt-4 pb-6">
+      <div
+        className="relative flex flex-1 flex-col px-5 gap-3"
+        style={{
+          paddingTop: "max(1.25rem, env(safe-area-inset-top))",
+          paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
+        }}
+      >
+        {/* ══════════════ HEADER ══════════════ */}
+        <div className="flex items-center gap-3">
+          {/* Logo stamp */}
           <div
-            className="mx-auto overflow-hidden rounded-[3.1rem] w-[min(55vw,14rem)]"
-            style={{
-              boxShadow: "0 0 0 1px rgba(255,255,255,0.04)",
-              background: "radial-gradient(circle at center, rgba(8,27,53,0) 58%, rgba(8,27,53,0.38) 76%, rgba(8,27,53,0.72) 88%, rgba(8,27,53,0.96) 100%)",
-            }}
+            className="shrink-0 w-[52px] h-[52px] rounded-[1.1rem] overflow-hidden"
+            style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.08), 0 4px 16px rgba(0,0,0,0.5)" }}
           >
-            <img src="./taseera-logo.png" alt="Taseera"
-              className="block w-full rounded-[3.1rem] object-contain"
-              style={{
-                WebkitMaskImage: "radial-gradient(circle at center, rgba(0,0,0,1) 56%, rgba(0,0,0,0.96) 68%, rgba(0,0,0,0.82) 80%, rgba(0,0,0,0.45) 91%, rgba(0,0,0,0) 100%)",
-                maskImage: "radial-gradient(circle at center, rgba(0,0,0,1) 56%, rgba(0,0,0,0.96) 68%, rgba(0,0,0,0.82) 80%, rgba(0,0,0,0.45) 91%, rgba(0,0,0,0) 100%)",
-              }} />
+            <img
+              src="./taseera-logo.png"
+              alt="Taseera"
+              className="w-full h-full object-cover"
+            />
           </div>
-          <p className="mt-3 text-center text-[11px] font-medium leading-relaxed text-white/70 max-w-[16rem]">
-            {text.login.hero}
-          </p>
+
+          {/* Brand text */}
+          <div className="flex-1 min-w-0">
+            <p className="text-[18px] font-black text-white leading-tight">تسعيرة</p>
+            <p className="text-[10px] font-medium text-white/40 leading-tight tracking-wide">
+              Know Costs · Beat The Market
+            </p>
+          </div>
+
+          {/* Language toggle */}
+          <div className="flex items-center gap-1 shrink-0">
+            {[{ id: "ar", label: "ع" }, { id: "en", label: "EN" }].map((lang) => (
+              <button
+                key={lang.id}
+                type="button"
+                onClick={() => onChangeLanguage?.(lang.id)}
+                className={`rounded-xl px-2.5 py-1.5 text-[10px] font-bold transition ${
+                  language === lang.id
+                    ? "bg-[#d4a843] text-white"
+                    : "border border-white/15 text-white/40"
+                }`}
+              >
+                {lang.label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Main card */}
-        <div className="rounded-3xl border border-white/10 bg-white/8 p-4 shadow-[0_24px_64px_rgba(0,0,0,0.4)] backdrop-blur-sm space-y-3">
+        {/* ══════════════ MAIN CARD ══════════════ */}
+        <div className="rounded-3xl border border-white/10 bg-white/[0.07] px-4 pt-3.5 pb-4 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur-sm space-y-2.5">
 
-          {/* Mode switcher */}
+          {/* Mode tabs */}
           <div className="flex gap-1 rounded-2xl bg-white/8 p-1">
             {[{ id: "login", label: text.login.login }, { id: "register", label: text.login.register }].map((m) => (
-              <button key={m.id} type="button" onClick={() => setMode(m.id)}
-                className={`flex-1 rounded-xl py-2.5 text-[11px] font-bold transition-all ${
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => { setMode(m.id); setError(""); }}
+                className={`flex-1 rounded-xl py-2 text-[12px] font-bold transition-all ${
                   mode === m.id
-                    ? "bg-[#d4a843] text-white shadow-[0_4px_12px_rgba(212,168,67,0.35)]"
-                    : "text-white/60"
-                }`}>
+                    ? "bg-[#d4a843] text-white shadow-[0_3px_10px_rgba(212,168,67,0.4)]"
+                    : "text-white/50"
+                }`}
+              >
                 {m.label}
               </button>
             ))}
           </div>
 
-          {/* Form fields */}
-          <div className="space-y-2.5">
+          {/* Fields */}
+          <div className="space-y-2">
             {mode === "register" && (
-              <input value={form.fullName} onChange={(e) => updateField("fullName", e.target.value)}
-                className={inputClass} placeholder={text.login.fullName} />
+              <input
+                value={form.fullName}
+                onChange={(e) => updateField("fullName", e.target.value)}
+                className={inputClass}
+                placeholder={text.login.fullName}
+              />
             )}
-            <input value={form.email} onChange={(e) => updateField("email", e.target.value)}
-              className={inputClass} placeholder={text.login.email} inputMode="email" />
-            <input type="password" value={form.password} onChange={(e) => updateField("password", e.target.value)}
-              className={inputClass} placeholder={text.login.password} />
+            <input
+              value={form.email}
+              onChange={(e) => updateField("email", e.target.value)}
+              className={inputClass}
+              placeholder={text.login.email}
+              inputMode="email"
+              autoComplete="email"
+            />
+            <input
+              type="password"
+              value={form.password}
+              onChange={(e) => updateField("password", e.target.value)}
+              className={inputClass}
+              placeholder={text.login.password}
+              autoComplete={mode === "register" ? "new-password" : "current-password"}
+            />
             {mode === "register" && (
-              <input type="password" value={form.confirmPassword} onChange={(e) => updateField("confirmPassword", e.target.value)}
-                className={inputClass} placeholder={text.login.confirmPassword} />
+              <input
+                type="password"
+                value={form.confirmPassword}
+                onChange={(e) => updateField("confirmPassword", e.target.value)}
+                className={inputClass}
+                placeholder={text.login.confirmPassword}
+                autoComplete="new-password"
+              />
             )}
           </div>
 
           {/* Submit */}
-          <button type="button" onClick={submit} disabled={loading}
-            className="w-full rounded-2xl bg-[#d4a843] py-3.5 text-[12px] font-bold text-white shadow-[0_8px_24px_rgba(212,168,67,0.4)] transition active:scale-[0.98] disabled:opacity-60">
-            {loading ? (language === "en" ? "Please wait…" : "جارٍ التحميل…") : (mode === "register" ? text.login.submitRegister : text.login.submitLogin)}
+          <button
+            type="button"
+            onClick={submit}
+            disabled={loading}
+            className="w-full rounded-2xl bg-[#d4a843] py-3 text-[13px] font-bold text-white shadow-[0_6px_20px_rgba(212,168,67,0.4)] transition active:scale-[0.98] disabled:opacity-60"
+          >
+            {loading
+              ? (language === "en" ? "Please wait…" : "جارٍ التحميل…")
+              : (mode === "register" ? text.login.submitRegister : text.login.submitLogin)}
           </button>
 
+          {/* Error */}
           {error && (
-            <p className="rounded-xl bg-red-500/20 border border-red-500/30 px-3 py-2 text-center text-[10px] font-semibold text-red-300">
+            <p className="rounded-xl bg-red-500/20 border border-red-500/30 px-3 py-2 text-center text-[10px] font-semibold text-red-300 leading-snug">
               {error}
             </p>
           )}
 
-          <p className="text-center text-[9px] leading-relaxed text-white/40">
+          {/* Sub-hint */}
+          <p className="text-center text-[9px] leading-relaxed text-white/35">
             {mode === "register" ? text.login.registerHint : text.login.loginHint}
           </p>
         </div>
 
-        {/* Divider */}
-        <div className="flex items-center gap-3 py-3">
+        {/* ══════════════ DIVIDER ══════════════ */}
+        <div className="flex items-center gap-3">
           <div className="h-px flex-1 bg-white/10" />
-          <span className="text-[9px] text-white/30">{language === "en" ? "or" : "أو"}</span>
+          <span className="text-[9px] text-white/25 font-bold">{language === "en" ? "or" : "أو"}</span>
           <div className="h-px flex-1 bg-white/10" />
         </div>
 
-        {/* Google sign in */}
-        <button type="button" onClick={signInWithGoogle} disabled={loading}
-          className="flex w-full items-center justify-center gap-2.5 rounded-2xl border border-white/15 bg-white/8 px-4 py-3 text-[11px] font-bold text-white transition hover:bg-white/12 active:scale-[0.98] disabled:opacity-60">
-          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.16C6.51 42.62 14.62 48 24 48z"/>
-            <path fill="#FBBC05" d="M10.53 28.58A14.9 14.9 0 0 1 9.6 24c0-1.58.27-3.12.93-4.58L2.55 13.26A23.93 23.93 0 0 0 0 24c0 3.77.9 7.34 2.55 10.74l7.98-6.16z"/>
-            <path fill="#EA4335" d="M24 9.52c3.53 0 6.69 1.22 9.19 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.55 13.26l7.98 6.16C12.43 13.74 17.74 9.52 24 9.52z"/>
-          </svg>
+        {/* ══════════════ SOCIAL ROW ══════════════ */}
+        {/* Google */}
+        <button
+          type="button"
+          onClick={signInWithGoogle}
+          disabled={loading}
+          className="flex w-full items-center justify-center gap-2.5 rounded-2xl border border-white/12 bg-white/7 px-4 py-3 text-[12px] font-bold text-white transition hover:bg-white/12 active:scale-[0.98] disabled:opacity-60"
+        >
+          <GoogleIcon />
           {language === "en" ? "Continue with Google" : "المتابعة بحساب جوجل"}
         </button>
 
-        {/* Guest button */}
-        <button type="button" onClick={() => onGuest("guest")}
-          className="mt-2.5 w-full rounded-2xl border border-[#d4a843]/40 py-3 text-[11px] font-bold text-[#d4a843] transition hover:bg-[#d4a843]/10 active:scale-[0.98]">
+        {/* Guest */}
+        <button
+          type="button"
+          onClick={() => onGuest("guest")}
+          className="w-full rounded-2xl border border-[#d4a843]/35 py-2.5 text-[12px] font-bold text-[#d4a843] transition hover:bg-[#d4a843]/8 active:scale-[0.98]"
+        >
           {text.login.guest}
         </button>
 
-        {/* Language + hint */}
-        <div className="mt-3 rounded-2xl border border-white/8 bg-white/5 px-4 py-3">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <p className="text-[9px] text-white/40 leading-relaxed flex-1">{text.login.guestHint}</p>
-            <div className="flex items-center gap-1.5 shrink-0">
-              {[{ id: "ar", label: "ع" }, { id: "en", label: "EN" }].map((lang) => (
-                <button key={lang.id} type="button" onClick={() => onChangeLanguage?.(lang.id)}
-                  className={`rounded-xl px-2.5 py-1 text-[9px] font-bold transition ${
-                    language === lang.id
-                      ? "bg-[#d4a843] text-white"
-                      : "border border-white/20 text-white/50"
-                  }`}>
-                  {lang.label}
-                </button>
-              ))}
-            </div>
-          </div>
+        {/* ══════════════ FOOTER HINT ══════════════ */}
+        <div className="mt-auto flex items-center gap-3 rounded-2xl border border-white/6 bg-white/[0.04] px-3.5 py-2.5">
+          <p className="flex-1 text-[9px] leading-relaxed text-white/30">{text.login.guestHint}</p>
         </div>
       </div>
     </div>
