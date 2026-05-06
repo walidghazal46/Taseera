@@ -203,7 +203,7 @@ export default function App() {
   // Core States
   const [authMode, setAuthMode] = usePersistentState(`${APP_STORAGE_PREFIX}.authMode`, null);
   const [authSession, setAuthSession] = usePersistentState(`${APP_STORAGE_PREFIX}.authSession`, null);
-  const [activePage, setActivePage] = usePersistentState(`${APP_STORAGE_PREFIX}.activePage`, "companies");
+  const [activePage, setActivePage] = usePersistentState(`${APP_STORAGE_PREFIX}.activePage`, "pricing");
   const [settings, setSettings] = usePersistentState(`${APP_STORAGE_PREFIX}.settings`, sampleSettings);
   // Always inject current build version — never rely on localStorage value
   const settingsWithVersion = { ...settings, appVersion: APP_VERSION };
@@ -296,9 +296,9 @@ export default function App() {
       else setActivePage(prevRoute.page);
       setShowExitPrompt(false); return true;
     }
-    if (activePage !== "companies") {
-      setActivePage("companies");
-      setRouteStack([createRoute(authMode, "companies")]);
+    if (activePage !== "pricing") {
+      setActivePage("pricing");
+      setRouteStack([createRoute(authMode, "pricing")]);
       setShowExitPrompt(false); return true;
     }
     if (bridge.isAndroid) {
