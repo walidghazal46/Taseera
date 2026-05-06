@@ -1406,6 +1406,7 @@ function AreaSectionDetailView({
   onReset,
   onUpdateItem,
   onSave,
+  onExport,
   adBanner,
   canManageAds = false,
   onManageAds,
@@ -1419,7 +1420,47 @@ function AreaSectionDetailView({
   if (!draft) return null;
 
   const handleExportSectionPdf = () => {
-    const now = new Date().toLocaleDateString("ar-SA");
+    const now = new Date().toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" });
+
+    if (window.TaseeraAndroid) {
+      // Mobile: open in-app export preview (no browser)
+      const resourcesList = (draft.items || []).map(it => ({
+        type: "مواد",
+        name: it.label,
+        qty: it.qty,
+        unit: it.unit,
+        rate: it.rate,
+        total: it.total,
+      }));
+      const fakeItem = {
+        ar: draft.title,
+        num: `AREA-${draft.sectionId || ""}`,
+        divAr: "تقدير مساحي",
+        unit: "م²",
+        market: 0,
+      };
+      onExport?.({
+        item: fakeItem,
+        c,
+        q: totalArea || 1,
+        f: 1,
+        overhead: 0,
+        profit: 0,
+        matT: draft.sectionTotal,
+        labT: 0,
+        eqpT: 0,
+        direct: draft.sectionTotal,
+        indirect: 0,
+        profitAmt: 0,
+        finalTotal: draft.sectionTotal,
+        unitPrice: draft.unitPrice,
+        resourcesList,
+        now,
+      });
+      return;
+    }
+
+    // Web: open new browser window for PDF export
     const rowsHtml = draft.items.map((item, index) => `
       <tr>
         <td>${index + 1}</td>
@@ -1463,22 +1504,10 @@ function AreaSectionDetailView({
             <div class="summary-card"><strong>المساحة الكلية</strong>${fmtNum(totalArea)} م²</div>
           </div>
           <table>
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>البند</th>
-                <th>الأساس</th>
-                <th>الكمية</th>
-                <th>سعر الوحدة</th>
-                <th>الإجمالي</th>
-              </tr>
-            </thead>
+            <thead><tr><th>#</th><th>البند</th><th>الأساس</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead>
             <tbody>${rowsHtml}</tbody>
           </table>
-          <div class="note">
-            <strong>افتراضات هندسية مستخدمة</strong>
-            <ul>${assumptionsHtml}</ul>
-          </div>
+          <div class="note"><strong>افتراضات هندسية مستخدمة</strong><ul>${assumptionsHtml}</ul></div>
           <script>window.onload = () => window.print();</script>
         </body>
       </html>
@@ -2703,6 +2732,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             sessionMeta={sessionMeta}
             settings={settings}
             onBack={() => { setMode("items"); setTab("csi"); }}
+            onExport={setExportPreview}
             onSave={(result) => {
               onSaveAnalysis?.({
                 item: selfPriceItem,
@@ -2756,6 +2786,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             adBanner={areaSectionAdBanner}
             canManageAds={isAdminUnlocked}
             onManageAds={handleOpenAdEditor}
+            onExport={setExportPreview}
             onToggleAdVisibility={handleToggleAdVisibility}
             onRemoveAd={handleRemoveAd}
           />
@@ -2833,7 +2864,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
 // Sub-components (Moved from previous implementation or newly added)
 
 // ===== سعر بنفسك Screen =====
-function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhead, setOverhead, profit, setProfit, country, authMode, sessionMeta, settings, onBack, onSave }) {
+function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhead, setOverhead, profit, setProfit, country, authMode, sessionMeta, settings, onBack, onSave, onExport }) {
   const sym = getCurrencySymbol(country);
   const fmt = (n) => Number(n).toLocaleString("en-US", { maximumFractionDigits: 0 });
 
@@ -3045,26 +3076,30 @@ function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhea
         </button>
         <button
           onClick={() => {
-            const w = window.open("", "_blank");
-            const currency = sym;
-            w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title>تحليل سعر — ${item.ar}</title>
-<style>
-  body{font-family:Arial,sans-serif;padding:24px;color:#082555;direction:rtl}
-  h1{font-size:16px;margin-bottom:4px}
-  .sub{color:#888;font-size:12px;margin-bottom:16px}
-  table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:12px}
-  th{background:#082555;color:#C9A84C;padding:6px 8px;text-align:right}
-  td{padding:5px 8px;border-bottom:1px solid #eee}
-  .total{background:#C9A84C;color:#082555;font-weight:bold;padding:10px 12px;border-radius:8px;display:flex;justify-content:space-between;margin-top:8px;font-size:14px}
-  @media print{button{display:none}}
-</style></head><body>
-<h1>${item.num} — ${item.ar}</h1>
-<p class="sub">${item.divAr} · الوحدة: ${item.unit} · سعر السوق: ${fmt(item.market)} ${currency}</p>
-${GROUP_HEADERS.map(g => `<h3 style="margin-bottom:4px">${g.emoji} ${g.label}</h3><table><tr><th>البند</th><th>الكمية</th><th>الوحدة</th><th>السعر</th><th>الإجمالي</th></tr>${(resources[g.key]||[]).map(r=>`<tr><td>${r.icon||''} ${r.name}</td><td>${r.qty}</td><td>${r.unit||''}</td><td>${fmt(r.rate)} ${currency}</td><td>${fmt((r.qty||0)*(r.rate||0))} ${currency}</td></tr>`).join('')}</table>`).join('')}
-<div class="total"><span>سعر الوحدة النهائي (شامل هامش ${profit}%)</span><span>${fmt(unitPrice)} ${currency}</span></div>
+            const q = Number(qty) || 1;
+            if (window.TaseeraAndroid) {
+              // Mobile: open in-app export preview
+              const cObj = COUNTRIES[country] || COUNTRIES.sa;
+              const resList = [];
+              (resources["مواد"]  || []).forEach(r => resList.push({ type: "مواد",   name: r.name, qty: r.qty, unit: r.unit, rate: r.rate, total: (Number(r.qty)||0)*(Number(r.rate)||0)*q }));
+              (resources["عمالة"] || []).forEach(r => resList.push({ type: "عمالة",  name: r.name, qty: r.qty, unit: r.unit, rate: r.rate, total: (Number(r.qty)||0)*(Number(r.rate)||0)*q }));
+              (resources["معدات"] || []).forEach(r => resList.push({ type: "معدات",  name: r.name, qty: r.qty, unit: r.unit, rate: r.rate, total: (Number(r.qty)||0)*(Number(r.rate)||0)*q }));
+              const now = new Date().toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" });
+              onExport?.({ item, c: cObj, q, f: 1, overhead: Number(overhead)||0, profit: Number(profit)||0, matT: matTotal*q, labT: labTotal*q, eqpT: eqpTotal*q, direct, indirect, profitAmt, finalTotal: total, unitPrice, resourcesList: resList, now });
+            } else {
+              // Web: open new window for print/PDF
+              const currency = sym;
+              const w = window.open("", "_blank");
+              if (!w) return;
+              w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title>تحليل سعر — ${item.ar}</title>
+<style>body{font-family:Arial,sans-serif;padding:24px;color:#082555;direction:rtl}h1{font-size:16px;margin-bottom:4px}.sub{color:#888;font-size:12px;margin-bottom:16px}table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:12px}th{background:#082555;color:#C9A84C;padding:6px 8px;text-align:right}td{padding:5px 8px;border-bottom:1px solid #eee}.total{background:#C9A84C;color:#082555;font-weight:bold;padding:10px 12px;border-radius:8px;display:flex;justify-content:space-between;margin-top:8px;font-size:14px}@media print{button{display:none}}</style></head><body>
+<h1>${item.num} — ${item.ar}</h1><p class="sub">${item.divAr} · الوحدة: ${item.unit}</p>
+${GROUP_HEADERS.map(g=>`<h3>${g.emoji} ${g.label}</h3><table><tr><th>البند</th><th>الكمية</th><th>الوحدة</th><th>السعر</th><th>الإجمالي</th></tr>${(resources[g.key]||[]).map(r=>`<tr><td>${r.name}</td><td>${r.qty}</td><td>${r.unit||''}</td><td>${fmt(r.rate)} ${currency}</td><td>${fmt((r.qty||0)*(r.rate||0))} ${currency}</td></tr>`).join('')}</table>`).join('')}
+<div class="total"><span>سعر الوحدة النهائي (هامش ${profit}%)</span><span>${fmt(unitPrice)} ${currency}</span></div>
 <button onclick="window.print()" style="margin-top:16px;padding:8px 20px;background:#082555;color:#C9A84C;border:none;border-radius:8px;cursor:pointer;font-size:13px">🖨️ طباعة</button>
 </body></html>`);
-            w.document.close();
+              w.document.close();
+            }
           }}
           className="flex-1 rounded-xl bg-white border-2 border-[#082555] py-3 text-[13px] font-bold text-[#082555] hover:bg-[#F5EDD8] transition active:scale-[0.98]">
           🖨️ طباعة
