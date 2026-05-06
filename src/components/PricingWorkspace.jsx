@@ -49,8 +49,11 @@ function ExportPreviewModal({ data, onClose }) {
 
   return (
     <div className="fixed inset-0 z-[300] overflow-y-auto bg-[#F7F3EC]" dir="rtl" style={{ fontFamily: AR }}>
-      {/* ── Sticky top bar ── */}
-      <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-[#082555] shadow-md print:hidden">
+      {/* ── Sticky top bar — with safe-area-inset-top so it clears the status bar ── */}
+      <div
+        className="sticky top-0 z-10 flex items-center justify-between px-4 bg-[#082555] shadow-md print:hidden"
+        style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))", paddingBottom: "0.75rem" }}
+      >
         <button
           onClick={onClose}
           className="flex items-center gap-2 text-white text-[14px] font-bold active:opacity-70"
