@@ -230,6 +230,7 @@ export default function App() {
   const [status, setStatus] = useState(null);
   const [dialog, setDialog] = useState(null);
   const [showExitPrompt, setShowExitPrompt] = useState(false);
+  const [rfqModal, setRfqModal] = useState(null); // { itemName }
   const [exitFromCompanies, setExitFromCompanies] = useState(false);
   const [authScreenMode, setAuthScreenMode] = useState(!authMode ? "login" : null);
 
@@ -447,37 +448,10 @@ export default function App() {
     showStatus(systemText.analysisSaved, "success");
   }, [authMode, selectedCompany, selectedProject, setSavedAnalyses, systemText, showStatus]);
 
-  const handleCreateRfq = useCallback(async ({ item, supplier, source }) => {
+  const handleCreateRfq = useCallback(({ item, supplier, source }) => {
     if (authMode === "guest") { showStatus(systemText.loginRequiredForRfq, "warning"); return; }
-
-    const now = new Date();
-    const pad = (n) => String(n).padStart(2, "0");
-    const datePart = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}`;
-    const randPart = Math.random().toString(36).slice(2, 6).toUpperCase();
-    const rfqRef = `RFQ-${datePart}-${randPart}`;
-
-    const userName = authSession?.userName || settings.userName || "غير محدد";
-    const userEmail = authSession?.userEmail || settings.userEmail || "غير محدد";
-    const dateStr = now.toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" });
-
-    const body = [
-      `رقم الطلب: ${rfqRef}`,
-      `التاريخ: ${dateStr}`,
-      "",
-      `الاسم: ${userName}`,
-      `البريد: ${userEmail}`,
-      "",
-      `البند: ${item ? `${item.num} - ${item.ar}` : "طلب عرض سعر عام"}`,
-    ].join("\n");
-
-    const subject = `طلب عرض سعر ${rfqRef}${item ? ` — ${item.ar}` : ""}`;
-
-    const nextR = { id: createId("rfq"), rfqRef, createdAt: now.toISOString(), source, itemId: item?.num || null, itemName: item?.ar || systemText.genericRequest, supplierName: supplier?.name || systemText.market, status: "draft" };
-    setRfqRequests((c) => [nextR, ...c].slice(0, 50));
-
-    await bridge.openEmail("walidghazal46@gmail.com", subject, body);
-    showStatus(`تم فتح البريد — مرجع الطلب: ${rfqRef}`, "success");
-  }, [authMode, authSession, bridge, setRfqRequests, settings, systemText, showStatus]);
+    setRfqModal({ itemName: item?.ar || supplier?.name || "طلب عرض سعر" });
+  }, [authMode, setRfqModal, showStatus, systemText.loginRequiredForRfq]);
 
   const handleContactSupplier = useCallback(async (s, channel = "phone") => {
     if (channel === "phone" && s.phone) { bridge.openDialer(s.phone); showStatus(systemText.callOpened(s.name), "info"); }
@@ -538,6 +512,39 @@ export default function App() {
     </Modal>
   );
 
+  // ── Simple RFQ contact modal ──────────────────────────────────────────────
+  function RfqContactModal() {
+    if (!rfqModal) return null;
+    return (
+      <div
+        style={{ position: "fixed", inset: 0, zIndex: 600, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
+        onClick={() => setRfqModal(null)}
+      >
+        <div
+          style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "24px 24px 0 0", padding: "24px 20px 32px", direction: "rtl", fontFamily: "'Cairo','Tajawal',sans-serif" }}
+          onClick={e => e.stopPropagation()}
+        >
+          <div style={{ width: 40, height: 4, background: "#e2d8c4", borderRadius: 4, margin: "0 auto 20px" }} />
+          <p style={{ fontSize: 11, fontWeight: 700, color: "#9a8a6a", letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>TASEERA</p>
+          <h2 style={{ fontSize: 20, fontWeight: 900, color: "#082555", margin: "0 0 6px" }}>طلب عرض سعر</h2>
+          {rfqModal.itemName && <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px" }}>{rfqModal.itemName}</p>}
+          <p style={{ fontSize: 14, color: "#374151", margin: "0 0 12px", lineHeight: 1.7 }}>
+            للتواصل وإرسال طلب العرض، يُرجى مراسلتنا على البريد الإلكتروني التالي:
+          </p>
+          <div style={{ background: "#f7f3ec", borderRadius: 16, padding: "14px 16px", textAlign: "center", border: "1px solid #e2d8c4", marginBottom: 20 }}>
+            <p style={{ fontSize: 16, fontWeight: 900, color: "#082555", direction: "ltr", margin: 0 }}>walidghazal46@gmail.com</p>
+          </div>
+          <button
+            onClick={() => setRfqModal(null)}
+            style={{ width: "100%", background: "#082555", color: "#c9a84c", fontWeight: 800, fontSize: 15, border: "none", borderRadius: 16, padding: "14px 0", cursor: "pointer", fontFamily: "inherit" }}
+          >
+            حسنًا
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (forcedScreen === "mobile-demo") {
     return <MobilePrototypeDemo />;
   }
@@ -546,6 +553,7 @@ export default function App() {
     <>
       <StatusToast status={status} />
       <InfoDialog dialog={dialog} onClose={closeDialog} />
+      <RfqContactModal />
       {shouldShowLogin ? (
         <>
           <LoginScreen onLogin={handleAuthEntry} onGuest={handleAuthEntry} language={settings.language} theme={settings.theme} initialMode={authScreenMode || "login"} onChangeLanguage={(l) => setSettings((c) => ({ ...c, language: l }))} />

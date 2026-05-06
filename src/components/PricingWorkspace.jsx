@@ -2517,6 +2517,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 <CandyWorkspace
                   country={country}
                   onBack={() => handleModeChange("selection")}
+                  onCreateRfq={onCreateRfq}
                 />
               </div>
             </ScreenProtection>

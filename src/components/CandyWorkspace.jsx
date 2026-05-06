@@ -385,7 +385,7 @@ function CandyExportModal({ data, onClose }) {
 }
 
 // ─── ANALYSIS VIEW ─────────────────────────────────────────────────────────────
-function AnalysisView({ item, division, country, onBack }) {
+function AnalysisView({ item, division, country, onBack, onCreateRfq }) {
   const cur = CUR[country] || "ر.س";
   const mktRates = MARKET_RATES[country] || MARKET_RATES.sa;
 
@@ -426,36 +426,6 @@ function AnalysisView({ item, division, country, onBack }) {
   const setA = (field, val) => setAssum(a => ({ ...a, [field]: val }));
   const reportFileBase = `${(item.num || "item").replace(/[^\w\u0600-\u06FF-]+/g, "_")}_${(item.ar || "analysis").replace(/[^\w\u0600-\u06FF-]+/g, "_")}`;
 
-  const openHtmlExport = useCallback(({ title, html, filename, autoPrint = false, onEmailFallback }) => {
-    // Open empty window then write HTML — avoids blob:// URL issues on mobile
-    // (fixes "تعذر فتح التطبيق المطلوب" on Android/iOS browsers)
-    const exportWin = window.open("", "_blank", "width=960,height=760");
-
-    if (exportWin) {
-      exportWin.document.open();
-      exportWin.document.write(html);
-      exportWin.document.close();
-      exportWin.focus();
-      if (autoPrint) {
-        setTimeout(() => {
-          try { exportWin.print(); } catch (_) {}
-        }, 600);
-      }
-      // After 10 seconds: if window was closed without printing → email fallback
-      if (onEmailFallback) {
-        setTimeout(() => {
-          if (exportWin.closed) onEmailFallback();
-        }, 10000);
-      }
-      return true;
-    }
-
-    // Popup blocked (common on mobile) → immediate email fallback
-    if (onEmailFallback) {
-      onEmailFallback();
-    }
-    return false;
-  }, []);
 
   const handleExportPdf = useCallback(() => {
     const rowsSection = (title, rows) => `
@@ -575,65 +545,9 @@ function AnalysisView({ item, division, country, onBack }) {
     });
   }, [assum, boqAmt, cur, division, finalRate, item, labs, mats, plts, qty, transpAmt]);
 
-  const handleRequestQuote = useCallback(async () => {
-    const rfqText = [
-      "طلب عروض سعر",
-      `البند: ${item.num} — ${item.ar}`,
-      `القسم: ${division.ar}`,
-      `الوحدة: ${item.unit}`,
-      `الكمية المطلوبة: ${qty} ${item.unit}`,
-      `السعر التقديري الحالي: ${fmt(finalRate, cur)} لكل ${item.unit}`,
-      `إجمالي تقديري: ${fmt(boqAmt, cur)}`,
-      "",
-      "الرجاء تزويدي بعرض سعر لهذا البند شاملاً التوريد والتنفيذ حسب الحاجة.",
-      notes.trim() ? `ملاحظات: ${notes.trim()}` : "",
-    ].filter(Boolean).join("\n");
-
-    try {
-      if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(rfqText);
-      }
-    } catch (_) {}
-
-    const html = `<!DOCTYPE html>
-      <html dir="rtl" lang="ar">
-        <head>
-          <meta charset="utf-8" />
-          <title>طلب عروض — ${item.ar}</title>
-          <style>
-            body{font-family:Arial,sans-serif;padding:24px;color:#082555;direction:rtl}
-            h1{font-size:18px;margin:0 0 6px}
-            .sub{color:#64748b;font-size:12px;margin-bottom:14px}
-            .card{border:1px solid #dbe2f0;border-radius:12px;padding:14px 16px;margin-bottom:12px}
-            .hint{background:#fff8e7;border-color:#f6d78b}
-            .value{font-weight:700}
-          </style>
-        </head>
-        <body>
-          <h1>طلب عروض سعر</h1>
-          <p class="sub">تم إنشاء هذا النموذج من Taseera بتاريخ ${new Date().toLocaleDateString("ar-SA")}</p>
-          <div class="card">
-            <div><span class="value">البند:</span> ${item.num} — ${item.ar}</div>
-            <div style="margin-top:6px"><span class="value">القسم:</span> ${division.ar}</div>
-            <div style="margin-top:6px"><span class="value">الوحدة:</span> ${item.unit}</div>
-            <div style="margin-top:6px"><span class="value">الكمية المطلوبة:</span> ${qty} ${item.unit}</div>
-            <div style="margin-top:6px"><span class="value">السعر التقديري الحالي:</span> ${fmt(finalRate, cur)} لكل ${item.unit}</div>
-            <div style="margin-top:6px"><span class="value">الإجمالي التقديري:</span> ${fmt(boqAmt, cur)}</div>
-          </div>
-          ${notes.trim() ? `<div class="card"><div class="value">ملاحظات إضافية</div><div style="margin-top:8px">${notes.trim().replace(/\n/g, "<br/>")}</div></div>` : ""}
-          <div class="card hint">
-            تم نسخ نص طلب العروض للحافظة متى كان ذلك مدعومًا. يمكنك الآن مشاركة هذه الصفحة أو طباعتها أو إرسال النص مباشرة إلى المورد.
-          </div>
-        </body>
-      </html>`;
-
-    openHtmlExport({
-      title: `طلب عروض — ${item.ar}`,
-      html,
-      filename: `طلب_عروض_${reportFileBase}.html`,
-      autoPrint: false,
-    });
-  }, [boqAmt, cur, division.ar, finalRate, item.ar, item.num, item.unit, notes, openHtmlExport, qty, reportFileBase]);
+  const handleRequestQuote = useCallback(() => {
+    onCreateRfq?.({ item, source: "candy-workspace" });
+  }, [item, onCreateRfq]);
 
   return (
     <div style={{ fontFamily: AR, direction: "rtl" }}>
@@ -1188,7 +1102,7 @@ function DivisionsView({ country, onSelectDivision }) {
 }
 
 // ─── MAIN EXPORT ────────────────────────────────────────────────────────────────
-export default function CandyWorkspace({ country = "sa", onBack }) {
+export default function CandyWorkspace({ country = "sa", onBack, onCreateRfq }) {
   const [view, setView]   = useState("divisions"); // divisions | items | analysis
   const [selDiv,  setDiv] = useState(null);
   const [selItem, setItem] = useState(null);
@@ -1235,6 +1149,7 @@ export default function CandyWorkspace({ country = "sa", onBack }) {
           division={selDiv}
           country={country}
           onBack={() => setView("items")}
+          onCreateRfq={onCreateRfq}
         />
       )}
     </div>
