@@ -47,7 +47,7 @@ import {
 } from "../services/qsPremiumApi";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
-const USERS_PAGE_SIZE = 12;
+const USERS_PAGE_SIZE = 7;
 
 const MENU = [
   { id: "dashboard", labelAr: "Dashboard", labelEn: "Dashboard" },
@@ -197,27 +197,27 @@ function TrendChart({ today, week, month }) {
 function KpiCard({ icon, label, value, sub, bg, border, valueColor, labelColor }) {
   return (
     <div
-      className="relative min-w-0 overflow-hidden rounded-[28px] border p-4 shadow-[0_14px_40px_rgba(15,23,42,0.07)]"
+      className="relative min-w-0 w-full max-w-full overflow-hidden rounded-[24px] border p-3 shadow-[0_12px_30px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-4 sm:shadow-[0_14px_40px_rgba(15,23,42,0.07)]"
       style={{ background: bg, borderColor: border }}
     >
-      <div className="flex min-h-[148px] flex-col justify-between gap-4">
-        <div className="flex items-start justify-between gap-3">
+      <div className="flex min-h-[112px] flex-col justify-between gap-3 sm:min-h-[148px] sm:gap-4">
+        <div className="flex items-start justify-between gap-2 sm:gap-3">
           <div className="min-w-0">
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] leading-4" style={{ color: labelColor }}>
+            <p className="text-[9px] font-extrabold uppercase tracking-[0.13em] leading-4 sm:text-[10px] sm:tracking-[0.16em]" style={{ color: labelColor }}>
               {label}
             </p>
             {sub && (
-              <p className="mt-2 text-[11px] leading-5" style={{ color: labelColor }}>
+              <p className="mt-1 text-[10px] leading-4 break-words sm:mt-2 sm:text-[11px] sm:leading-5" style={{ color: labelColor }}>
                 {sub}
               </p>
             )}
           </div>
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-[24px] shadow-sm" style={{ color: valueColor, borderColor: border, background: "rgba(255,255,255,0.45)" }}>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border text-[20px] shadow-sm sm:h-12 sm:w-12 sm:text-[24px]" style={{ color: valueColor, borderColor: border, background: "rgba(255,255,255,0.45)" }}>
             {icon}
           </span>
         </div>
         <div className="min-w-0">
-          <p className="text-[34px] font-extrabold leading-none sm:text-[38px]" style={{ color: valueColor }}>
+          <p className="text-[28px] font-extrabold leading-none sm:text-[38px]" style={{ color: valueColor }}>
             {value}
           </p>
         </div>
@@ -348,6 +348,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
   );
 
   const [activeTab, setActiveTab] = useState(initialTab || "dashboard");
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
   const [dashboardStats, setDashboardStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(true);
 
@@ -421,6 +422,28 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
       setActiveTab(initialTab);
     }
   }, [initialTab]);
+
+  useEffect(() => {
+    if (!mobilePanelOpen || typeof window === "undefined") return undefined;
+
+    window.history.pushState({ ...(window.history.state || {}), __adminPanelOpen: true }, "");
+    const handlePopState = () => {
+      setMobilePanelOpen(false);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [mobilePanelOpen]);
+
+  const closeMobilePanel = useCallback(() => {
+    if (typeof window !== "undefined" && mobilePanelOpen && window.history.state?.__adminPanelOpen) {
+      window.history.back();
+      return;
+    }
+    setMobilePanelOpen(false);
+  }, [mobilePanelOpen]);
 
   const canViewUsers = hasPermission(adminProfile, "viewUsers");
   const canEditUsers = hasPermission(adminProfile, "editUsers");
@@ -860,6 +883,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
     0,
     (dashboardStats?.totalUsers || 0) - (dashboardStats?.paidUsers || 0) - qsActive
   );
+  const activeMenuItem = MENU.find((item) => item.id === activeTab) || MENU[0];
 
   return (
     <div className="w-full max-w-full space-y-4 overflow-x-hidden" style={{ fontFamily: AR }}>
@@ -871,7 +895,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
         </div>
 
         <div className="w-full max-w-full p-4 sm:p-5">
-          <div className="mb-5 grid w-full max-w-full grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3">
+          <div className={`mb-5 grid w-full max-w-full grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3 ${mobilePanelOpen ? "hidden md:grid" : ""}`}>
             {MENU.map((item) => {
               const pendingQsBadge = item.id === "qspremium" && activeTab !== "qspremium"
                 ? qsRequests.filter((r) => r.status === "pending").length
@@ -889,7 +913,13 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    if (typeof window !== "undefined" && window.innerWidth < 768) {
+                      setMobilePanelOpen(true);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }
+                  }}
                   className={`group relative w-full min-w-0 max-w-full overflow-hidden rounded-[24px] border px-3 py-3 text-left transition-all duration-200 sm:rounded-[28px] sm:px-5 sm:py-5 ${
                     isActive
                       ? "border-transparent text-white shadow-[0_18px_45px_rgba(59,91,255,0.28)]"
@@ -897,20 +927,25 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                   }`}
                   style={isActive ? { background: "linear-gradient(135deg,#3053ff 0%,#4b6cff 52%,#2f6af6 100%)" } : undefined}
                 >
-                  <div className="flex min-w-0 items-center gap-2.5 sm:gap-4">
+                  <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                    <div className="flex min-w-0 items-start justify-between gap-3 sm:contents">
                     <span
-                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border text-[20px] sm:h-16 sm:w-16 sm:rounded-[22px] sm:text-[30px] ${
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] border text-[18px] sm:h-16 sm:w-16 sm:rounded-[22px] sm:text-[30px] ${
                         isActive ? "border-white/20 bg-white/14 text-white" : ""
                       }`}
                       style={isActive ? undefined : { background: meta.tint, borderColor: `${meta.accent}22`, color: meta.accent }}
                     >
                       {meta.icon}
                     </span>
-                    <div className="min-w-0 flex-1">
-                      <div className={`text-[13px] font-extrabold leading-tight sm:text-[18px] ${isActive ? "text-white" : "text-[#1e293b]"}`}>
+                    <span className={`shrink-0 text-[16px] leading-none sm:text-[32px] ${isActive ? "text-white/85" : "text-slate-400 transition-transform group-hover:translate-x-0.5"}`}>
+                      ›
+                    </span>
+                    </div>
+                    <div className="min-w-0 w-full flex-1">
+                      <div className={`break-words text-[12px] font-extrabold leading-snug sm:text-[18px] sm:leading-tight ${isActive ? "text-white" : "text-[#1e293b]"}`}>
                         {isEn ? item.labelEn : item.labelAr}
                       </div>
-                      <div className={`mt-1 text-[10px] font-medium leading-5 sm:text-[11px] sm:leading-5 ${isActive ? "text-white/75" : "text-slate-400"}`}>
+                      <div className={`mt-1 break-words text-[10px] font-medium leading-4 sm:text-[11px] sm:leading-5 ${isActive ? "text-white/75" : "text-slate-400"}`}>
                         {item.id === "dashboard" && "Overview and live command center"}
                         {item.id === "users" && "Manage accounts and user activity"}
                         {item.id === "pending" && "Review waiting approvals"}
@@ -922,9 +957,6 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                         {item.id === "qspremium" && "QS premium plans and requests"}
                       </div>
                     </div>
-                    <span className={`shrink-0 text-[18px] leading-none sm:text-[32px] ${isActive ? "text-white/85" : "text-slate-400 transition-transform group-hover:translate-x-0.5"}`}>
-                      ›
-                    </span>
                   </div>
                   {badgeValue > 0 && (
                     <span className={`absolute top-4 right-4 flex min-w-[26px] items-center justify-center rounded-full px-2 py-1 text-[10px] font-extrabold shadow ${
@@ -938,7 +970,34 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
             })}
           </div>
 
-          <section className="min-w-0">
+          <section className={`${mobilePanelOpen ? "fixed inset-0 z-[70] overflow-y-auto bg-[linear-gradient(180deg,#f6faff_0%,#eef5ff_100%)] p-4" : "hidden"} min-w-0 md:static md:block md:overflow-visible md:bg-transparent md:p-0`}>
+            <div className="mx-auto w-full max-w-[720px] md:max-w-none">
+              <div className="md:hidden sticky top-0 z-10 mb-4 rounded-[24px] border border-[#dbe4ff] bg-white/95 px-4 py-3 shadow-[0_18px_48px_rgba(37,99,235,0.10)] backdrop-blur">
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={closeMobilePanel}
+                    className="rounded-2xl border border-[#d8e4ff] bg-[#f7fbff] px-4 py-2 text-[12px] font-extrabold text-[#2151d1]"
+                  >
+                    ← {isEn ? "Back" : "رجوع"}
+                  </button>
+                  <div className="min-w-0 text-center">
+                    <div className="truncate text-[14px] font-extrabold text-[#082555]">
+                      {isEn ? activeMenuItem.labelEn : activeMenuItem.labelAr}
+                    </div>
+                    <div className="mt-1 text-[10px] font-medium text-slate-400">Admin section</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeMobilePanel}
+                    className="rounded-2xl border border-[#ffd9df] bg-[#fff5f7] px-4 py-2 text-[12px] font-extrabold text-[#e11d48]"
+                  >
+                    {isEn ? "Close" : "إغلاق"} ✕
+                  </button>
+                </div>
+              </div>
+
+              <div className={`${mobilePanelOpen ? "rounded-[28px] border border-[#dbe4ff] bg-white p-4 shadow-[0_24px_60px_rgba(37,99,235,0.10)]" : ""} md:rounded-none md:border-0 md:bg-transparent md:p-0 md:shadow-none`}>
             {activeTab === "dashboard" && (
               <div className="space-y-5">
 
@@ -965,7 +1024,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                 ) : (
                   <>
                     {/* ── KPI Cards ──────────────────────────────────────── */}
-                    <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(176px, 1fr))" }}>
+                    <div className="grid grid-cols-2 gap-3 md:grid-cols-2 xl:grid-cols-3">
                       <KpiCard
                         icon="👥" label="Total Users"
                         value={dashboardStats?.totalUsers || 0}
@@ -1444,23 +1503,24 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                     </div>
 
                     {totalUsersPages > 1 && (
-                      <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                      <div dir="ltr" className="flex flex-wrap items-center justify-center gap-2 pt-1">
                         {Array.from({ length: totalUsersPages }, (_, index) => {
                           const pageNumber = index + 1;
                           const isActivePage = pageNumber === usersPage;
+                          const needsFetch = pageNumber > loadedUsersPages && usersHasMore && !isSearchingAllUsers;
                           return (
                             <button
                               key={pageNumber}
                               type="button"
                               onClick={() => handleUsersPageChange(pageNumber)}
-                              disabled={usersLoading && pageNumber > loadedUsersPages}
+                              disabled={usersLoading && needsFetch}
                               className={`min-w-[42px] rounded-xl border px-3 py-2 text-[12px] font-extrabold transition ${
                                 isActivePage
                                   ? "border-[#1d4ed8] bg-[#1d4ed8] text-white shadow-sm"
                                   : "border-[#dbe2ea] bg-white text-slate-600 hover:border-[#93c5fd] hover:text-[#1d4ed8]"
                               }`}
                             >
-                              {usersLoading && pageNumber > loadedUsersPages ? "..." : pageNumber}
+                              {pageNumber}
                             </button>
                           );
                         })}
@@ -2564,6 +2624,8 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                   )}
                 </div>
             )}
+              </div>
+            </div>
           </section>
         </div>
       </div>

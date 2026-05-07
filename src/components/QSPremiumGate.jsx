@@ -263,6 +263,15 @@ const FEATURES = [
   "تصدير التحليل وحفظه في حسابك",
 ];
 
+const FEATURES_EN = [
+  "First Principle cost analysis",
+  "All CSI divisions (18 divisions, 300+ items)",
+  "Editable materials + labour + equipment",
+  "Indirect cost assumptions",
+  "Detailed final unit price",
+  "Export analysis and save it to your account",
+];
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -283,7 +292,8 @@ function hoursBetween(ts) {
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
-function InfoModal({ onClose }) {
+function InfoModal({ onClose, language = "ar" }) {
+  const isEn = language === "en";
   return (
     <div style={styles.overlay} onClick={onClose}>
       <div style={styles.overlayCard} onClick={(e) => e.stopPropagation()}>
@@ -293,10 +303,11 @@ function InfoModal({ onClose }) {
         </div>
         <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.85)", lineHeight: "1.7" }}>
           <p style={{ marginBottom: "12px" }}>
-            باقة التسعير الاحترافية مصممة للمهندسين والمقاولين الذين يحتاجون إلى تحليل دقيق للتكاليف
-            باستخدام أسلوب First Principle مع بيانات شاملة لجميع أقسام CSI.
+            {isEn
+              ? "The professional pricing package is designed for engineers and contractors who need accurate cost analysis using the First Principle method with comprehensive CSI coverage."
+              : "باقة التسعير الاحترافية مصممة للمهندسين والمقاولين الذين يحتاجون إلى تحليل دقيق للتكاليف باستخدام أسلوب First Principle مع بيانات شاملة لجميع أقسام CSI."}
           </p>
-          <div style={{ fontWeight: "700", color: "#ffd700", marginBottom: "8px" }}>📋 سياسة الاسترداد:</div>
+          <div style={{ fontWeight: "700", color: "#ffd700", marginBottom: "8px" }}>{isEn ? "📋 Refund Policy:" : "📋 سياسة الاسترداد:"}</div>
           <div style={{
             background: "rgba(255,255,255,0.06)",
             borderRadius: "10px",
@@ -309,19 +320,19 @@ function InfoModal({ onClose }) {
           }}>
             <div style={{ display: "flex", gap: "8px" }}>
               <span style={{ color: "#4ade80", flexShrink: 0 }}>✅</span>
-              <span><strong style={{ color: "#fff" }}>خلال 48 ساعة من الفتح:</strong> يمكن طلب استرداد المبلغ مع خصم <strong style={{ color: "#ffd700" }}>5 دولار</strong> رسوم إدارية فقط</span>
+              <span>{isEn ? <><strong style={{ color: "#fff" }}>Within 48 hours of activation:</strong> refund available with only a <strong style={{ color: "#ffd700" }}>$5</strong> admin fee deduction</> : <><strong style={{ color: "#fff" }}>خلال 48 ساعة من الفتح:</strong> يمكن طلب استرداد المبلغ مع خصم <strong style={{ color: "#ffd700" }}>5 دولار</strong> رسوم إدارية فقط</>}</span>
             </div>
             <div style={{ display: "flex", gap: "8px" }}>
               <span style={{ color: "#facc15", flexShrink: 0 }}>⚠️</span>
-              <span><strong style={{ color: "#fff" }}>بعد 48 ساعة حتى 7 أيام:</strong> يمكن طلب الاسترداد مع خصم <strong style={{ color: "#ffd700" }}>20 دولار</strong> رسوم الاستخدام</span>
+              <span>{isEn ? <><strong style={{ color: "#fff" }}>After 48 hours up to 7 days:</strong> refund available with a <strong style={{ color: "#ffd700" }}>$20</strong> usage deduction</> : <><strong style={{ color: "#fff" }}>بعد 48 ساعة حتى 7 أيام:</strong> يمكن طلب الاسترداد مع خصم <strong style={{ color: "#ffd700" }}>20 دولار</strong> رسوم الاستخدام</>}</span>
             </div>
             <div style={{ display: "flex", gap: "8px" }}>
               <span style={{ color: "#f87171", flexShrink: 0 }}>🚫</span>
-              <span><strong style={{ color: "#fff" }}>بعد مرور 7 أيام:</strong> لا يمكن استرداد المبلغ نهائياً</span>
+              <span>{isEn ? <><strong style={{ color: "#fff" }}>After 7 days:</strong> no refund is available</> : <><strong style={{ color: "#fff" }}>بعد مرور 7 أيام:</strong> لا يمكن استرداد المبلغ نهائياً</>}</span>
             </div>
           </div>
           <div style={{ marginTop: "10px", fontSize: "11px", color: "rgba(255,255,255,0.55)", lineHeight: "1.6" }}>
-            ⏱ فترة التجربة 48 ساعة — وصول كامل لجميع البنود والباقتين المتاحتين في التطبيق
+            {isEn ? "⏱ 48-hour trial period — full access to all items and both packages in the app" : "⏱ فترة التجربة 48 ساعة — وصول كامل لجميع البنود والباقتين المتاحتين في التطبيق"}
           </div>
         </div>
         <button
@@ -329,7 +340,7 @@ function InfoModal({ onClose }) {
           onClick={onClose}
           style={{ ...styles.ctaButton, marginTop: "20px", padding: "10px 0", fontSize: "13px" }}
         >
-          حسناً، فهمت
+          {isEn ? "OK, got it" : "حسناً، فهمت"}
         </button>
       </div>
     </div>
@@ -370,7 +381,8 @@ function buildEmailPayload({ orderId, userName, userEmail, amount, currency, cou
 
 const COUNTRY_LABELS = { sa: "المملكة العربية السعودية", eg: "جمهورية مصر العربية", ae: "الإمارات العربية المتحدة" };
 
-function RequestForm({ country, userId, userEmail, userName, systemBridge, onSuccess, onCancel }) {
+function RequestForm({ country, userId, userEmail, userName, systemBridge, onSuccess, onCancel, language = "ar" }) {
+  const isEn = language === "en";
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -423,14 +435,14 @@ function RequestForm({ country, userId, userEmail, userName, systemBridge, onSuc
           </div>
 
           <div style={{ fontSize: "18px", fontWeight: "800", color: "#4ade80", marginBottom: "8px" }}>
-            تم إرسال الطلب بنجاح!
+            {isEn ? "Request sent successfully!" : "تم إرسال الطلب بنجاح!"}
           </div>
           <div style={{ fontSize: "13px", color: "rgba(255,255,255,0.8)", lineHeight: "1.8", marginBottom: "20px" }}>
-            تم حفظ طلبك وفتح تطبيق البريد الإلكتروني تلقائياً.
+            {isEn ? "Your request has been saved and your email app was opened automatically." : "تم حفظ طلبك وفتح تطبيق البريد الإلكتروني تلقائياً."}
             <br />
-            <strong style={{ color: "#ffd700" }}>يُرجى إرفاق ايصال الدفع وإرسال الإيميل</strong>
+            <strong style={{ color: "#ffd700" }}>{isEn ? "Please attach the payment receipt and send the email" : "يُرجى إرفاق ايصال الدفع وإرسال الإيميل"}</strong>
             <br />
-            حتى يتمكن فريق الإدارة من مراجعة طلبك وتفعيل الباقة.
+            {isEn ? "so the admin team can review your request and activate the package." : "حتى يتمكن فريق الإدارة من مراجعة طلبك وتفعيل الباقة."}
           </div>
 
           {/* Info box */}
@@ -445,9 +457,9 @@ function RequestForm({ country, userId, userEmail, userName, systemBridge, onSuc
             marginBottom: "20px",
             textAlign: "right",
           }}>
-            ⏱ سيتم مراجعة طلبك خلال 24–48 ساعة عمل بعد استلام الإيصال.
+            {isEn ? "⏱ Your request will be reviewed within 24–48 business hours after receiving the receipt." : "⏱ سيتم مراجعة طلبك خلال 24–48 ساعة عمل بعد استلام الإيصال."}
             <br />
-            📧 ستظهر الباقة مفعّلة تلقائياً بعد موافقة الإدارة.
+            {isEn ? "📧 The package will appear as activated automatically after admin approval." : "📧 ستظهر الباقة مفعّلة تلقائياً بعد موافقة الإدارة."}
           </div>
 
           <button
@@ -455,7 +467,7 @@ function RequestForm({ country, userId, userEmail, userName, systemBridge, onSuc
             onClick={onSuccess}
             style={{ ...styles.ctaButton, marginTop: 0 }}
           >
-            حسناً، سأرسل الإيميل الآن
+            {isEn ? "OK, I will send the email now" : "حسناً، سأرسل الإيميل الآن"}
           </button>
         </div>
       </div>
@@ -468,10 +480,10 @@ function RequestForm({ country, userId, userEmail, userName, systemBridge, onSuc
       <div style={styles.overlayCard} onClick={(e) => e.stopPropagation()}>
         <button style={styles.closeBtn} onClick={onCancel} type="button">✕</button>
         <div style={{ fontSize: "17px", fontWeight: "800", color: "#ffd700", marginBottom: "4px" }}>
-          طلب الاشتراك
+          {isEn ? "Subscription request" : "طلب الاشتراك"}
         </div>
         <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.7)", marginBottom: "16px" }}>
-          QS Premium Package — باقة التسعير الاحترافية
+          {isEn ? "QS Premium Package — Professional pricing package" : "QS Premium Package — باقة التسعير الاحترافية"}
         </div>
 
         {/* Price badge */}
@@ -483,9 +495,9 @@ function RequestForm({ country, userId, userEmail, userName, systemBridge, onSuc
           marginBottom: "16px",
           textAlign: "center",
         }}>
-          <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.6)", marginBottom: "4px" }}>رسوم الاشتراك</div>
-          <div style={{ fontSize: "24px", fontWeight: "800", color: "#ffd700" }}>{priceInfo.label}</div>
-          <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.5)", marginTop: "2px" }}>{priceInfo.labelEn}</div>
+          <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.6)", marginBottom: "4px" }}>{isEn ? "Subscription fee" : "رسوم الاشتراك"}</div>
+          <div style={{ fontSize: "24px", fontWeight: "800", color: "#ffd700" }}>{isEn ? priceInfo.labelEn : priceInfo.label}</div>
+          <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.5)", marginTop: "2px" }}>{isEn ? "One-time payment" : priceInfo.labelEn}</div>
         </div>
 
         {/* Steps hint */}
@@ -499,22 +511,33 @@ function RequestForm({ country, userId, userEmail, userName, systemBridge, onSuc
           lineHeight: "1.8",
           direction: "rtl",
         }}>
-          <div style={{ fontWeight: "700", color: "#ffd700", marginBottom: "4px" }}>كيف يعمل الطلب؟</div>
-          1️⃣ اضغط "تأكيد" ← يُفتح تطبيق البريد تلقائياً<br />
-          2️⃣ أرفق ايصال الدفع وأرسل الإيميل<br />
-          3️⃣ تنتظر موافقة الإدارة (24–48 ساعة)<br />
-          4️⃣ تُفعَّل الباقة تلقائياً بعد الموافقة ✓
+          <div style={{ fontWeight: "700", color: "#ffd700", marginBottom: "4px" }}>{isEn ? "How does it work?" : "كيف يعمل الطلب؟"}</div>
+          {isEn ? (
+            <>
+              1️⃣ Press "Confirm" ← your email app opens automatically<br />
+              2️⃣ Attach the payment receipt and send the email<br />
+              3️⃣ Wait for admin approval (24–48 hours)<br />
+              4️⃣ The package is activated automatically after approval ✓
+            </>
+          ) : (
+            <>
+              1️⃣ اضغط "تأكيد" ← يُفتح تطبيق البريد تلقائياً<br />
+              2️⃣ أرفق ايصال الدفع وأرسل الإيميل<br />
+              3️⃣ تنتظر موافقة الإدارة (24–48 ساعة)<br />
+              4️⃣ تُفعَّل الباقة تلقائياً بعد الموافقة ✓
+            </>
+          )}
         </div>
 
         {/* Optional note */}
         <div style={{ marginBottom: "14px" }}>
           <label style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", display: "block", marginBottom: "6px" }}>
-            ملاحظة للإدارة (اختياري)
+            {isEn ? "Note to admin (optional)" : "ملاحظة للإدارة (اختياري)"}
           </label>
           <textarea
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="أي ملاحظة إضافية..."
+            placeholder={isEn ? "Any additional note..." : "أي ملاحظة إضافية..."}
             rows={2}
             style={styles.formInput}
           />
@@ -533,23 +556,23 @@ function RequestForm({ country, userId, userEmail, userName, systemBridge, onSuc
           color: "rgba(255,255,255,0.8)",
         }}>
           <div style={{ fontWeight: "800", color: "#ffd700", marginBottom: "6px", fontSize: "12px" }}>
-            📋 سياسة الاسترداد — يرجى القراءة قبل التأكيد
+            {isEn ? "📋 Refund policy — please read before confirming" : "📋 سياسة الاسترداد — يرجى القراءة قبل التأكيد"}
           </div>
           <div style={{ display: "flex", gap: "6px", marginBottom: "3px" }}>
             <span style={{ color: "#4ade80", flexShrink: 0 }}>✅</span>
-            <span>بعد الفتح مباشرةً — فترة تجربة <strong style={{ color: "#fff" }}>48 ساعة</strong> بوصول كامل لجميع البنود والباقتين</span>
+            <span>{isEn ? <>Immediately after activation — a <strong style={{ color: "#fff" }}>48-hour</strong> trial with full access to all items and both packages</> : <>بعد الفتح مباشرةً — فترة تجربة <strong style={{ color: "#fff" }}>48 ساعة</strong> بوصول كامل لجميع البنود والباقتين</>}</span>
           </div>
           <div style={{ display: "flex", gap: "6px", marginBottom: "3px" }}>
             <span style={{ color: "#4ade80", flexShrink: 0 }}>✅</span>
-            <span>طلب استرداد خلال الـ 48 ساعة → خصم <strong style={{ color: "#ffd700" }}>5 دولار</strong> فقط</span>
+            <span>{isEn ? <>Refund request within 48 hours → only a <strong style={{ color: "#ffd700" }}>$5</strong> deduction</> : <>طلب استرداد خلال الـ 48 ساعة → خصم <strong style={{ color: "#ffd700" }}>5 دولار</strong> فقط</>}</span>
           </div>
           <div style={{ display: "flex", gap: "6px", marginBottom: "3px" }}>
             <span style={{ color: "#facc15", flexShrink: 0 }}>⚠️</span>
-            <span>استرداد بعد 48 ساعة وحتى 7 أيام → خصم <strong style={{ color: "#ffd700" }}>20 دولار</strong></span>
+            <span>{isEn ? <>Refund after 48 hours and up to 7 days → <strong style={{ color: "#ffd700" }}>$20</strong> deduction</> : <>استرداد بعد 48 ساعة وحتى 7 أيام → خصم <strong style={{ color: "#ffd700" }}>20 دولار</strong></>}</span>
           </div>
           <div style={{ display: "flex", gap: "6px" }}>
             <span style={{ color: "#f87171", flexShrink: 0 }}>🚫</span>
-            <span>بعد مرور <strong style={{ color: "#fff" }}>7 أيام</strong> من الفتح → لا يمكن الاسترداد نهائياً</span>
+            <span>{isEn ? <>After <strong style={{ color: "#fff" }}>7 days</strong> from activation → no refund is available</> : <>بعد مرور <strong style={{ color: "#fff" }}>7 أيام</strong> من الفتح → لا يمكن الاسترداد نهائياً</>}</span>
           </div>
         </div>
 
@@ -563,7 +586,7 @@ function RequestForm({ country, userId, userEmail, userName, systemBridge, onSuc
           disabled={loading}
           style={{ ...styles.ctaButton, opacity: loading ? 0.7 : 1, cursor: loading ? "not-allowed" : "pointer" }}
         >
-          {loading ? "جاري الإرسال..." : "تأكيد طلب الاشتراك — أفهم سياسة الاسترداد"}
+          {loading ? (isEn ? "Sending..." : "جاري الإرسال...") : (isEn ? "Confirm subscription request — I understand the refund policy" : "تأكيد طلب الاشتراك — أفهم سياسة الاسترداد")}
         </button>
         <button
           type="button"
@@ -578,14 +601,15 @@ function RequestForm({ country, userId, userEmail, userName, systemBridge, onSuc
             cursor: "pointer", marginTop: "8px",
           }}
         >
-          إلغاء
+          {isEn ? "Cancel" : "إلغاء"}
         </button>
       </div>
     </div>
   );
 }
 
-function RefundModal({ onSubmit, onCancel }) {
+function RefundModal({ onSubmit, onCancel, language = "ar" }) {
+  const isEn = language === "en";
   const [reason, setReason] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -604,7 +628,7 @@ function RefundModal({ onSubmit, onCancel }) {
       <div style={styles.overlayCard} onClick={(e) => e.stopPropagation()}>
         <button style={styles.closeBtn} onClick={onCancel} type="button">✕</button>
         <div style={{ fontSize: "16px", fontWeight: "800", color: "#ffd700", marginBottom: "8px" }}>
-          طلب استرداد المبلغ
+          {isEn ? "Refund request" : "طلب استرداد المبلغ"}
         </div>
         <div style={{
           background: "rgba(255,255,255,0.06)",
@@ -618,25 +642,25 @@ function RefundModal({ onSubmit, onCancel }) {
         }}>
           <div style={{ display: "flex", gap: "8px", marginBottom: "4px" }}>
             <span style={{ color: "#4ade80", flexShrink: 0 }}>✅</span>
-            <span><strong style={{ color: "#fff" }}>خلال 48 ساعة:</strong> خصم 5 دولار فقط</span>
+            <span>{isEn ? <><strong style={{ color: "#fff" }}>Within 48 hours:</strong> only a $5 deduction</> : <><strong style={{ color: "#fff" }}>خلال 48 ساعة:</strong> خصم 5 دولار فقط</>}</span>
           </div>
           <div style={{ display: "flex", gap: "8px", marginBottom: "4px" }}>
             <span style={{ color: "#facc15", flexShrink: 0 }}>⚠️</span>
-            <span><strong style={{ color: "#fff" }}>بعد 48 ساعة حتى 7 أيام:</strong> خصم 20 دولار</span>
+            <span>{isEn ? <><strong style={{ color: "#fff" }}>After 48 hours and up to 7 days:</strong> $20 deduction</> : <><strong style={{ color: "#fff" }}>بعد 48 ساعة حتى 7 أيام:</strong> خصم 20 دولار</>}</span>
           </div>
           <div style={{ display: "flex", gap: "8px" }}>
             <span style={{ color: "#f87171", flexShrink: 0 }}>🚫</span>
-            <span><strong style={{ color: "#fff" }}>بعد 7 أيام:</strong> لا يمكن الاسترداد</span>
+            <span>{isEn ? <><strong style={{ color: "#fff" }}>After 7 days:</strong> refund is not available</> : <><strong style={{ color: "#fff" }}>بعد 7 أيام:</strong> لا يمكن الاسترداد</>}</span>
           </div>
         </div>
         <div style={{ marginBottom: "14px" }}>
           <label style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", display: "block", marginBottom: "6px" }}>
-            سبب طلب الاسترداد *
+            {isEn ? "Reason for refund request *" : "سبب طلب الاسترداد *"}
           </label>
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="اذكر السبب بوضوح..."
+            placeholder={isEn ? "State the reason clearly..." : "اذكر السبب بوضوح..."}
             rows={4}
             style={styles.formInput}
           />
@@ -652,7 +676,7 @@ function RefundModal({ onSubmit, onCancel }) {
             cursor: loading || !reason.trim() ? "not-allowed" : "pointer",
           }}
         >
-          {loading ? "جاري الإرسال..." : "إرسال طلب الاسترداد"}
+          {loading ? (isEn ? "Sending..." : "جاري الإرسال...") : (isEn ? "Send refund request" : "إرسال طلب الاسترداد")}
         </button>
       </div>
     </div>
@@ -671,7 +695,9 @@ export default function QSPremiumGate({
   onOpenAuthScreen,
   systemBridge,
   isAdminUnlocked = false,
+  language = "ar",
 }) {
+  const isEn = language === "en";
   const [subscription, setSubscription] = useState(undefined); // undefined = loading
   const [showInfo, setShowInfo] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -778,7 +804,7 @@ export default function QSPremiumGate({
       <div style={{ ...styles.root, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "200px" }}>
         <div style={{ textAlign: "center", color: "#64748b" }}>
           <div style={{ fontSize: "28px", animation: "spin 1s linear infinite", display: "inline-block" }}>⏳</div>
-          <div style={{ marginTop: "8px", fontSize: "13px", fontFamily: AR }}>جاري التحميل...</div>
+          <div style={{ marginTop: "8px", fontSize: "13px", fontFamily: AR }}>{isEn ? "Loading..." : "جاري التحميل..."}</div>
         </div>
         <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       </div>
@@ -793,11 +819,10 @@ export default function QSPremiumGate({
           <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
           <div style={styles.pendingIcon}>⏳</div>
           <div style={{ fontSize: "18px", fontWeight: "800", color: "#0f2444", margin: "16px 0 8px", fontFamily: AR }}>
-            طلبك قيد المراجعة
+            {isEn ? "Your request is under review" : "طلبك قيد المراجعة"}
           </div>
           <div style={{ fontSize: "13px", color: "#64748b", fontFamily: AR, lineHeight: "1.7" }}>
-            تم استلام طلب الاشتراك بنجاح. سيقوم فريق الإدارة بمراجعته ومعالجته في أقرب وقت ممكن
-            (عادةً خلال 24-48 ساعة عمل).
+            {isEn ? "Your subscription request has been received successfully. Our admin team will review and process it as soon as possible (usually within 24–48 business hours)." : "تم استلام طلب الاشتراك بنجاح. سيقوم فريق الإدارة بمراجعته ومعالجته في أقرب وقت ممكن (عادةً خلال 24-48 ساعة عمل)."}
           </div>
           <div style={{
             marginTop: "20px",
@@ -809,7 +834,7 @@ export default function QSPremiumGate({
             color: "#1e3a8a",
             fontFamily: AR,
           }}>
-            📧 ستتلقى إشعاراً عند تفعيل اشتراكك.
+            {isEn ? "📧 You will receive a notification when your subscription is activated." : "📧 ستتلقى إشعاراً عند تفعيل اشتراكك."}
           </div>
         </div>
       </div>
@@ -832,7 +857,7 @@ export default function QSPremiumGate({
               <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                 <span style={{ fontSize: "16px" }}>⏱</span>
                 <span>
-                  أنت في فترة التجربة ({trialHoursLeft} ساعة متبقية) — وصول كامل لجميع البنود والباقتين
+                  {isEn ? `You are in the trial period (${trialHoursLeft} hours left) — full access to all items and both packages` : `أنت في فترة التجربة (${trialHoursLeft} ساعة متبقية) — وصول كامل لجميع البنود والباقتين`}
                 </span>
               </div>
               {!hasRefundRequest && !refundSent && (
@@ -841,14 +866,14 @@ export default function QSPremiumGate({
                   style={styles.refundBtn}
                   onClick={() => setShowRefund(true)}
                 >
-                  طلب استرداد المبلغ
+                  {isEn ? "Request Refund" : "طلب استرداد المبلغ"}
                 </button>
               )}
               {(hasRefundRequest || refundSent) && (
                 <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)" }}>
-                  {refundStatus === "pending_review" || refundSent ? "طلب الاسترداد قيد المراجعة" :
-                   refundStatus === "approved" ? "تمت الموافقة على الاسترداد" :
-                   refundStatus === "rejected" ? "تم رفض طلب الاسترداد" : ""}
+                  {refundStatus === "pending_review" || refundSent ? (isEn ? "Refund request is under review" : "طلب الاسترداد قيد المراجعة") :
+                   refundStatus === "approved" ? (isEn ? "Refund approved" : "تمت الموافقة على الاسترداد") :
+                   refundStatus === "rejected" ? (isEn ? "Refund request rejected" : "تم رفض طلب الاسترداد") : ""}
                 </span>
               )}
             </div>
@@ -858,20 +883,20 @@ export default function QSPremiumGate({
               <div style={{ marginBottom: "12px" }}>
                 <div style={styles.premiumBadge}>
                   <span>💎</span>
-                  <span>QS Premium — وصول كامل</span>
+                  <span>{isEn ? "QS Premium — Full access" : "QS Premium — وصول كامل"}</span>
                 </div>
               </div>
               {!hasRefundRequest && !refundSent && (
                 <div style={{ ...styles.warningBanner, display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                  <span>⚠️ انتهت فترة التجربة — يمكنك الاسترداد مع خصم 20 دولار حتى 7 أيام من الفتح</span>
-                  <button type="button" style={{ ...styles.refundBtn, background: "rgba(245,158,11,0.3)", borderColor: "rgba(245,158,11,0.5)", color: "#92400e" }} onClick={() => setShowRefund(true)}>استرداد</button>
+                  <span>{isEn ? "⚠️ The trial period has ended — you can still request a refund with a $20 deduction within 7 days of activation" : "⚠️ انتهت فترة التجربة — يمكنك الاسترداد مع خصم 20 دولار حتى 7 أيام من الفتح"}</span>
+                  <button type="button" style={{ ...styles.refundBtn, background: "rgba(245,158,11,0.3)", borderColor: "rgba(245,158,11,0.5)", color: "#92400e" }} onClick={() => setShowRefund(true)}>{isEn ? "Refund" : "استرداد"}</button>
                 </div>
               )}
               {(hasRefundRequest || refundSent) && (
                 <div style={styles.warningBanner}>
-                  {refundStatus === "pending_review" || refundSent ? "⏳ طلب الاسترداد قيد المراجعة" :
-                   refundStatus === "approved" ? "✅ تمت الموافقة على الاسترداد" :
-                   refundStatus === "rejected" ? "❌ تم رفض طلب الاسترداد" : ""}
+                  {refundStatus === "pending_review" || refundSent ? (isEn ? "⏳ Refund request is under review" : "⏳ طلب الاسترداد قيد المراجعة") :
+                   refundStatus === "approved" ? (isEn ? "✅ Refund approved" : "✅ تمت الموافقة على الاسترداد") :
+                   refundStatus === "rejected" ? (isEn ? "❌ Refund request rejected" : "❌ تم رفض طلب الاسترداد") : ""}
                 </div>
               )}
             </>
@@ -880,7 +905,7 @@ export default function QSPremiumGate({
             <div style={{ marginBottom: "12px" }}>
               <div style={styles.premiumBadge}>
                 <span>💎</span>
-                <span>{hasAdminAccess ? "QS Premium — وصول الأدمن الكامل" : "QS Premium — وصول كامل"}</span>
+                <span>{hasAdminAccess ? (isEn ? "QS Premium — Full Admin Access" : "QS Premium — وصول الأدمن الكامل") : (isEn ? "QS Premium — Full Access" : "QS Premium — وصول كامل")}</span>
               </div>
             </div>
           )}
@@ -895,6 +920,7 @@ export default function QSPremiumGate({
                 setRefundSent(true);
                 setShowRefund(false);
               }}
+              language={language}
             />
           )}
         </div>
@@ -929,8 +955,8 @@ export default function QSPremiumGate({
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
               <span style={{ fontSize: "18px" }}>🎁</span>
-              <span style={{ fontWeight: "900", color: "#082555" }}>التجربة المجانية</span>
-              <span style={{ color: "#5a4e38", fontWeight: "700", lineHeight: "1.7" }}>وصول كامل لجميع البنود والباقتين</span>
+              <span style={{ fontWeight: "900", color: "#082555" }}>{isEn ? "Free trial" : "التجربة المجانية"}</span>
+              <span style={{ color: "#5a4e38", fontWeight: "700", lineHeight: "1.7" }}>{isEn ? "Full access to all items and both packages" : "وصول كامل لجميع البنود والباقتين"}</span>
             </div>
             <div style={{
               background: "#082555",
@@ -943,7 +969,7 @@ export default function QSPremiumGate({
               whiteSpace: "nowrap",
               letterSpacing: "0.01em",
             }}>
-              {remaining} / {FREE_TRIAL_LIMIT} بنود متبقية
+              {isEn ? `${remaining} / ${FREE_TRIAL_LIMIT} items left` : `${remaining} / ${FREE_TRIAL_LIMIT} بنود متبقية`}
             </div>
           </div>
           {children}
@@ -976,7 +1002,7 @@ export default function QSPremiumGate({
           gap: "4px",
           whiteSpace: "nowrap",
         }}>
-          📋 سياسة الباقة
+          {isEn ? "📋 Package policy" : "📋 سياسة الباقة"}
         </button>
 
         {/* Crown icon */}
@@ -984,14 +1010,14 @@ export default function QSPremiumGate({
 
         {/* Package name */}
         <div style={styles.title}>QS Premium Package</div>
-        <div style={styles.titleAr}>باقة التسعير الاحترافية</div>
+        <div style={styles.titleAr}>{isEn ? "Professional pricing package" : "باقة التسعير الاحترافية"}</div>
 
         {/* Price badge */}
         <div style={{ display: "flex", justifyContent: "center" }}>
           <div style={styles.priceBadge}>
             <span>💰</span>
-            <span>{priceInfo.label}</span>
-            <span style={{ fontSize: "12px", fontWeight: "400", opacity: 0.7 }}>مرة واحدة</span>
+            <span>{isEn ? priceInfo.labelEn : priceInfo.label}</span>
+            <span style={{ fontSize: "12px", fontWeight: "400", opacity: 0.7 }}>{isEn ? "one-time" : "مرة واحدة"}</span>
           </div>
         </div>
 
@@ -1006,7 +1032,7 @@ export default function QSPremiumGate({
             fontSize: "12px",
             color: "#fca5a5",
           }}>
-            <div style={{ fontWeight: "700", marginBottom: "4px" }}>سبب الرفض:</div>
+            <div style={{ fontWeight: "700", marginBottom: "4px" }}>{isEn ? "Rejection reason:" : "سبب الرفض:"}</div>
             {subscription.rejectionReason}
           </div>
         )}
@@ -1020,13 +1046,13 @@ export default function QSPremiumGate({
             fontSize: "12px",
             color: "#fcd34d",
           }}>
-            تم إيقاف اشتراكك. للاستفسار، تواصل مع الدعم أو أعد تقديم طلب اشتراك جديد.
+            {isEn ? "Your subscription has been deactivated. For help, contact support or submit a new subscription request." : "تم إيقاف اشتراكك. للاستفسار، تواصل مع الدعم أو أعد تقديم طلب اشتراك جديد."}
           </div>
         )}
 
         {/* Features list */}
         <ul style={styles.featuresList}>
-          {FEATURES.map((f) => (
+          {(isEn ? FEATURES_EN : FEATURES).map((f) => (
             <li key={f} style={styles.featureItem}>
               <span style={styles.goldCheck}>✓</span>
               <span>{f}</span>
@@ -1065,7 +1091,7 @@ export default function QSPremiumGate({
               e.currentTarget.style.boxShadow = "0 0 18px rgba(220,38,68,0.25), inset 0 1px 0 rgba(255,255,255,0.06)";
             }}
           >
-            🔐 يجب تسجيل الدخول أولاً — اضغط هنا لتسجيل الدخول
+            {isEn ? "🔐 You must sign in first — tap here to sign in" : "🔐 يجب تسجيل الدخول أولاً — اضغط هنا لتسجيل الدخول"}
           </button>
         ) : (
           <>
@@ -1074,7 +1100,7 @@ export default function QSPremiumGate({
               style={styles.ctaButton}
               onClick={() => setShowForm(true)}
             >
-              {status === "rejected" || status === "deactivated" ? "طلب اشتراك جديد" : "طلب الاشتراك"}
+              {status === "rejected" || status === "deactivated" ? (isEn ? "Request a new subscription" : "طلب اشتراك جديد") : (isEn ? "Request subscription" : "طلب الاشتراك")}
             </button>
 
             {/* Free Trial button — only show if trial not started yet and no pending/active request */}
@@ -1111,7 +1137,7 @@ export default function QSPremiumGate({
                   e.currentTarget.style.boxShadow = "0 0 18px rgba(16,185,129,0.15), inset 0 1px 0 rgba(255,255,255,0.05)";
                 }}
               >
-                🎁 تجربة مجانية — {FREE_TRIAL_LIMIT} بنود مجانية
+                {isEn ? `🎁 Free trial — ${FREE_TRIAL_LIMIT} free items` : `🎁 تجربة مجانية — ${FREE_TRIAL_LIMIT} بنود مجانية`}
               </button>
             )}
 
@@ -1128,9 +1154,9 @@ export default function QSPremiumGate({
                 color: "#fcd34d",
                 fontFamily: AR,
               }}>
-                🔒 انتهت التجربة المجانية ({FREE_TRIAL_LIMIT}/{FREE_TRIAL_LIMIT} بنود)
+                {isEn ? `🔒 Free trial ended (${FREE_TRIAL_LIMIT}/${FREE_TRIAL_LIMIT} items)` : `🔒 انتهت التجربة المجانية (${FREE_TRIAL_LIMIT}/${FREE_TRIAL_LIMIT} بنود)`}
                 <br />
-                <span style={{ fontSize: "11px", opacity: 0.75 }}>اشترك في الباقة للوصول الكامل</span>
+                <span style={{ fontSize: "11px", opacity: 0.75 }}>{isEn ? "Subscribe to unlock full access" : "اشترك في الباقة للوصول الكامل"}</span>
               </div>
             )}
           </>
@@ -1144,13 +1170,13 @@ export default function QSPremiumGate({
           color: "rgba(255,255,255,0.5)",
           lineHeight: "1.7",
         }}>
-          ⏱ تجربة 48 ساعة — وصول كامل لجميع البنود والباقتين
+          {isEn ? "⏱ 48-hour trial — full access to all items and both packages" : "⏱ تجربة 48 ساعة — وصول كامل لجميع البنود والباقتين"}
           <br />
-          🛡 استرداد بخصم 5$ خلال 48 ساعة • 20$ حتى 7 أيام • لا استرداد بعد 7 أيام
+          {isEn ? "🛡 Refund with a $5 deduction within 48 hours • $20 up to 7 days • no refund after 7 days" : "🛡 استرداد بخصم 5$ خلال 48 ساعة • 20$ حتى 7 أيام • لا استرداد بعد 7 أيام"}
         </div>
       </div>
 
-      {showInfo && <InfoModal onClose={() => setShowInfo(false)} />}
+      {showInfo && <InfoModal onClose={() => setShowInfo(false)} language={language} />}
 
       {showForm && (
         <RequestForm
@@ -1161,6 +1187,7 @@ export default function QSPremiumGate({
           systemBridge={systemBridge}
           onSuccess={() => setShowForm(false)}
           onCancel={() => setShowForm(false)}
+          language={language}
         />
       )}
     </div>

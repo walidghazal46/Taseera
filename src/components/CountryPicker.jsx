@@ -1,4 +1,5 @@
 import { trackCountryVisit } from "../hooks/useCountryStats";
+import uaeFlagRound from "../assets/uae-flag-round.png";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
 const MONO = "'IBM Plex Mono', monospace";
@@ -181,7 +182,7 @@ function UAELandmarkSVG() {
 
 // ─── Flag components with glossy metallic ring ────────────────────────────────
 
-function FlagCircle({ flagUrl, code, shadow }) {
+function FlagCircle({ flagUrl, code, shadow, offsetX = 0 }) {
   return (
     <div
       style={{
@@ -189,6 +190,7 @@ function FlagCircle({ flagUrl, code, shadow }) {
         width: 62,
         height: 62,
         flexShrink: 0,
+        transform: `translateX(${offsetX}px)`,
       }}
     >
       {/* Outer metallic ring */}
@@ -254,7 +256,7 @@ const COUNTRIES = [
   {
     value: "الإمارات",
     code: "AE",
-    flagUrl: "https://flagcdn.com/ae.svg",
+    flagUrl: uaeFlagRound,
     labelAr: "الإمارات العربية المتحدة",
     labelEn: "United Arab Emirates",
     color: "#1565c0",
@@ -314,7 +316,6 @@ export default function CountryPicker({
   section = "companies",
 }) {
   const isAr = language !== "en";
-
   const handleSelect = (country) => {
     try { trackCountryVisit(country.value, section, authMode).catch(() => {}); } catch {}
     onSelect(country.value);
@@ -482,6 +483,7 @@ export default function CountryPicker({
                     flagUrl={country.flagUrl}
                     code={country.code}
                     shadow={country.shadow}
+                    offsetX={0}
                   />
                 </div>
 

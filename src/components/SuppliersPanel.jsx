@@ -126,8 +126,9 @@ function FilterSelect({ label, value, options, onChange, ariaLabel }) {
   );
 }
 
-function InlineAdBanner({ adBanner, canManageAds = false, onEdit, onToggleVisibility, onRemove }) {
+function InlineAdBanner({ adBanner, canManageAds = false, onEdit, onToggleVisibility, onRemove, language = "ar" }) {
   const hasContent = adBanner?.enabled && adBanner?.imageUrl;
+  const isEn = language === "en";
 
   return (
     <div className="relative rounded-2xl border-2 border-[#E2D8C4] bg-white p-2.5 shadow-sm overflow-hidden">
@@ -139,7 +140,7 @@ function InlineAdBanner({ adBanner, canManageAds = false, onEdit, onToggleVisibi
             className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm"
             style={{ fontFamily: AR }}
           >
-            تعديل
+            {isEn ? "Edit" : "تعديل"}
           </button>
           <button
             type="button"
@@ -147,7 +148,7 @@ function InlineAdBanner({ adBanner, canManageAds = false, onEdit, onToggleVisibi
             className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm"
             style={{ fontFamily: AR }}
           >
-            إظهار
+            {isEn ? "Show" : "إظهار"}
           </button>
           <button
             type="button"
@@ -155,19 +156,19 @@ function InlineAdBanner({ adBanner, canManageAds = false, onEdit, onToggleVisibi
             className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm"
             style={{ fontFamily: AR }}
           >
-            إخفاء
+            {isEn ? "Hide" : "إخفاء"}
           </button>
           <button
             type="button"
             onClick={() => {
-              const ok = window.confirm("هل تريد إزالة محتوى هذا الإعلان؟");
+              const ok = window.confirm(isEn ? "Do you want to remove this ad content?" : "هل تريد إزالة محتوى هذا الإعلان؟");
               if (!ok) return;
               onRemove?.();
             }}
             className="rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-bold text-rose-700 shadow-sm"
             style={{ fontFamily: AR }}
           >
-            إزالة
+            {isEn ? "Remove" : "إزالة"}
           </button>
         </div>
       ) : null}
@@ -198,7 +199,7 @@ function InlineAdBanner({ adBanner, canManageAds = false, onEdit, onToggleVisibi
       ) : canManageAds ? (
         <div className="mx-auto flex h-[230px] w-full max-w-[608px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#d4a843]/35 bg-[#fff9ec] px-4 py-5 text-center">
           <p className="text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
-            مساحة إعلانية
+            {isEn ? "Ad Space" : "مساحة إعلانية"}
           </p>
         </div>
       ) : (
@@ -212,6 +213,7 @@ export default function SuppliersPanel({
   suppliers, authMode, settings, onAddSupplier, onContactSupplier, onCreateRfq, navigationBridge, initialCountry, sessionMeta,
 }) {
   const copy = getSuppliersCopy(settings?.language);
+  const isEn = settings?.language === "en";
   const { profile: adminProfile } = useAdminSession({
     uid: sessionMeta?.uid,
     email: settings?.userEmail,
@@ -341,21 +343,21 @@ export default function SuppliersPanel({
         AD_SLOT_IDS.suppliersAfterPagination
       );
     } catch {
-      window.alert("تعذر تحديث حالة الإعلان");
+      window.alert(isEn ? "Unable to update ad visibility." : "تعذر تحديث حالة الإعلان");
     }
-  }, [adminProfile, canManageAds, suppliersAdBanner]);
+  }, [adminProfile, canManageAds, isEn, suppliersAdBanner]);
 
   const handleEditAd = useCallback(async () => {
     if (!canManageAds) return;
 
     const current = { ...(suppliersAdBanner || DEFAULT_AD_BANNER) };
-    const title = window.prompt("عنوان الإعلان", current.title || "");
+    const title = window.prompt(isEn ? "Ad title" : "عنوان الإعلان", current.title || "");
     if (title === null) return;
-    const imageUrl = window.prompt("رابط صورة الإعلان", current.imageUrl || "");
+    const imageUrl = window.prompt(isEn ? "Ad image URL" : "رابط صورة الإعلان", current.imageUrl || "");
     if (imageUrl === null) return;
-    const targetUrl = window.prompt("رابط التحويل عند الضغط", current.targetUrl || "");
+    const targetUrl = window.prompt(isEn ? "Target URL when clicked" : "رابط التحويل عند الضغط", current.targetUrl || "");
     if (targetUrl === null) return;
-    const alt = window.prompt("نص بديل للصورة (اختياري)", current.alt || "");
+    const alt = window.prompt(isEn ? "Alt text for the image (optional)" : "نص بديل للصورة (اختياري)", current.alt || "");
     if (alt === null) return;
 
     try {
@@ -371,9 +373,9 @@ export default function SuppliersPanel({
         AD_SLOT_IDS.suppliersAfterPagination
       );
     } catch {
-      window.alert("تعذر حفظ تعديل الإعلان");
+      window.alert(isEn ? "Unable to save ad changes." : "تعذر حفظ تعديل الإعلان");
     }
-  }, [adminProfile, canManageAds, suppliersAdBanner]);
+  }, [adminProfile, canManageAds, isEn, suppliersAdBanner]);
 
   const handleRemoveAd = useCallback(async () => {
     if (!canManageAds) return;
@@ -391,9 +393,9 @@ export default function SuppliersPanel({
         AD_SLOT_IDS.suppliersAfterPagination
       );
     } catch {
-      window.alert("تعذر إزالة الإعلان");
+      window.alert(isEn ? "Unable to remove the ad." : "تعذر إزالة الإعلان");
     }
-  }, [adminProfile, canManageAds]);
+  }, [adminProfile, canManageAds, isEn]);
 
   if (activeSection === "supplier-detail" && selectedSupplier) {
     return (
@@ -480,6 +482,7 @@ export default function SuppliersPanel({
         <InlineAdBanner
           adBanner={suppliersAdBanner}
           canManageAds={canManageAds}
+          language={settings?.language || "ar"}
           onEdit={handleEditAd}
           onToggleVisibility={handleToggleAdVisibility}
           onRemove={handleRemoveAd}
@@ -662,6 +665,7 @@ export default function SuppliersPanel({
           <InlineAdBanner
             adBanner={suppliersAdBanner}
             canManageAds={canManageAds}
+            language={settings?.language || "ar"}
             onEdit={handleEditAd}
             onToggleVisibility={handleToggleAdVisibility}
             onRemove={handleRemoveAd}
@@ -680,9 +684,9 @@ export default function SuppliersPanel({
               onChange={(e) => setForm((c) => ({ ...c, name: e.target.value }))} placeholder={copy.writeSupplierName} />
             <div className="grid grid-cols-2 gap-3">
               <FormField label={copy.category} value={form.category}
-                onChange={(e) => setForm((c) => ({ ...c, category: e.target.value }))} placeholder="مواد كهربائية" />
+                onChange={(e) => setForm((c) => ({ ...c, category: e.target.value }))} placeholder={isEn ? "Electrical materials" : "مواد كهربائية"} />
               <FormField label={copy.location} value={form.location}
-                onChange={(e) => setForm((c) => ({ ...c, location: e.target.value }))} placeholder="الرياض" />
+                onChange={(e) => setForm((c) => ({ ...c, location: e.target.value }))} placeholder={isEn ? "Riyadh" : "الرياض"} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <FormField label={copy.phone} value={form.phone}

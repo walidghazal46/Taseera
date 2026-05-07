@@ -30,10 +30,11 @@ function fmtNum(n) {
 // ---------------------------------------------------------------------------
 // In-App Export Preview Modal (replaces window.open on mobile)
 // ---------------------------------------------------------------------------
-function ExportPreviewModal({ data, onClose }) {
+function ExportPreviewModal({ data, onClose, language = "ar" }) {
   const contentRef = useRef(null);
   const frameRef = useRef(null);
   const closeLockRef = useRef(false);
+  const isEn = language === "en";
 
   const handleClose = useCallback((event) => {
     event?.preventDefault?.();
@@ -93,7 +94,7 @@ function ExportPreviewModal({ data, onClose }) {
   return (
     <div
       className="fixed inset-0 z-[300] bg-[#F7F3EC] overflow-hidden"
-      dir="rtl"
+      dir={isEn ? "ltr" : "rtl"}
       style={{ fontFamily: AR }}
     >
       {/* ── Top bar — intentionally lowered for mobile comfort ── */}
@@ -109,12 +110,12 @@ function ExportPreviewModal({ data, onClose }) {
           type="button"
           onClick={handleClose}
           className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-white text-[13px] font-bold active:opacity-70"
-          aria-label="إغلاق المعاينة"
+          aria-label={isEn ? "Close preview" : "إغلاق المعاينة"}
         >
           <span className="text-[13px] leading-none">✕</span>
-          إغلاق
+          {isEn ? "Close" : "إغلاق"}
         </button>
-        <span className="text-[11px] font-bold text-[#d4a843] tracking-wide">تحليل البند</span>
+        <span className="text-[11px] font-bold text-[#d4a843] tracking-wide">{isEn ? "Item Analysis" : "تحليل البند"}</span>
         <div className="flex items-center gap-2">
           {/* Print/Save — web only, hidden on Android */}
           {!window.TaseeraAndroid && (
@@ -122,21 +123,21 @@ function ExportPreviewModal({ data, onClose }) {
               onClick={() => window.print()}
               className="flex items-center gap-1 text-[11px] text-[#d4a843] font-bold active:opacity-70 print:hidden"
             >
-              <PrinterIcon className="h-4 w-4" /> حفظ
+              <PrinterIcon className="h-4 w-4" /> {isEn ? "Save" : "حفظ"}
             </button>
           )}
           {/* Screenshot hint — Android only */}
           {window.TaseeraAndroid && (
-            <span className="text-[10px] text-white/50 font-bold">📸 سكرين شوت</span>
+            <span className="text-[10px] text-white/50 font-bold">{isEn ? "📸 Screenshot" : "📸 سكرين شوت"}</span>
           )}
           <button
             type="button"
             onClick={handleClose}
             className="flex items-center gap-1 rounded-full bg-[#d4a843] px-3 py-1.5 text-[#082555] active:opacity-70 transition-colors"
-            aria-label="الرجوع للصفحة السابقة"
+            aria-label={isEn ? "Back to previous screen" : "الرجوع للصفحة السابقة"}
           >
             <ArrowRightIcon className="h-4 w-4" />
-            <span className="text-[12px] font-black leading-none">رجوع</span>
+            <span className="text-[12px] font-black leading-none">{isEn ? "Back" : "رجوع"}</span>
           </button>
         </div>
       </div>
@@ -147,7 +148,7 @@ function ExportPreviewModal({ data, onClose }) {
 
           {/* Item header */}
           <div className="bg-[#082555] rounded-2xl px-4 py-2 text-right">
-            <p className="text-[8px] font-bold text-[#d4a843]/70 uppercase tracking-widest">TASEERA · تسعيرة</p>
+            <p className="text-[8px] font-bold text-[#d4a843]/70 uppercase tracking-widest">{isEn ? "TASEERA" : "TASEERA · تسعيرة"}</p>
             <h1 className="text-[14px] font-black text-white leading-snug">{item.ar}</h1>
             <p className="text-[9px] text-white/50">{item.num} · {item.divAr} · {item.unit}</p>
             <p className="text-[8px] text-white/30">{now}</p>
@@ -156,12 +157,12 @@ function ExportPreviewModal({ data, onClose }) {
           {/* Key metrics */}
           <div className="grid grid-cols-2 gap-1.5">
             <div className="bg-white rounded-xl p-2.5 text-right border border-[#E2D8C4]">
-              <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">سعر الوحدة النهائي</p>
+              <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">{isEn ? "Final Unit Price" : "سعر الوحدة النهائي"}</p>
               <p className="mt-0.5 text-[20px] font-black text-[#082555] leading-none">{fmtNum(unitPrice)}</p>
               <p className="text-[9px] text-[#d4a843] font-bold mt-0.5">{c.currency} / {item.unit}</p>
             </div>
             <div className="bg-white rounded-xl p-2.5 text-right border border-[#E2D8C4]">
-              <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">إجمالي العرض</p>
+              <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">{isEn ? "Total Quote" : "إجمالي العرض"}</p>
               <p className="mt-0.5 text-[20px] font-black text-[#082555] leading-none">{fmtNum(finalTotal)}</p>
               <p className="text-[9px] text-slate-400 font-bold mt-0.5">{c.currency}</p>
             </div>
@@ -169,13 +170,13 @@ function ExportPreviewModal({ data, onClose }) {
 
           {/* Cost breakdown */}
           <div className="bg-white rounded-xl px-3 py-2 border border-[#E2D8C4]">
-            <h3 className="text-[10px] font-black text-[#082555] text-right mb-0.5">تفصيل التكلفة</h3>
-            <Row label="مواد" val={matT} />
-            <Row label="عمالة" val={labT} />
-            <Row label="معدات" val={eqpT} />
-            <Row label="إجمالي مباشر" val={direct} bold />
-            <Row label={`أعباء غير مباشرة (${overhead}%)`} val={indirect} />
-            <Row label={`هامش الربح (${profit}%)`} val={profitAmt} />
+            <h3 className="text-[10px] font-black text-[#082555] text-right mb-0.5">{isEn ? "Cost Breakdown" : "تفصيل التكلفة"}</h3>
+            <Row label={isEn ? "Materials" : "مواد"} val={matT} />
+            <Row label={isEn ? "Labour" : "عمالة"} val={labT} />
+            <Row label={isEn ? "Equipment" : "معدات"} val={eqpT} />
+            <Row label={isEn ? "Direct Total" : "إجمالي مباشر"} val={direct} bold />
+            <Row label={isEn ? `Overhead (${overhead}%)` : `أعباء غير مباشرة (${overhead}%)`} val={indirect} />
+            <Row label={isEn ? `Profit Margin (${profit}%)` : `هامش الربح (${profit}%)`} val={profitAmt} />
           </div>
 
           {/* Settings row */}
@@ -283,19 +284,20 @@ function Flag({ code, mini = false }) {
   return <div className={`${base} bg-gray-200 flex items-center justify-center text-[8px]`}>{code.toUpperCase()}</div>;
 }
 
-function CountryModal({ onConfirm, current }) {
+function CountryModal({ onConfirm, current, language = "ar" }) {
   const [sel, setSel] = useState(current || "sa");
+  const isEn = language === "en";
   const countries = [
-    { code: "sa", name: "المملكة العربية السعودية", currency: "SAR", icon: "🇸🇦" },
-    { code: "eg", name: "جمهورية مصر العربية", currency: "EGP", icon: "🇪🇬" },
-    { code: "ae", name: "الإمارات العربية المتحدة", currency: "AED", icon: "🇦🇪" },
+    { code: "sa", name: isEn ? "Saudi Arabia" : "المملكة العربية السعودية", currency: "SAR", icon: "🇸🇦" },
+    { code: "eg", name: isEn ? "Egypt" : "جمهورية مصر العربية", currency: "EGP", icon: "🇪🇬" },
+    { code: "ae", name: isEn ? "United Arab Emirates" : "الإمارات العربية المتحدة", currency: "AED", icon: "🇦🇪" },
   ];
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#0d2545]/80 backdrop-blur-md p-6">
       <div className="w-full max-w-[420px] animate-in zoom-in-95 duration-300">
         <div className="rounded-[32px] border border-white/10 bg-white p-6 sm:p-8 shadow-2xl">
-          <h2 className="mb-6 text-center text-[20px] font-black text-[#0d2545]" style={{ fontFamily: AR }}>تغيير دولة التسعير</h2>
+          <h2 className="mb-6 text-center text-[20px] font-black text-[#0d2545]" style={{ fontFamily: AR }}>{isEn ? "Change Pricing Country" : "تغيير دولة التسعير"}</h2>
 
           <div className="space-y-3">
             {countries.map((c) => (
@@ -321,10 +323,10 @@ function CountryModal({ onConfirm, current }) {
 
           <button onClick={() => onConfirm(sel)}
             className="mt-8 w-full rounded-2xl bg-[#0d2545] py-4 text-[16px] font-black text-white shadow-xl shadow-[#0d2545]/20 transition-all hover:bg-[#1a3a63] active:scale-[0.98]">
-            تأكيد الاختيار
+            {isEn ? "Confirm Selection" : "تأكيد الاختيار"}
           </button>
 
-          <button onClick={() => onConfirm(current)} className="mt-3 w-full py-2 text-[14px] font-bold text-gray-400 hover:text-gray-600">إلغاء</button>
+          <button onClick={() => onConfirm(current)} className="mt-3 w-full py-2 text-[14px] font-bold text-gray-400 hover:text-gray-600">{isEn ? "Cancel" : "إلغاء"}</button>
         </div>
       </div>
     </div>
@@ -426,8 +428,9 @@ function IsometricBg() {
 }
 
 // ─── GUEST LOGIN MODAL (reusable) ──────────────────────────────────────────────
-function GuestLoginModal({ open, onClose, onOpenAuthScreen, subtitle }) {
+function GuestLoginModal({ open, onClose, onOpenAuthScreen, subtitle, language = "ar" }) {
   if (!open) return null;
+  const isEn = language === "en";
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center p-4 pb-8"
       style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
@@ -444,9 +447,9 @@ function GuestLoginModal({ open, onClose, onOpenAuthScreen, subtitle }) {
             style={{ background: "rgba(220,38,38,0.15)", border: "1.5px solid rgba(220,38,38,0.35)" }}>
             <span className="text-2xl">🔐</span>
           </div>
-          <h3 className="text-[17px] font-black text-white mb-1">يجب تسجيل الدخول أولاً</h3>
+          <h3 className="text-[17px] font-black text-white mb-1">{isEn ? "Sign in required first" : "يجب تسجيل الدخول أولاً"}</h3>
           <p className="text-[12px] text-white/55 leading-relaxed">
-            {subtitle || "سجّل دخولك أو أنشئ حساباً مجانياً للمتابعة"}
+            {subtitle || (isEn ? "Sign in or create a free account to continue." : "سجّل دخولك أو أنشئ حساباً مجانياً للمتابعة")}
           </p>
         </div>
         {/* Buttons */}
@@ -455,17 +458,17 @@ function GuestLoginModal({ open, onClose, onOpenAuthScreen, subtitle }) {
             onClick={() => { onClose(); onOpenAuthScreen?.("login"); }}
             className="w-full rounded-2xl py-3 text-[14px] font-black text-white transition-all active:scale-[0.97]"
             style={{ background: "linear-gradient(130deg,#dc2626,#ef4444)", boxShadow: "0 0 20px rgba(220,38,38,0.4), 0 4px 16px rgba(220,38,38,0.3)" }}>
-            تسجيل الدخول
+            {isEn ? "Sign In" : "تسجيل الدخول"}
           </button>
           <button type="button"
             onClick={() => { onClose(); onOpenAuthScreen?.("register"); }}
             className="w-full rounded-2xl py-3 text-[14px] font-black transition-all active:scale-[0.97]"
             style={{ background: "rgba(220,38,38,0.12)", border: "1.5px solid rgba(220,38,38,0.35)", color: "#fca5a5" }}>
-            إنشاء حساب جديد
+            {isEn ? "Create Account" : "إنشاء حساب جديد"}
           </button>
           <button type="button" onClick={onClose}
             className="w-full rounded-2xl py-2.5 text-[12px] font-bold text-white/40 transition-all active:scale-[0.97]">
-            إلغاء
+            {isEn ? "Cancel" : "إلغاء"}
           </button>
         </div>
       </div>
@@ -474,7 +477,7 @@ function GuestLoginModal({ open, onClose, onOpenAuthScreen, subtitle }) {
 }
 
 // ─── GUEST AREA WRAPPER ────────────────────────────────────────────────────────
-function GuestAreaWrapper({ isGuest, onOpenAuthScreen, children }) {
+function GuestAreaWrapper({ isGuest, onOpenAuthScreen, children, language = "ar" }) {
   const [showPrompt, setShowPrompt] = useState(false);
   if (!isGuest) return <>{children}</>;
   return (
@@ -485,7 +488,8 @@ function GuestAreaWrapper({ isGuest, onOpenAuthScreen, children }) {
       </div>
       <GuestLoginModal open={showPrompt} onClose={() => setShowPrompt(false)}
         onOpenAuthScreen={onOpenAuthScreen}
-        subtitle="سجّل دخولك أو أنشئ حساباً مجانياً للمتابعة واستخدام تسعير المباني" />
+        language={language}
+        subtitle={language === "en" ? "Sign in or create a free account to continue and use building pricing." : "سجّل دخولك أو أنشئ حساباً مجانياً للمتابعة واستخدام تسعير المباني"} />
     </div>
   );
 }
@@ -504,8 +508,18 @@ const TPRO_FEATURES = [
   "تصدير وحفظ التسعير",
 ];
 
-function TaseeraProGate({ country, isGuest, onOpenSubscription, onOpenAuthScreen }) {
+function TaseeraProGate({ country, isGuest, onOpenSubscription, onOpenAuthScreen, language = "ar" }) {
+  const isEn = language === "en";
   const priceInfo = TPRO_PRICES[(country || "sa").toLowerCase()] || TPRO_PRICES.sa;
+  const features = isEn
+    ? [
+        "Full building pricing with high accuracy",
+        "Area × floors × finish level calculation",
+        "Cost breakdown by discipline",
+        "Compare multiple project scenarios",
+        "Export and save pricing results",
+      ]
+    : TPRO_FEATURES;
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ fontFamily: AR, direction: "rtl" }}>
       {/* Hero */}
@@ -519,19 +533,19 @@ function TaseeraProGate({ country, isGuest, onOpenSubscription, onOpenAuthScreen
             </div>
             <div>
               <p className="text-[10px] font-bold text-[#0d2545]/60 uppercase tracking-widest">Taseera Pro Package</p>
-              <h2 className="text-[20px] font-black text-[#0d2545] leading-tight">باقة بنود المقايسات الكاملة</h2>
+              <h2 className="text-[20px] font-black text-[#0d2545] leading-tight">{isEn ? "Complete QS Package" : "باقة بنود المقايسات الكاملة"}</h2>
             </div>
           </div>
           {/* Price pill */}
           <div className="inline-flex items-center gap-2 rounded-full border border-[#0d2545]/20 bg-[#0d2545]/10 px-4 py-2">
             <span className="text-[22px] font-black text-[#0d2545]">{priceInfo.label}</span>
-            <span className="text-[12px] text-[#0d2545]/60">مرة واحدة</span>
+            <span className="text-[12px] text-[#0d2545]/60">{isEn ? "one-time" : "مرة واحدة"}</span>
           </div>
         </div>
         {/* Features */}
         <div className="bg-[#0d2545]/8 px-5 py-4">
           <ul className="space-y-2">
-            {TPRO_FEATURES.map((f, i) => (
+            {features.map((f, i) => (
               <li key={i} className="flex items-center gap-2.5 text-[13px] font-bold text-[#0d2545]">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#0d2545] text-[#d4a843] text-[10px]">✓</span>
                 {f}
@@ -546,31 +560,32 @@ function TaseeraProGate({ country, isGuest, onOpenSubscription, onOpenAuthScreen
         <button type="button" onClick={onOpenSubscription}
           className="w-full rounded-2xl py-3.5 text-[15px] font-black text-[#082555] shadow-lg active:scale-[0.98] transition-all"
           style={{ background: "linear-gradient(130deg,#d4a843,#e8c060)" }}>
-          طلب الاشتراك في الباقة ←
+          {isEn ? "Request Subscription ←" : "طلب الاشتراك في الباقة ←"}
         </button>
       ) : (
         <button type="button" onClick={() => onOpenAuthScreen?.()}
           className="w-full rounded-2xl py-3.5 text-[15px] font-black text-white shadow-lg active:scale-[0.98] transition-all"
           style={{ background: "linear-gradient(130deg,#dc2626,#ef4444)", boxShadow: "0 0 20px rgba(220,38,38,0.35)" }}>
-          🔐 سجّل دخولك أولاً لطلب الاشتراك
+          {isEn ? "🔐 Sign in first to request subscription" : "🔐 سجّل دخولك أولاً لطلب الاشتراك"}
         </button>
       )}
 
       <p className="mt-3 text-center text-[11px] text-slate-400">
-        ♻ استرداد جزئي خلال فترة التجربة المجانية
+        {isEn ? "♻ Partial refund available during the trial period" : "♻ استرداد جزئي خلال فترة التجربة المجانية"}
       </p>
     </div>
   );
 }
 
-function ModeSelection({ onSelect, areaLocked = false, areaMessage = "", onOpenSubscription }) {
+function ModeSelection({ onSelect, areaLocked = false, areaMessage = "", onOpenSubscription, language = "ar" }) {
+  const isEn = language === "en";
   return (
     <div className="flex flex-col gap-4 py-2 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ fontFamily: AR }}>
 
       {/* Header */}
       <div className="px-1">
-        <h2 className="text-[18px] font-bold text-[#0d2545]" style={{ fontFamily: AR }}>مرحباً بك في محرك التسعير</h2>
-        <p className="mt-0.5 text-[13px] text-slate-500" style={{ fontFamily: AR }}>اختر طريقة التسعير المناسبة لاحتياجك</p>
+        <h2 className="text-[18px] font-bold text-[#0d2545]" style={{ fontFamily: AR }}>{isEn ? "Welcome to the Pricing Engine" : "مرحباً بك في محرك التسعير"}</h2>
+        <p className="mt-0.5 text-[13px] text-slate-500" style={{ fontFamily: AR }}>{isEn ? "Choose the pricing method that fits your need." : "اختر طريقة التسعير المناسبة لاحتياجك"}</p>
       </div>
 
       {/* ── Card 1: دليل بنود الأعمال (navy) ── */}
@@ -587,9 +602,9 @@ function ModeSelection({ onSelect, areaLocked = false, areaMessage = "", onOpenS
           </div>
           {/* Text */}
           <div className="flex-1 text-right">
-            <h3 className="text-[18px] font-bold text-white leading-tight">دليل بنود الأعمال</h3>
+            <h3 className="text-[18px] font-bold text-white leading-tight">{isEn ? "Work Items Directory" : "دليل بنود الأعمال"}</h3>
             <p className="mt-1.5 text-[15px] leading-relaxed text-white">
-              تحليل مفصل لكل بند (مواد، عمالة، معدات) بناءً على أكواد CSI MasterFormat.<br/>مثالي للمقاولين والمهندسين.
+              {isEn ? "Detailed analysis for each item (materials, labour, equipment) based on CSI MasterFormat codes." : "تحليل مفصل لكل بند (مواد، عمالة، معدات) بناءً على أكواد CSI MasterFormat."}<br/>{isEn ? "Ideal for contractors and engineers." : "مثالي للمقاولين والمهندسين."}
             </p>
           </div>
           {/* Icon box */}
@@ -615,9 +630,9 @@ function ModeSelection({ onSelect, areaLocked = false, areaMessage = "", onOpenS
           </div>
           {/* Text */}
           <div className="flex-1 text-right">
-            <h3 className="text-[20px] font-black text-[#0d2545] leading-tight">تسعير مبني</h3>
+            <h3 className="text-[20px] font-black text-[#0d2545] leading-tight">{isEn ? "Building Pricing" : "تسعير مبني"}</h3>
             <p className="mt-1.5 text-[15px] leading-relaxed text-white">
-              حساب تقديري سريع لتكلفة بناء كامل بناءً على المساحة، عدد الأدوار،<br/>ومستوى التشطيب. مثالي للملاك والمستثمرين.
+              {isEn ? "A quick cost estimate for a full building based on area, number of floors," : "حساب تقديري سريع لتكلفة بناء كامل بناءً على المساحة، عدد الأدوار،"}<br/>{isEn ? "and finish level. Ideal for owners and investors." : "ومستوى التشطيب. مثالي للملاك والمستثمرين."}
             </p>
           </div>
           {/* Icon box */}
@@ -643,13 +658,13 @@ function ModeSelection({ onSelect, areaLocked = false, areaMessage = "", onOpenS
           </div>
           {/* Text — same structure as cards 1 & 2 so title aligns identically */}
           <div className="flex-1 text-right">
-            <h3 className="text-[18px] font-black text-white leading-tight">تسعير تفصيلي للبنود</h3>
+            <h3 className="text-[18px] font-black text-white leading-tight">{isEn ? "Detailed Item Pricing" : "تسعير تفصيلي للبنود"}</h3>
             <span className="inline-flex mt-1 rounded-full px-2.5 py-0.5 text-[9px] font-bold text-white"
               style={{ background: "#4f46e5", fontFamily: "'IBM Plex Mono',monospace", letterSpacing: "0.05em" }}>
               RESOURCE-BASED
             </span>
             <p className="mt-1 text-[15px] leading-relaxed text-white">
-              بناء سعر الوحدة من الموارد — مواد + عمالة + معدات + أعباء + ربح.<br/>أسلوب First Principle المتقدم لتحليل المقايسات.
+              {isEn ? "Build the unit rate from resources — materials + labour + equipment + overhead + profit." : "بناء سعر الوحدة من الموارد — مواد + عمالة + معدات + أعباء + ربح."}<br/>{isEn ? "Advanced First Principle method for quantity surveying analysis." : "أسلوب First Principle المتقدم لتحليل المقايسات."}
             </p>
           </div>
           {/* Icon box */}
@@ -661,7 +676,7 @@ function ModeSelection({ onSelect, areaLocked = false, areaMessage = "", onOpenS
       </button>
 
       <p className="text-center text-[11px] text-slate-400 mt-1" style={{ fontFamily: AR }}>
-        جميع الحسابات تقديرية وتعتمد على متوسطات السوق الحالية في الدولة المختارة.
+        {isEn ? "All calculations are indicative and based on current market averages in the selected country." : "جميع الحسابات تقديرية وتعتمد على متوسطات السوق الحالية في الدولة المختارة."}
       </p>
     </div>
   );
@@ -1629,6 +1644,7 @@ function AreaSectionDetailView({
 
 export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings, sessionMeta, onOpenSubscription, onOpenAuthScreen, onShowStatus, systemBridge }) {
   // initialCountry comes from the CountryPicker on PricingPage; always override persisted value
+  const isEn = settings?.language === "en";
   const [country, setCountry] = useState(initialCountry || "sa");
   const [mode, setMode] = useState("selection"); // selection, items, area, area-results
   const [tab, setTab] = useState("csi");
@@ -1958,6 +1974,10 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     };
   }, [areaParams, country, currentAreaScenario, effectiveAreaResults]);
 
+  const pushWorkspaceStep = useCallback(() => {
+    navigationBridge?.pushHistoryEntry?.();
+  }, [navigationBridge]);
+
   const handleCalculateArea = async (params) => {
     const allowed = await consumeAccess("area");
     if (!allowed) {
@@ -2005,6 +2025,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     setAreaSectionDrafts({});
     setSelectedAreaSection(null);
     setAreaResults({ total: selectedTotal, unitPrice: selectedTotal / totalArea, breakdown: filteredBreakdown, dist });
+    pushWorkspaceStep();
     setMode("area-results");
   };
 
@@ -2017,8 +2038,9 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
       return nextDraft ? { ...current, [sectionId]: nextDraft } : current;
     });
     setSelectedAreaSection(sectionId);
+    pushWorkspaceStep();
     setMode("area-section-detail");
-  }, [areaParams, areaResults]);
+  }, [areaParams, areaResults, pushWorkspaceStep]);
 
   const handleResetAreaSection = useCallback(() => {
     if (!selectedAreaSection || !areaParams || !areaResults) return;
@@ -2358,6 +2380,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     setSelfPriceQty(1);
     setSelfPriceOverhead(12);
     setSelfPriceProfit(15);
+    pushWorkspaceStep();
     setMode("self-price");
   }
 
@@ -2383,6 +2406,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     });
     applyAnalysisSnapshot(snapshot);
     setAnalysisBaseline(snapshot);
+    pushWorkspaceStep();
     setTab("analysis");
   }
 
@@ -2404,11 +2428,13 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
       });
       applyAnalysisSnapshot(snapshot);
       setAnalysisBaseline(snapshot);
+      pushWorkspaceStep();
       setMode("items");
       setTab("analysis");
     } else {
       setAreaParams(analysis.params);
       setAreaResults(analysis.results);
+      pushWorkspaceStep();
       setMode("area-results");
     }
   }
@@ -2420,20 +2446,28 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
 
   async function handleModeChange(nextMode) {
     if (mode === "items" && tab === "analysis") {
-      const canLeave = confirmDiscardAnalysisChanges(() => setMode(nextMode));
+      const canLeave = confirmDiscardAnalysisChanges(() => {
+        if (nextMode !== "selection" && nextMode !== mode) pushWorkspaceStep();
+        setMode(nextMode);
+      });
       if (!canLeave) return;
       return;
     }
+    if (nextMode !== "selection" && nextMode !== mode) pushWorkspaceStep();
     setMode(nextMode);
   }
 
   function handleTabChange(nextTab) {
     if (nextTab === tab) return;
     if (tab === "analysis") {
-      const canLeave = confirmDiscardAnalysisChanges(() => setTab(nextTab));
+      const canLeave = confirmDiscardAnalysisChanges(() => {
+        if (nextTab !== "csi") pushWorkspaceStep();
+        setTab(nextTab);
+      });
       if (!canLeave) return;
       return;
     }
+    if (nextTab !== "csi") pushWorkspaceStep();
     setTab(nextTab);
   }
 
@@ -2495,16 +2529,17 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   }, [mode, tab, navigationBridge?.onEntryChange]);
 
   const tabs = [
-    { id: "csi",      label: "البنود",    icon: "📋" },
-    { id: "analysis", label: "التحليل",   icon: "📊" },
-    { id: "market",   label: "السوق",     icon: "📈" },
-    { id: "history",  label: "المحفوظة", icon: "🕘" },
+    { id: "csi",      label: isEn ? "Items" : "البنود",    icon: "📋" },
+    { id: "analysis", label: isEn ? "Analysis" : "التحليل",   icon: "📊" },
+    { id: "market",   label: isEn ? "Market" : "السوق",     icon: "📈" },
+    { id: "history",  label: isEn ? "Saved" : "المحفوظة", icon: "🕘" },
   ];
 
   if (!country) {
     return (
       <CountryModal
         current={country}
+        language={settings?.language || "ar"}
         onConfirm={(c) => {
           setCountry(c);
         }}
@@ -2524,7 +2559,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
               </svg>
             </div>
             <div>
-              <h1 className="text-[16px] font-bold text-[#0d2545] leading-none">تسعيرة</h1>
+              <h1 className="text-[16px] font-bold text-[#0d2545] leading-none">{isEn ? "Taseera" : "تسعيرة"}</h1>
               <p className="text-[10px] font-bold text-[#d4a843] mt-1 uppercase tracking-widest">Construction Pricing</p>
             </div>
           </button>
@@ -2538,19 +2573,21 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             areaLocked={areaLocked}
             areaMessage={areaLockMessage}
             onOpenSubscription={openSubscriptionScreen}
+            language={settings?.language || "ar"}
           />
         )}
 
         {mode === "candy" && (
-          <QSPremiumGate
-            country={country}
-            userId={sessionMeta?.uid}
-            userEmail={sessionMeta?.email}
-            userName={sessionMeta?.displayName}
-            onOpenAuthScreen={onOpenAuthScreen}
-            systemBridge={systemBridge}
-            isAdminUnlocked={isAdminUnlocked}
-          >
+        <QSPremiumGate
+          country={country}
+          userId={sessionMeta?.uid}
+          userEmail={sessionMeta?.email}
+          userName={sessionMeta?.displayName}
+          onOpenAuthScreen={onOpenAuthScreen}
+          systemBridge={systemBridge}
+          isAdminUnlocked={isAdminUnlocked}
+          language={settings?.language || "ar"}
+        >
             <ScreenProtection enabled={true}>
               <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <CandyWorkspace
@@ -2648,9 +2685,10 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
               isGuest={false}
               onOpenSubscription={openSubscriptionScreen}
               onOpenAuthScreen={onOpenAuthScreen}
+              language={settings?.language || "ar"}
             />
           ) : (
-            <GuestAreaWrapper isGuest={isGuest} onOpenAuthScreen={onOpenAuthScreen}>
+            <GuestAreaWrapper isGuest={isGuest} onOpenAuthScreen={onOpenAuthScreen} language={settings?.language || "ar"}>
               <AreaPricingForm
                 country={country}
                 onCalculate={handleCalculateArea}
@@ -2684,7 +2722,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 params: areaParams,
                 mode: 'area'
               });
-              showToast("تم حفظ تسعير المشروع بنجاح");
+              showToast(isEn ? "Project pricing saved successfully." : "تم حفظ تسعير المشروع بنجاح");
             }}
             onOpenSection={handleOpenAreaSection}
             adBanner={areaResultsAdBanner}
@@ -2717,8 +2755,9 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 results: result,
                 mode: 'item',
               });
-              showToast("تم حفظ تحليل السعر بنجاح ✔️");
+              showToast(isEn ? "Price analysis saved successfully. ✔️" : "تم حفظ تحليل السعر بنجاح ✔️");
             }}
+            language={settings?.language || "ar"}
           />
         )}
 
@@ -2757,7 +2796,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 },
                 mode: "area-section-detail",
               });
-              showToast("تم حفظ تفاصيل التخصص بنجاح");
+              showToast(isEn ? "Discipline details saved successfully." : "تم حفظ تفاصيل التخصص بنجاح");
             }}
             adBanner={areaSectionAdBanner}
             canManageAds={isAdminUnlocked}
@@ -2792,7 +2831,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
       )}
 
       {/* In-app export preview modal */}
-      <ExportPreviewModal data={exportPreview} onClose={() => setExportPreview(null)} />
+      <ExportPreviewModal data={exportPreview} onClose={() => setExportPreview(null)} language={settings?.language || "ar"} />
 
       {showSubscriptionModal && (
         <div
@@ -2840,7 +2879,8 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
 // Sub-components (Moved from previous implementation or newly added)
 
 // ===== سعر بنفسك Screen =====
-function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhead, setOverhead, profit, setProfit, country, authMode, sessionMeta, settings, onBack, onSave, onExport }) {
+function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhead, setOverhead, profit, setProfit, country, authMode, sessionMeta, settings, onBack, onSave, onExport, language = "ar" }) {
+  const isEn = language === "en";
   const sym = getCurrencySymbol(country);
   const fmt = (n) => Number(n).toLocaleString("en-US", { maximumFractionDigits: 0 });
 
@@ -2902,9 +2942,9 @@ function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhea
               <span className="text-[11px] text-[#9A8A6A]">{item.divAr}</span>
             </div>
             <h2 className="text-[15px] font-bold text-white leading-snug">{item.ar}</h2>
-            <p className="mt-1 text-[12px] text-[#9A8A6A]">الوحدة: <span className="text-[#C9A84C] font-bold">{item.unit}</span>  ·  سعر السوق: <span className="text-[#C9A84C] font-bold">{fmt(item.market)} {sym}</span></p>
+            <p className="mt-1 text-[12px] text-[#9A8A6A]">{isEn ? "Unit:" : "الوحدة:"} <span className="text-[#C9A84C] font-bold">{item.unit}</span>  ·  {isEn ? "Market Price:" : "سعر السوق:"} <span className="text-[#C9A84C] font-bold">{fmt(item.market)} {sym}</span></p>
           </div>
-          <button onClick={onBack} className="shrink-0 rounded-xl bg-[#0d2f5e] px-3 py-2 text-[12px] text-[#9A8A6A] hover:text-white transition">← رجوع</button>
+          <button onClick={onBack} className="shrink-0 rounded-xl bg-[#0d2f5e] px-3 py-2 text-[12px] text-[#9A8A6A] hover:text-white transition">← {isEn ? "Back" : "رجوع"}</button>
         </div>
       </div>
 
@@ -2946,7 +2986,7 @@ function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhea
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="flex flex-col items-center gap-0.5">
-                    <span className="text-[9px] font-bold text-[#9A8A6A] tracking-wider" style={{ fontFamily: AR }}>الكمية</span>
+            <span className="text-[9px] font-bold text-[#9A8A6A] tracking-wider" style={{ fontFamily: AR }}>{isEn ? "Quantity" : "الكمية"}</span>
                     <input type="number" min="0" step="0.01"
                       value={row.qty}
                       onChange={e => updateRow(key, idx, "qty", e.target.value)}
@@ -2957,7 +2997,7 @@ function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhea
                     <span className="text-[9px] font-bold text-[#9A8A6A]">{row.unit || "وحدة"}</span>
                   </div>
                   <div className="flex flex-col items-center gap-0.5">
-                    <span className="text-[9px] font-bold text-[#9A8A6A] tracking-wider" style={{ fontFamily: AR }}>السعر</span>
+                    <span className="text-[9px] font-bold text-[#9A8A6A] tracking-wider" style={{ fontFamily: AR }}>{isEn ? "Rate" : "السعر"}</span>
                     <input type="number" min="0" step="1"
                       value={row.rate}
                       onChange={e => updateRow(key, idx, "rate", e.target.value)}
@@ -2988,14 +3028,14 @@ function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhea
       {/* Overhead & Profit */}
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-xl bg-white border border-[#E2D8C4] p-3 text-center">
-          <p className="mb-1.5 text-[11px] text-[#9A8A6A]">المصاريف العامة %</p>
+          <p className="mb-1.5 text-[11px] text-[#9A8A6A]">{isEn ? "Overhead %" : "المصاريف العامة %"}</p>
           <input type="number" min="0" max="50"
             value={overhead} onChange={e => setOverhead(e.target.value)}
             className="w-full rounded-lg border border-[#E2D8C4] px-2 py-1.5 text-center text-[16px] font-bold text-[#082555] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
           />
         </div>
         <div className="rounded-xl bg-white border border-[#E2D8C4] p-3 text-center">
-          <p className="mb-1.5 text-[11px] text-[#9A8A6A]">هامش الربح %</p>
+          <p className="mb-1.5 text-[11px] text-[#9A8A6A]">{isEn ? "Profit Margin %" : "هامش الربح %"}</p>
           <input type="number" min="0" max="100"
             value={profit} onChange={e => setProfit(e.target.value)}
             className="w-full rounded-lg border border-[#E2D8C4] px-2 py-1.5 text-center text-[16px] font-bold text-[#082555] focus:outline-none focus:ring-2 focus:ring-[#C9A84C]"
@@ -3005,15 +3045,15 @@ function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhea
 
       {/* Summary Card */}
       <div className="mb-4 rounded-2xl bg-[#082555] p-4 shadow-xl">
-        <h3 className="mb-3 text-[13px] font-bold text-[#C9A84C]">ملخص التكلفة (للكمية {qty} {item.unit})</h3>
+        <h3 className="mb-3 text-[13px] font-bold text-[#C9A84C]">{isEn ? `Cost Summary (for quantity ${qty} ${item.unit})` : `ملخص التكلفة (للكمية ${qty} ${item.unit})`}</h3>
         <div className="space-y-1.5">
           {[
-            { label: "مواد",         val: matTotal * (Number(qty)||1), color: "text-blue-300"   },
-            { label: "عمالة",        val: labTotal * (Number(qty)||1), color: "text-green-300"  },
-            { label: "معدات",        val: eqpTotal * (Number(qty)||1), color: "text-orange-300" },
-            { label: "تكلفة مباشرة",val: direct,   color: "text-white font-bold", sep: true },
-            { label: `مصاريف عامة ${overhead}%`, val: indirect,  color: "text-[#E2D8C4]" },
-            { label: `ربح ${profit}%`,            val: profitAmt, color: "text-[#E2D8C4]" },
+            { label: isEn ? "Materials" : "مواد",         val: matTotal * (Number(qty)||1), color: "text-blue-300"   },
+            { label: isEn ? "Labour" : "عمالة",        val: labTotal * (Number(qty)||1), color: "text-green-300"  },
+            { label: isEn ? "Equipment" : "معدات",        val: eqpTotal * (Number(qty)||1), color: "text-orange-300" },
+            { label: isEn ? "Direct Cost" : "تكلفة مباشرة",val: direct,   color: "text-white font-bold", sep: true },
+            { label: isEn ? `Overhead ${overhead}%` : `مصاريف عامة ${overhead}%`, val: indirect,  color: "text-[#E2D8C4]" },
+            { label: isEn ? `Profit ${profit}%` : `ربح ${profit}%`,            val: profitAmt, color: "text-[#E2D8C4]" },
           ].map(({ label, val, color, sep }, i) => (
             <div key={i}>
               {sep && <div className="my-2 border-t border-[#1e3a6e]" />}
@@ -3026,19 +3066,19 @@ function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhea
         </div>
         <div className="mt-3 rounded-xl bg-[#C9A84C] p-3 flex justify-between items-center">
           <div>
-            <p className="text-[10px] font-bold text-[#082555] opacity-70">سعر الوحدة</p>
+            <p className="text-[10px] font-bold text-[#082555] opacity-70">{isEn ? "Unit Price" : "سعر الوحدة"}</p>
             <p className="text-[22px] font-bold text-[#082555] leading-tight" style={{ fontFamily: MONO }}>{fmt(unitPrice)} <span className="text-[13px]">{sym}</span></p>
           </div>
           <div className="text-left">
-            <p className="text-[10px] font-bold text-[#082555] opacity-70">الإجمالي</p>
+            <p className="text-[10px] font-bold text-[#082555] opacity-70">{isEn ? "Total" : "الإجمالي"}</p>
             <p className="text-[18px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{fmt(total)} {sym}</p>
           </div>
         </div>
         {item.market > 0 && (
           <p className={`mt-2 text-center text-[11px] font-bold ${unitPrice <= item.market ? "text-green-400" : "text-red-400"}`}>
             {unitPrice <= item.market
-              ? `✓ سعرك أقل من السوق بـ ${fmt(item.market - unitPrice)} ${sym}`
-              : `⚠ سعرك أعلى من السوق بـ ${fmt(unitPrice - item.market)} ${sym}`}
+              ? (isEn ? `✓ Your price is below market by ${fmt(item.market - unitPrice)} ${sym}` : `✓ سعرك أقل من السوق بـ ${fmt(item.market - unitPrice)} ${sym}`)
+              : (isEn ? `⚠ Your price is above market by ${fmt(unitPrice - item.market)} ${sym}` : `⚠ سعرك أعلى من السوق بـ ${fmt(unitPrice - item.market)} ${sym}`)}
           </p>
         )}
       </div>
@@ -3048,7 +3088,7 @@ function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhea
         <button
           onClick={() => onSave({ unitPrice, total, direct, indirect, profitAmt })}
           className="flex-1 rounded-xl bg-[#082555] py-3 text-[13px] font-bold text-[#C9A84C] shadow-lg hover:bg-[#0d2f5e] transition active:scale-[0.98]">
-          💾 حفظ في الحساب
+          💾 {isEn ? "Save to Account" : "حفظ في الحساب"}
         </button>
         <button
           onClick={() => {
@@ -3062,7 +3102,7 @@ function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhea
             onExport?.({ item, c: cObj, q, f: 1, overhead: Number(overhead)||0, profit: Number(profit)||0, matT: matTotal*q, labT: labTotal*q, eqpT: eqpTotal*q, direct, indirect, profitAmt, finalTotal: total, unitPrice, resourcesList: resList, now });
           }}
           className="flex-1 rounded-xl bg-white border-2 border-[#082555] py-3 text-[13px] font-bold text-[#082555] hover:bg-[#F5EDD8] transition active:scale-[0.98]">
-          تصدير تحليل البند
+          {isEn ? "Export Item Analysis" : "تصدير تحليل البند"}
         </button>
       </div>
 

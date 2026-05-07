@@ -4,6 +4,8 @@
     <color name="taseera_navy_dark">#FF001F3F</color>
     <color name="taseera_navy_surface">#FF0B4A84</color>
     <color name="taseera_gold">#FFD8B16C</color>
+    <color name="taseera_splash_light">#FFF7FAFF</color>
+    <color name="taseera_splash_surface">#FFEFF6FF</color>
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>

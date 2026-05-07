@@ -504,8 +504,8 @@ export default function App() {
       <div className="grid gap-3 rounded-[16px] border border-red-200 bg-white p-4 text-right">
         <p className="text-sm font-semibold text-red-700">{settings.language === "en" ? "Do you want to exit?" : "هل تريد الخروج من التطبيق؟"}</p>
         <div className="grid grid-cols-2 gap-2">
-          <button onClick={confirmExit} className="rounded-[12px] bg-red-600 px-3 py-2 text-xs font-bold text-white">نعم</button>
-          <button onClick={() => setShowExitPrompt(false)} className="rounded-[12px] border border-slate-200 px-3 py-2 text-xs font-bold">إلغاء</button>
+          <button onClick={confirmExit} className="rounded-[12px] bg-red-600 px-3 py-2 text-xs font-bold text-white">{settings.language === "en" ? "Yes" : "نعم"}</button>
+          <button onClick={() => setShowExitPrompt(false)} className="rounded-[12px] border border-slate-200 px-3 py-2 text-xs font-bold">{settings.language === "en" ? "Cancel" : "إلغاء"}</button>
         </div>
       </div>
     </Modal>
@@ -525,10 +525,10 @@ export default function App() {
         >
           <div style={{ width: 40, height: 4, background: "#e2d8c4", borderRadius: 4, margin: "0 auto 20px" }} />
           <p style={{ fontSize: 11, fontWeight: 700, color: "#9a8a6a", letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>TASEERA</p>
-          <h2 style={{ fontSize: 20, fontWeight: 900, color: "#082555", margin: "0 0 6px" }}>طلب عرض سعر</h2>
+          <h2 style={{ fontSize: 20, fontWeight: 900, color: "#082555", margin: "0 0 6px" }}>{settings.language === "en" ? "Request for Quotation" : "طلب عرض سعر"}</h2>
           {rfqModal.itemName && <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px" }}>{rfqModal.itemName}</p>}
           <p style={{ fontSize: 14, color: "#374151", margin: "0 0 12px", lineHeight: 1.7 }}>
-            للتواصل وإرسال طلب العرض، يُرجى مراسلتنا على البريد الإلكتروني التالي:
+            {settings.language === "en" ? "To communicate and send the quotation request, please contact us at the following email:" : "للتواصل وإرسال طلب العرض، يُرجى مراسلتنا على البريد الإلكتروني التالي:"}
           </p>
           <div style={{ background: "#f7f3ec", borderRadius: 16, padding: "14px 16px", textAlign: "center", border: "1px solid #e2d8c4", marginBottom: 20 }}>
             <p style={{ fontSize: 16, fontWeight: 900, color: "#082555", direction: "ltr", margin: 0 }}>walidghazal46@gmail.com</p>
@@ -537,7 +537,7 @@ export default function App() {
             onClick={() => setRfqModal(null)}
             style={{ width: "100%", background: "#082555", color: "#c9a84c", fontWeight: 800, fontSize: 15, border: "none", borderRadius: 16, padding: "14px 0", cursor: "pointer", fontFamily: "inherit" }}
           >
-            حسنًا
+            {settings.language === "en" ? "OK" : "حسنًا"}
           </button>
         </div>
       </div>

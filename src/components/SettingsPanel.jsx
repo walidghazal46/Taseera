@@ -812,13 +812,26 @@ function AccountTab({
                   {isAr ? "جاري تحميل ملف الأدمن..." : "Loading admin profile..."}
                 </p>
               </div>
-            ) : (
+            ) : adminProfile?.canAccessAdmin === true ? (
               <AdminDashboard
                 language={settings.language}
-                adminProfile={adminProfile || { email: settings.userEmail, canAccessAdmin: true, adminType: isSuperAdminEmail ? "super" : "limited", role: "admin", permissions: {} }}
+                adminProfile={adminProfile}
                 onToast={(message, tone = "info") => onShowStatus?.(message, tone)}
                 initialTab={settings?.adminDashboardTab || "dashboard"}
               />
+            ) : (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-center">
+                <p className="text-[12px] font-bold text-amber-700">
+                  {isAr
+                    ? "ملف الأدمن لم يكتمل تحميله أو أن جلسة تسجيل الدخول غير متزامنة على هذا الجهاز."
+                    : "The admin profile is not fully loaded yet, or the sign-in session is not synced on this device."}
+                </p>
+                <p className="mt-2 text-[11px] text-amber-600">
+                  {isAr
+                    ? "أعد تسجيل الدخول أو افتح التطبيق من جديد بعد المزامنة."
+                    : "Please sign in again or reopen the app after syncing."}
+                </p>
+              </div>
             )}
           </div>
         </GlassCard>
