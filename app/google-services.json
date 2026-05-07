@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "732996943611-pl4qs7f6lhn4hu1e1laco6avd7o5nmme.apps.googleusercontent.com",
+          "client_id": "732996943611-4og6pn920hejo0bp9051v5bf13d34p0f.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.taseera.app",
-            "certificate_hash": "07fd6251e4445590d05ced50afe6a38d5ac94ec2"
+            "certificate_hash": "7ce9186b079bad4368b483efe7bd868264f9ae66"
           }
         },
         {

@@ -279,7 +279,7 @@ export default function LoginScreen({
           <div className="flex items-center gap-1.5 shrink-0">
             {[{ id: "ar", label: "ع" }, { id: "en", label: "EN" }].map((lang) => (
               <button key={lang.id} type="button" onClick={() => onChangeLanguage?.(lang.id)}
-                className={`rounded-xl px-3 py-3 text-[11px] font-bold transition ${
+                className={`flex h-12 w-12 items-center justify-center rounded-xl text-[11px] font-bold transition ${
                   language === lang.id ? "bg-[#d4a843] text-white" : "border border-white/20 text-white/50 bg-white/5"
                 }`}>
                 {lang.label}

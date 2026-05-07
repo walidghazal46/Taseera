@@ -60,6 +60,18 @@ const MENU = [
   { id: "qspremium", labelAr: "QS Premium", labelEn: "QS Premium" },
 ];
 
+const MENU_META = {
+  dashboard: { icon: "▦", accent: "#3b5bff", tint: "#eef2ff" },
+  users: { icon: "👥", accent: "#4f46e5", tint: "#eef2ff" },
+  pending: { icon: "📝", accent: "#f97316", tint: "#fff7ed" },
+  payments: { icon: "💳", accent: "#22c55e", tint: "#ecfdf5" },
+  subscriptions: { icon: "♛", accent: "#14b8a6", tint: "#ecfeff" },
+  admins: { icon: "🛡", accent: "#8b5cf6", tint: "#f5f3ff" },
+  logs: { icon: "📄", accent: "#a855f7", tint: "#faf5ff" },
+  settings: { icon: "⚙", accent: "#64748b", tint: "#f8fafc" },
+  qspremium: { icon: "◇", accent: "#eab308", tint: "#fffbeb" },
+};
+
 function fmtDate(value) {
   if (!value) return "-";
   const date = typeof value?.toDate === "function" ? value.toDate() : new Date(value);
@@ -184,24 +196,30 @@ function TrendChart({ today, week, month }) {
 function KpiCard({ icon, label, value, sub, bg, border, valueColor, labelColor }) {
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border p-4"
+      className="relative min-w-0 overflow-hidden rounded-[28px] border p-4 shadow-[0_14px_40px_rgba(15,23,42,0.07)]"
       style={{ background: bg, borderColor: border }}
     >
-      <div className="flex items-start justify-between gap-1">
+      <div className="flex min-h-[148px] flex-col justify-between gap-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] leading-4" style={{ color: labelColor }}>
+              {label}
+            </p>
+            {sub && (
+              <p className="mt-2 text-[11px] leading-5" style={{ color: labelColor }}>
+                {sub}
+              </p>
+            )}
+          </div>
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-[24px] shadow-sm" style={{ color: valueColor, borderColor: border, background: "rgba(255,255,255,0.45)" }}>
+            {icon}
+          </span>
+        </div>
         <div className="min-w-0">
-          <p className="text-[10px] font-extrabold uppercase tracking-[0.12em]" style={{ color: labelColor }}>
-            {label}
-          </p>
-          <p className="mt-1 text-[26px] font-extrabold leading-none" style={{ color: valueColor }}>
+          <p className="text-[34px] font-extrabold leading-none sm:text-[38px]" style={{ color: valueColor }}>
             {value}
           </p>
-          {sub && (
-            <p className="mt-1 text-[10px]" style={{ color: labelColor }}>
-              {sub}
-            </p>
-          )}
         </div>
-        <span className="shrink-0 text-[26px] opacity-[0.18]">{icon}</span>
       </div>
     </div>
   );
@@ -817,60 +835,82 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
 
   return (
     <div className="space-y-4" style={{ fontFamily: AR }}>
-      <div className="overflow-hidden rounded-3xl border border-[#c7d2fe] bg-white shadow-sm">
-        <div className="border-b border-[#e2e8f0] bg-gradient-to-r from-[#082555] to-[#163a6b] px-4 py-4 text-white">
+      <div className="overflow-hidden rounded-[32px] border border-[#dbe4ff] bg-[linear-gradient(180deg,#ffffff_0%,#f9fbff_100%)] shadow-[0_30px_80px_rgba(37,99,235,0.08)]">
+        <div className="border-b border-[#dbe7ff] bg-[linear-gradient(135deg,#082555_0%,#163a6b_52%,#1f4aa1_100%)] px-5 py-5 text-white">
           <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-white/70">Secure Control Center</p>
-          <h2 className="mt-1 text-[20px] font-extrabold">{t.title}</h2>
-          <p className="mt-1 text-[11px] text-white/70">{adminProfile.email} • {adminProfile.adminType === "super" ? "Super Admin" : "Admin Limited"}</p>
+          <h2 className="mt-2 text-[24px] font-extrabold sm:text-[28px]">{t.title}</h2>
+          <p className="mt-2 text-[12px] text-white/75">{adminProfile.email} • {adminProfile.adminType === "super" ? "Super Admin" : "Admin Limited"}</p>
         </div>
 
-        <div className="grid grid-cols-1 gap-0 md:grid-cols-[220px_minmax(0,1fr)]">
-          <aside className="border-b border-[#e2e8f0] bg-[#f8fafc] p-3 md:border-b-0 md:border-r">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-1">
-              {MENU.map((item) => {
-                const pendingQsBadge = item.id === "qspremium" && activeTab !== "qspremium"
-                  ? qsRequests.filter((r) => r.status === "pending").length
-                  : 0;
-                const subsBadge = item.id === "subscriptions" && activeTab !== "subscriptions"
-                  ? cancelReqs.length + deleteReqs.length
-                  : 0;
-                const dashBadge = item.id === "dashboard" && activeTab !== "dashboard"
-                  ? allPendingFeed.length
-                  : 0;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setActiveTab(item.id)}
-                    className={`relative rounded-xl border px-3 py-2 text-left text-[11px] font-bold transition ${
-                      activeTab === item.id
-                        ? "border-[#1d4ed8] bg-[#dbeafe] text-[#1e3a8a]"
-                        : "border-[#dbe2ea] bg-white text-slate-600 hover:border-[#93c5fd]"
-                    }`}
-                  >
-                    {isEn ? item.labelEn : item.labelAr}
-                    {pendingQsBadge > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-extrabold text-white shadow">
-                        {pendingQsBadge}
-                      </span>
-                    )}
-                    {subsBadge > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-[9px] font-extrabold text-white shadow">
-                        {subsBadge}
-                      </span>
-                    )}
-                    {dashBadge > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-extrabold text-white shadow">
-                        {dashBadge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </aside>
+        <div className="p-4 sm:p-5">
+          <div className="mb-5 grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+            {MENU.map((item) => {
+              const pendingQsBadge = item.id === "qspremium" && activeTab !== "qspremium"
+                ? qsRequests.filter((r) => r.status === "pending").length
+                : 0;
+              const subsBadge = item.id === "subscriptions" && activeTab !== "subscriptions"
+                ? cancelReqs.length + deleteReqs.length
+                : 0;
+              const dashBadge = item.id === "dashboard" && activeTab !== "dashboard"
+                ? allPendingFeed.length
+                : 0;
+              const badgeValue = pendingQsBadge || subsBadge || dashBadge || 0;
+              const meta = MENU_META[item.id] || MENU_META.dashboard;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setActiveTab(item.id)}
+                  className={`group relative min-w-0 overflow-hidden rounded-[28px] border px-5 py-5 text-left transition-all duration-200 ${
+                    isActive
+                      ? "border-transparent text-white shadow-[0_18px_45px_rgba(59,91,255,0.28)]"
+                      : "border-[#e5ebf8] bg-white text-[#334155] shadow-[0_14px_34px_rgba(15,23,42,0.06)] hover:-translate-y-0.5 hover:border-[#c7d7ff]"
+                  }`}
+                  style={isActive ? { background: "linear-gradient(135deg,#3053ff 0%,#4b6cff 52%,#2f6af6 100%)" } : undefined}
+                >
+                  <div className="flex items-center gap-4">
+                    <span
+                      className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-[22px] border text-[30px] ${
+                        isActive ? "border-white/20 bg-white/14 text-white" : ""
+                      }`}
+                      style={isActive ? undefined : { background: meta.tint, borderColor: `${meta.accent}22`, color: meta.accent }}
+                    >
+                      {meta.icon}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className={`text-[16px] font-extrabold sm:text-[18px] ${isActive ? "text-white" : "text-[#1e293b]"}`}>
+                        {isEn ? item.labelEn : item.labelAr}
+                      </div>
+                      <div className={`mt-1 text-[11px] font-medium ${isActive ? "text-white/75" : "text-slate-400"}`}>
+                        {item.id === "dashboard" && "Overview and live command center"}
+                        {item.id === "users" && "Manage accounts and user activity"}
+                        {item.id === "pending" && "Review waiting approvals"}
+                        {item.id === "payments" && "Track receipts and payment flow"}
+                        {item.id === "subscriptions" && "Control active subscription states"}
+                        {item.id === "admins" && "Manage admin access levels"}
+                        {item.id === "logs" && "Inspect audit trails and events"}
+                        {item.id === "settings" && "Runtime controls and ad settings"}
+                        {item.id === "qspremium" && "QS premium plans and requests"}
+                      </div>
+                    </div>
+                    <span className={`shrink-0 text-[32px] leading-none ${isActive ? "text-white/85" : "text-slate-400 transition-transform group-hover:translate-x-0.5"}`}>
+                      ›
+                    </span>
+                  </div>
+                  {badgeValue > 0 && (
+                    <span className={`absolute top-4 right-4 flex min-w-[26px] items-center justify-center rounded-full px-2 py-1 text-[10px] font-extrabold shadow ${
+                      isActive ? "bg-white text-[#3053ff]" : "bg-rose-500 text-white"
+                    }`}>
+                      {badgeValue}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
 
-          <section className="min-w-0 p-3 sm:p-4">
+          <section className="min-w-0">
             {activeTab === "dashboard" && (
               <div className="space-y-5">
 
@@ -897,7 +937,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                 ) : (
                   <>
                     {/* ── KPI Cards ──────────────────────────────────────── */}
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+                    <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(176px, 1fr))" }}>
                       <KpiCard
                         icon="👥" label="Total Users"
                         value={dashboardStats?.totalUsers || 0}

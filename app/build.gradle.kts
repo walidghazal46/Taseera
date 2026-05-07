@@ -7,6 +7,21 @@ android {
     namespace = "com.taseera.app"
     compileSdk = 35
 
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("C:/Users/admin/taseera key/taseera key")
+            storePassword = "793131"
+            keyAlias = "key0"
+            keyPassword = "793131"
+        }
+        create("release") {
+            storeFile = file("C:/Users/admin/taseera key/taseera key")
+            storePassword = "793131"
+            keyAlias = "key0"
+            keyPassword = "793131"
+        }
+    }
+
     defaultConfig {
         applicationId = "com.taseera.app"
         minSdk = 24
@@ -20,6 +35,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

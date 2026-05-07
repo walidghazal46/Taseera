@@ -1,14 +1,14 @@
 {
   "files": {
-    "main.css": "./static/css/main.006bfbc8.css",
-    "main.js": "./static/js/main.417a5651.js",
+    "main.css": "./static/css/main.3453c3ae.css",
+    "main.js": "./static/js/main.88e651ff.js",
     "static/media/taseera-logo.png": "./static/media/taseera-logo.cea613709e9165015cdd.png",
     "index.html": "./index.html",
-    "main.006bfbc8.css.map": "./static/css/main.006bfbc8.css.map",
-    "main.417a5651.js.map": "./static/js/main.417a5651.js.map"
+    "main.3453c3ae.css.map": "./static/css/main.3453c3ae.css.map",
+    "main.88e651ff.js.map": "./static/js/main.88e651ff.js.map"
   },
   "entrypoints": [
-    "static/css/main.006bfbc8.css",
-    "static/js/main.417a5651.js"
+    "static/css/main.3453c3ae.css",
+    "static/js/main.88e651ff.js"
   ]
 }
