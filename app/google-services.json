@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "732996943611",
+    "project_id": "taseera-8ccdd",
+    "storage_bucket": "taseera-8ccdd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:732996943611:android:878c4cc720183ee8083a5e",
+        "android_client_info": {
+          "package_name": "com.taseera.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "732996943611-pl4qs7f6lhn4hu1e1laco6avd7o5nmme.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.taseera.app",
+            "certificate_hash": "07fd6251e4445590d05ced50afe6a38d5ac94ec2"
+          }
+        },
+        {
+          "client_id": "732996943611-svsnsbthhkica23honfqra3mr719gmkp.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCqQBdAWngra4w4NwmPRywIGBj5IdLI5bo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "732996943611-svsnsbthhkica23honfqra3mr719gmkp.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

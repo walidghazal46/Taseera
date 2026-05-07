@@ -1,0 +1,867 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { FolderIcon, PlusIcon, SearchIcon, StarIcon, ChevronRightIcon, BuildingsIcon } from "./icons";
+import useBackStack from "../hooks/useBackStack";
+import useAdminSession from "../hooks/useAdminSession";
+import { SUPER_ADMIN_EMAIL } from "../constants/admin";
+import { AD_SLOT_IDS, DEFAULT_AD_BANNER, listenAdBanner, saveAdBanner } from "../services/subscriptionApi";
+import AdSenseUnit from "./AdSenseUnit";
+
+const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
+const MONO = "'IBM Plex Mono',monospace";
+const COUNTRY_VALUES = {
+  sa: "السعودية",
+  eg: "مصر",
+  ae: "الإمارات",
+};
+
+function normalizeCountry(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (!text) return COUNTRY_VALUES.sa;
+  if (["السعودية", "saudi arabia", "ksa", "sa"].includes(text)) return COUNTRY_VALUES.sa;
+  if (["مصر", "egypt", "eg"].includes(text)) return COUNTRY_VALUES.eg;
+  if (["الإمارات", "الامارات", "u.a.e.", "uae", "united arab emirates", "ae"].includes(text)) return COUNTRY_VALUES.ae;
+  return String(value || "").trim();
+}
+
+function getCompaniesCopy(language) {
+  return language === "en"
+    ? {
+        contractor: "Contractor", consultant: "Consultant", back: "Back",
+        countryFilter: "Country", chooseCountry: "Choose country",
+        saudiArabia: "Saudi Arabia", egypt: "Egypt", uae: "U.A.E.",
+        headquarters: "Headquarters", website: "Website", visitWebsite: "Visit",
+        unavailable: "Unavailable", keyProjects: "Key Projects",
+        projectCount: "projects", systemProjects: "Projects in System",
+        noBudget: "No budget", noProjects: "No projects added yet.",
+        overallRating: "Rating", customerReviews: "Client Reviews",
+        reviewCount: "3 reviews",
+        reviewOne: "Pricing was clear and communication stayed fast throughout.",
+        reviewTwo: "Excellent execution quality, schedule updates could be faster.",
+        reviewThree: "Strong fit for major projects with solid coordination.",
+        rating: "Details", directory: "Directory", projects: "Projects", add: "Add",
+        searchPlaceholder: "Search by name, specialty, or city",
+        totalCompanies: "Total", contractors: "Contractors", consultants: "Consultants",
+        companyDetails: "Company Details", currentShowing: "Showing",
+        outOf: "of", remaining: "Remaining", previous: "Prev", next: "Next",
+        page: "Page", company: "Company", selected: "Selected", choose: "Select",
+        noCompanyProjects: "No projects added yet.", addCompany: "Add Company",
+        companyName: "Company name", enterCompanyName: "Enter company name",
+        specialization: "Specialization", enterSpecialization: "Roads, MEP, hospitals…",
+        type: "Type", contracting: "Contracting", consulting: "Consulting",
+        country: "Country", mainCities: "Primary Cities", citiesPlaceholder: "Riyadh, Jeddah",
+        saveCompany: "Save Company", addProject: "Add Project",
+        chooseCompanyFirst: "Select a company first", projectName: "Project name",
+        enterProjectName: "Enter project name", location: "Location",
+        stage: "Stage", pricingStage: "Pricing", budget: "Budget",
+        saveProject: "Save Project",
+      }
+    : {
+        contractor: "مقاول", consultant: "استشاري", back: "رجوع",
+        countryFilter: "الدولة", chooseCountry: "اختر الدولة",
+        saudiArabia: "السعودية", egypt: "مصر", uae: "الإمارات",
+        headquarters: "المقرات", website: "الموقع", visitWebsite: "زيارة",
+        unavailable: "غير متاح", keyProjects: "المشاريع الرئيسية",
+        projectCount: "مشروع", systemProjects: "المشاريع في النظام",
+        noBudget: "بدون ميزانية", noProjects: "لا توجد مشاريع مسجلة بعد.",
+        overallRating: "التقييم", customerReviews: "تجارب العملاء",
+        reviewCount: "3 تقييمات",
+        reviewOne: "التسعير واضح والتواصل سريع طوال المشروع.",
+        reviewTwo: "جودة التنفيذ ممتازة لكن تحديثات الجداول تحتاج سرعة أعلى.",
+        reviewThree: "شركة مناسبة للمشاريع الكبيرة بحضور جيد في التنسيق.",
+        rating: "تفاصيل", directory: "الدليل", projects: "المشاريع", add: "إضافة",
+        searchPlaceholder: "ابحث باسم الشركة أو التخصص أو المدينة",
+        totalCompanies: "الإجمالي", contractors: "مقاولين", consultants: "استشاريين",
+        companyDetails: "تفاصيل الشركة", currentShowing: "يعرض",
+        outOf: "من أصل", remaining: "المتبقي", previous: "السابق", next: "التالي",
+        page: "صفحة", company: "الشركة", selected: "محدد", choose: "اختيار",
+        noCompanyProjects: "لا توجد مشاريع مضافة لهذه الشركة بعد.",
+        addCompany: "إضافة شركة", companyName: "اسم الشركة",
+        enterCompanyName: "اكتب اسم الشركة", specialization: "التخصص",
+        enterSpecialization: "طرق، MEP، مستشفيات...", type: "النوع",
+        contracting: "مقاولات", consulting: "استشارات", country: "الدولة",
+        mainCities: "المدن الرئيسية", citiesPlaceholder: "الرياض، جدة",
+        saveCompany: "حفظ الشركة", addProject: "إضافة مشروع",
+        chooseCompanyFirst: "اختر شركة أولاً", projectName: "اسم المشروع",
+        enterProjectName: "اكتب اسم المشروع", location: "الموقع",
+        stage: "المرحلة", pricingStage: "تسعير", budget: "الميزانية",
+        saveProject: "حفظ المشروع",
+      };
+}
+
+function Stars({ rating }) {
+  const filled = Math.round(rating);
+  return (
+    <div className="flex items-center gap-0.5">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <StarIcon key={i} className={`h-3.5 w-3.5 ${i < filled ? "stroke-[#C9A84C] fill-[#C9A84C]" : "stroke-[#E2D8C4] fill-transparent"}`} />
+      ))}
+    </div>
+  );
+}
+
+const TAB_ICONS = { directory: "📋", projects: "📁", create: "➕" };
+
+function TabBar({ tabs, active, onSelect }) {
+  return (
+    <div className="overflow-hidden rounded-2xl bg-gradient-to-br from-[#082555] to-[#0d3070] shadow-[0_8px_24px_rgba(8,37,85,0.22)] p-1.5">
+      <div className="flex gap-1.5">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => onSelect(tab.id)}
+            className={`flex flex-1 items-center justify-center gap-1.5 min-h-[46px] rounded-xl px-2 py-2 text-[12px] font-bold transition-all duration-200 ${
+              active === tab.id
+                ? "bg-[#C9A84C] text-[#082555] shadow-[0_2px_10px_rgba(201,168,76,0.4)]"
+                : "text-white/55 hover:text-white hover:bg-white/8"
+            }`}
+            style={{ fontFamily: AR }}
+          >
+            <span className="text-sm leading-none">{TAB_ICONS[tab.id] || "•"}</span>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const STAT_ICONS = { 0: "🏢", 1: "🔨", 2: "📐" };
+
+function StatBadge({ label, value, index = 0 }) {
+  return (
+    <div className="flex flex-1 items-center gap-2.5 rounded-xl border border-[#E2D8C4] bg-white px-3 py-2.5 shadow-sm transition-shadow hover:shadow-md">
+      <span className="text-base leading-none shrink-0">{STAT_ICONS[index]}</span>
+      <div className="min-w-0">
+        <p className="text-[18px] font-bold leading-none text-[#082555]" style={{ fontFamily: MONO }}>{value}</p>
+        <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wide text-[#9A8A6A]" style={{ fontFamily: AR }}>{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function CompanyCard({ company, selected, onSelect, onShowDetails, copy }) {
+  return (
+    <div
+      className={`overflow-hidden rounded-2xl border-2 transition-all duration-300 ${
+        selected
+          ? "border-[#C9A84C] bg-[#F5EDD8] shadow-md"
+          : "border-[#E2D8C4] bg-white shadow-sm hover:shadow-md"
+      }`}
+    >
+      <button
+        type="button"
+        onClick={() => onSelect(company.id)}
+        className="w-full p-4 text-right"
+      >
+        <div className="flex items-start gap-4">
+          <div
+            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-2xl shadow-sm ${
+              selected ? "bg-[#C9A84C] text-[#082555] ring-4 ring-[#C9A84C]/20" : "bg-[#F7F3EC] text-[#082555]"
+            }`}
+          >
+            {company.logo}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <h3
+                className="text-[14px] font-bold text-[#082555] leading-snug"
+                style={{ fontFamily: AR }}
+              >
+                {company.name}
+              </h3>
+              <span
+                className={`shrink-0 rounded-lg px-2 py-1 text-[9px] font-bold uppercase tracking-wider ${
+                  company.type === "Consultant"
+                    ? "bg-[#C9A84C]/10 text-[#C9A84C]"
+                    : "bg-[#E2D8C4] text-[#5A4E38]"
+                }`}
+              >
+                {company.type === "Contractor" ? copy.contractor : copy.consultant}
+              </span>
+            </div>
+
+            <p className="mt-1 text-[11px] text-[#C9A84C] font-bold" style={{ fontFamily: AR }}>
+              {company.specialization}
+            </p>
+
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <Stars rating={company.rating} />
+              <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#9A8A6A]">
+                <FolderIcon className="h-3.5 w-3.5" />
+                <span style={{ fontFamily: MONO }}>{company.projectsCount} {copy.projectCount}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </button>
+
+      <div className="flex items-center justify-between border-t-2 border-[#E2D8C4] bg-[#FAFAFA] px-4 py-3">
+        <div className="flex gap-1.5">
+          {(company.headquarters || []).slice(0, 2).map((city) => (
+            <span key={city} className="rounded-lg bg-white border border-[#E2D8C4] px-2.5 py-1 text-[10px] font-bold text-[#9A8A6A]">
+              {city}
+            </span>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => onShowDetails(company.id)}
+          className="flex min-h-[36px] items-center gap-1.5 rounded-xl bg-[#C9A84C] px-4 py-1.5 text-[11px] font-bold text-[#082555] transition hover:bg-[#E8C97A]"
+          style={{ fontFamily: AR }}
+        >
+          {copy.rating}
+          <ChevronRightIcon className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CompanyDetailView({ company, onBack, copy }) {
+  if (!company) return null;
+  return (
+    <div className="space-y-3">
+      {/* Header card */}
+      <div className="relative overflow-hidden rounded-2xl bg-[#082555] p-6 shadow-xl">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#C9A84C]/20 to-transparent pointer-events-none" />
+        <div className="flex items-start gap-4">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-3xl shadow-sm backdrop-blur-sm">
+            {company.logo}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-[18px] font-bold text-white" style={{ fontFamily: AR }}>
+              {company.name}
+            </h2>
+            <p className="mt-1 text-[12px] text-[#E8C97A] font-bold" style={{ fontFamily: AR }}>
+              {company.specialization}
+            </p>
+            <div className="mt-3 flex items-center gap-3">
+              <Stars rating={company.rating} />
+              <span className="text-[12px] font-bold text-white/60" style={{ fontFamily: MONO }}>{company.rating}/5</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onBack}
+            className="shrink-0 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-[11px] font-bold text-white transition hover:bg-white/20"
+            style={{ fontFamily: AR }}
+          >
+            {copy.back}
+          </button>
+        </div>
+      </div>
+
+      {/* Info grid */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-4 shadow-sm">
+          <p className="text-[10px] font-bold text-[#9A8A6A] mb-2 uppercase tracking-wider">{copy.headquarters}</p>
+          <p className="text-[13px] font-bold text-[#082555]" style={{ fontFamily: AR }}>
+            {(company.headquarters || []).join(" • ")}
+          </p>
+        </div>
+        <div className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-4 shadow-sm">
+          <p className="text-[10px] font-bold text-[#9A8A6A] mb-2 uppercase tracking-wider">{copy.website}</p>
+          {company.website ? (
+            <a href={company.website} target="_blank" rel="noreferrer"
+              className="text-[13px] font-bold text-[#C9A84C] underline underline-offset-4">
+              {copy.visitWebsite}
+            </a>
+          ) : (
+            <p className="text-[13px] font-bold text-[#9A8A6A]">{copy.unavailable}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Key projects */}
+      <div className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-4 shadow-sm">
+        <p className="text-[11px] font-bold text-[#082555] mb-3 uppercase tracking-wider" style={{ fontFamily: AR }}>
+          {copy.keyProjects}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {(company.keyProjects || []).map((p) => (
+            <span key={p} className="rounded-xl border-2 border-[#E2D8C4] bg-[#F7F3EC] px-3 py-1.5 text-[11px] font-bold text-[#5A4E38]"
+              style={{ fontFamily: AR }}>
+              {p}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Reviews */}
+      <div className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-[11px] font-bold text-[#082555] uppercase tracking-wider" style={{ fontFamily: AR }}>
+            {copy.customerReviews}
+          </p>
+          <span className="text-[11px] font-bold text-[#9A8A6A]" style={{ fontFamily: MONO }}>{copy.reviewCount}</span>
+        </div>
+        <div className="space-y-3">
+          {[copy.reviewOne, copy.reviewTwo, copy.reviewThree].map((review, i) => (
+            <div key={i} className="flex gap-3 rounded-2xl bg-[#F7F3EC] p-4">
+              <span className="text-[14px] text-[#C9A84C]">★</span>
+              <p className="text-[12px] leading-relaxed font-medium text-[#5A4E38]" style={{ fontFamily: AR }}>
+                {review}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FormField({ label, value, onChange, placeholder, type = "text" }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500" style={{ fontFamily: AR }}>
+        {label}
+      </span>
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className="min-h-[44px] w-full rounded-xl border border-[#E2D8C4] bg-white px-3.5 py-2.5 text-[13px] font-medium text-[#082555] outline-none transition-all duration-150 hover:border-[#C9A84C]/60 focus:border-[#C9A84C] focus:ring-2 focus:ring-[#C9A84C]/20 placeholder:text-slate-300"
+        style={{ fontFamily: AR }}
+      />
+    </label>
+  );
+}
+
+function InlineAdBanner({ adBanner, canManageAds = false, onEdit, onToggleVisibility, onRemove }) {
+  const hasContent = adBanner?.enabled && adBanner?.imageUrl;
+
+  return (
+    <div className="relative rounded-2xl border-2 border-[#E2D8C4] bg-white p-2.5 shadow-sm overflow-hidden">
+      {canManageAds ? (
+        <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onEdit?.()}
+            className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm"
+            style={{ fontFamily: AR }}
+          >
+            تعديل
+          </button>
+          <button
+            type="button"
+            onClick={() => onToggleVisibility?.(true)}
+            className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm"
+            style={{ fontFamily: AR }}
+          >
+            إظهار
+          </button>
+          <button
+            type="button"
+            onClick={() => onToggleVisibility?.(false)}
+            className="rounded-xl border border-[#082555]/15 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-[#082555] shadow-sm"
+            style={{ fontFamily: AR }}
+          >
+            إخفاء
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const ok = window.confirm("هل تريد إزالة محتوى هذا الإعلان؟");
+              if (!ok) return;
+              onRemove?.();
+            }}
+            className="rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-bold text-rose-700 shadow-sm"
+            style={{ fontFamily: AR }}
+          >
+            إزالة
+          </button>
+        </div>
+      ) : null}
+
+      {hasContent ? (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              if (!adBanner?.targetUrl) return;
+              window.open(adBanner.targetUrl, "_blank", "noopener,noreferrer");
+            }}
+            className="mx-auto block h-[230px] w-full max-w-[608px] overflow-hidden rounded-xl bg-[#F7F3EC]"
+          >
+            <img
+              src={adBanner.imageUrl}
+              alt={adBanner.alt || adBanner.title || "companies-ad-banner"}
+              loading="lazy"
+              className="h-full w-full object-cover"
+            />
+          </button>
+          {adBanner.title ? (
+            <p className="mt-2 text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+              {adBanner.title}
+            </p>
+          ) : null}
+        </>
+      ) : canManageAds ? (
+        <div className="mx-auto flex h-[230px] w-full max-w-[608px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#d4a843]/35 bg-[#fff9ec] px-4 py-5 text-center">
+          <p className="text-[11px] font-bold text-[#5A4E38]" style={{ fontFamily: AR }}>
+            مساحة إعلانية
+          </p>
+        </div>
+      ) : (
+        <AdSenseUnit />
+      )}
+    </div>
+  );
+}
+
+export default function CompaniesPanel({
+  companies, company, selectedCompanyId, selectedProjectId,
+  onSelectCompany, onSelectProject, onAddCompany, onAddProject,
+  navigationBridge, settings, sessionMeta, authMode, initialCountry,
+}) {
+  const copy = getCompaniesCopy(settings?.language);
+  const { profile: adminProfile } = useAdminSession({
+    uid: sessionMeta?.uid,
+    email: settings?.userEmail,
+    displayName: settings?.userName,
+  });
+  const canManageAds = authMode !== "guest" && (
+    adminProfile?.canAccessAdmin === true ||
+    String(settings?.userEmail || "").toLowerCase() === SUPER_ADMIN_EMAIL
+  );
+  const countryOptions = useMemo(() => ([
+    { value: COUNTRY_VALUES.sa, label: copy.saudiArabia },
+    { value: COUNTRY_VALUES.eg, label: copy.egypt },
+    { value: COUNTRY_VALUES.ae, label: copy.uae },
+  ]), [copy.egypt, copy.saudiArabia, copy.uae]);
+  const [activeCountry, setActiveCountry] = useState(normalizeCountry(initialCountry || settings?.country || COUNTRY_VALUES.sa));
+  const [query, setQuery] = useState("");
+  const [companyForm, setCompanyForm] = useState({
+    name: "", type: "Contractor",
+    country: normalizeCountry(initialCountry || settings?.country || COUNTRY_VALUES.sa),
+    specialization: "", headquarters: "",
+  });
+  const [projectForm, setProjectForm] = useState({
+    name: "", location: "", stage: copy.pricingStage, budget: "",
+  });
+  const [directoryPage, setDirectoryPage] = useState(1);
+  const [companiesAdBanner, setCompaniesAdBanner] = useState(null);
+  const nav = useBackStack({
+    initialEntry: { section: "directory", detailCompanyId: null },
+    registerBackHandler: navigationBridge?.registerBackHandler,
+    pushHistoryEntry: navigationBridge?.pushHistoryEntry,
+    onEntryChange: navigationBridge?.onEntryChange,
+  });
+  const activeSection = nav.currentEntry.section;
+  const detailCompanyId = nav.currentEntry.detailCompanyId;
+
+  const countryCompanies = useMemo(
+    () => companies.filter((entry) => normalizeCountry(entry.country) === normalizeCountry(activeCountry)),
+    [activeCountry, companies]
+  );
+
+  const filteredCompanies = useMemo(() => {
+    const q = query.trim();
+    if (!q) return countryCompanies;
+    return countryCompanies.filter((e) =>
+      [e.name, e.specialization, e.description, ...(e.headquarters || []), ...(e.keyProjects || [])]
+        .filter(Boolean).some((v) => v.includes(q))
+    );
+  }, [countryCompanies, query]);
+
+  const pageSize = 4;
+  const totalPages = Math.max(1, Math.ceil(filteredCompanies.length / pageSize));
+  const pagedCompanies = filteredCompanies.slice((directoryPage - 1) * pageSize, directoryPage * pageSize);
+
+  const summary = useMemo(() => ({
+    total: countryCompanies.length,
+    contractors: countryCompanies.filter((e) => e.type === "Contractor").length,
+    consultants: countryCompanies.filter((e) => e.type === "Consultant").length,
+  }), [countryCompanies]);
+
+  const detailCompany = useMemo(() => companies.find((e) => e.id === detailCompanyId) || null, [companies, detailCompanyId]);
+
+  const tabs = [
+    { id: "directory", label: copy.directory },
+    { id: "projects", label: copy.projects },
+    { id: "create", label: copy.add },
+  ];
+
+  useEffect(() => {
+    if (directoryPage > totalPages) setDirectoryPage(totalPages);
+  }, [directoryPage, totalPages]);
+
+  useEffect(() => {
+    setDirectoryPage(1);
+    setQuery("");
+  }, [activeCountry]);
+
+  useEffect(() => {
+    if (activeSection === "details") nav.reset({ section: "directory", detailCompanyId: null });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [directoryPage, query, activeCountry]);
+
+  useEffect(() => {
+    setCompanyForm((current) => ({ ...current, country: activeCountry }));
+  }, [activeCountry]);
+
+  useEffect(() => {
+    if (!countryOptions.some((option) => option.value === activeCountry)) {
+      setActiveCountry(COUNTRY_VALUES.sa);
+    }
+  }, [activeCountry, countryOptions]);
+
+  useEffect(() => {
+    const nextCountry = normalizeCountry(initialCountry || settings?.country || COUNTRY_VALUES.sa);
+    setActiveCountry(nextCountry);
+    setCompanyForm((current) => ({ ...current, country: nextCountry }));
+  }, [initialCountry, settings?.country]);
+
+  useEffect(() => {
+    const unsubscribe = listenAdBanner(
+      (data) => setCompaniesAdBanner(data),
+      AD_SLOT_IDS.companiesAfterPagination
+    );
+    return () => unsubscribe?.();
+  }, []);
+
+  const handleToggleAdVisibility = useCallback(async (nextEnabled) => {
+    if (!canManageAds) return;
+    try {
+      await saveAdBanner(
+        adminProfile,
+        { ...(companiesAdBanner || DEFAULT_AD_BANNER), enabled: Boolean(nextEnabled) },
+        AD_SLOT_IDS.companiesAfterPagination
+      );
+    } catch {
+      window.alert("تعذر تحديث حالة الإعلان");
+    }
+  }, [adminProfile, canManageAds, companiesAdBanner]);
+
+  const handleEditAd = useCallback(async () => {
+    if (!canManageAds) return;
+
+    const current = { ...(companiesAdBanner || DEFAULT_AD_BANNER) };
+    const title = window.prompt("عنوان الإعلان", current.title || "");
+    if (title === null) return;
+    const imageUrl = window.prompt("رابط صورة الإعلان", current.imageUrl || "");
+    if (imageUrl === null) return;
+    const targetUrl = window.prompt("رابط التحويل عند الضغط", current.targetUrl || "");
+    if (targetUrl === null) return;
+    const alt = window.prompt("نص بديل للصورة (اختياري)", current.alt || "");
+    if (alt === null) return;
+
+    try {
+      await saveAdBanner(
+        adminProfile,
+        {
+          ...current,
+          title: title.trim(),
+          imageUrl: imageUrl.trim(),
+          targetUrl: targetUrl.trim(),
+          alt: alt.trim(),
+        },
+        AD_SLOT_IDS.companiesAfterPagination
+      );
+    } catch {
+      window.alert("تعذر حفظ تعديل الإعلان");
+    }
+  }, [adminProfile, canManageAds, companiesAdBanner]);
+
+  const handleRemoveAd = useCallback(async () => {
+    if (!canManageAds) return;
+    try {
+      await saveAdBanner(
+        adminProfile,
+        {
+          ...DEFAULT_AD_BANNER,
+          enabled: false,
+          title: "",
+          imageUrl: "",
+          targetUrl: "",
+          alt: "",
+        },
+        AD_SLOT_IDS.companiesAfterPagination
+      );
+    } catch {
+      window.alert("تعذر إزالة الإعلان");
+    }
+  }, [adminProfile, canManageAds]);
+
+  const submitCompany = (e) => {
+    e.preventDefault();
+    if (!companyForm.name.trim() || !companyForm.country.trim() || !companyForm.specialization.trim()) return;
+    onAddCompany(companyForm);
+    setCompanyForm({ name: "", type: "Contractor", country: activeCountry, specialization: "", headquarters: "" });
+    nav.navigate({ section: "projects", detailCompanyId: null });
+  };
+
+  const submitProject = (e) => {
+    e.preventDefault();
+    if (!company || !projectForm.name.trim() || !projectForm.location.trim()) return;
+    onAddProject(company.id, projectForm);
+    setProjectForm({ name: "", location: "", stage: copy.pricingStage, budget: "" });
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Nav tabs */}
+      {activeSection !== "details" ? (
+        <div className="space-y-2.5">
+          <TabBar tabs={tabs} active={activeSection} onSelect={(id) => nav.navigate({ section: id, detailCompanyId: null })} />
+
+          {activeSection === "directory" && (
+            <div className="space-y-2.5">
+              {/* Search */}
+              <div className="relative">
+                <SearchIcon className="absolute start-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9A8A6A]" />
+                <input
+                  value={query}
+                  onChange={(e) => { setQuery(e.target.value); setDirectoryPage(1); }}
+                  placeholder={copy.searchPlaceholder}
+                  className="h-11 w-full rounded-xl border border-[#E2D8C4] bg-white ps-10 pe-4 text-[12px] font-medium text-[#082555] outline-none transition-all duration-150 hover:border-[#C9A84C]/50 focus:border-[#C9A84C] focus:ring-2 focus:ring-[#C9A84C]/20 shadow-sm placeholder:text-slate-300"
+                  style={{ fontFamily: AR }}
+                />
+              </div>
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-2">
+                <StatBadge label={copy.totalCompanies} value={summary.total} index={0} />
+                <StatBadge label={copy.contractors} value={summary.contractors} index={1} />
+                <StatBadge label={copy.consultants} value={summary.consultants} index={2} />
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-2xl bg-[#082555] p-4 shadow-xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] text-[#C9A84C] font-bold uppercase tracking-widest">{copy.companyDetails}</p>
+              <p className="mt-1 text-[15px] font-bold text-white" style={{ fontFamily: AR }}>
+                {detailCompany?.name}
+              </p>
+            </div>
+            <button type="button" onClick={() => nav.reset({ section: "directory", detailCompanyId: null })}
+              className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-[11px] font-bold text-white transition hover:bg-white/20">
+              {copy.back}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Directory */}
+      {activeSection === "directory" && (
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between rounded-xl border border-[#E2D8C4] bg-[#FAFAF8] px-3.5 py-2 shadow-sm">
+            <span className="text-[11px] text-[#9A8A6A]" style={{ fontFamily: AR }}>
+              {copy.currentShowing}{" "}
+              <strong className="text-[#082555]">{pagedCompanies.length}</strong>
+              {" "}{copy.outOf}{" "}
+              <strong className="text-[#082555]">{filteredCompanies.length}</strong>
+            </span>
+            <span className="rounded-full bg-[#082555] px-2.5 py-0.5 text-[10px] font-bold text-white" style={{ fontFamily: MONO }}>
+              {directoryPage} / {totalPages}
+            </span>
+          </div>
+
+          {pagedCompanies.map((entry) => (
+            <CompanyCard
+              key={entry.id} company={entry} copy={copy}
+              selected={selectedCompanyId === entry.id}
+              onSelect={onSelectCompany}
+              onShowDetails={(id) => nav.navigate({ section: "details", detailCompanyId: id })}
+            />
+          ))}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => setDirectoryPage((p) => Math.max(1, p - 1))}
+              disabled={directoryPage === 1}
+              className={`flex h-10 flex-1 items-center justify-center rounded-xl text-[12px] font-bold transition-all duration-150 ${
+                directoryPage === 1
+                  ? "border border-[#E2D8C4] bg-white text-[#D4C9B0] cursor-not-allowed"
+                  : "border border-[#C9A84C] bg-white text-[#C9A84C] hover:bg-[#FFF9EC] active:scale-[0.98]"
+              }`} style={{ fontFamily: AR }}>
+              {copy.previous}
+            </button>
+            <div className="flex h-10 min-w-[56px] items-center justify-center rounded-xl bg-[#082555] px-3 text-[11px] font-bold text-white" style={{ fontFamily: MONO }}>
+              {directoryPage} / {totalPages}
+            </div>
+            <button type="button" onClick={() => setDirectoryPage((p) => Math.min(totalPages, p + 1))}
+              disabled={directoryPage === totalPages}
+              className={`flex h-10 flex-1 items-center justify-center rounded-xl text-[12px] font-bold transition-all duration-150 ${
+                directoryPage === totalPages
+                  ? "border border-[#E2D8C4] bg-white text-[#D4C9B0] cursor-not-allowed"
+                  : "bg-gradient-to-r from-[#082555] to-[#0d3070] text-white shadow-md hover:shadow-lg active:scale-[0.98]"
+              }`} style={{ fontFamily: AR }}>
+              {copy.next}
+            </button>
+          </div>
+          )}
+
+          <InlineAdBanner
+            adBanner={companiesAdBanner}
+            canManageAds={canManageAds}
+            onEdit={handleEditAd}
+            onToggleVisibility={handleToggleAdVisibility}
+            onRemove={handleRemoveAd}
+          />
+        </div>
+      )}
+
+      {/* Detail view */}
+      {activeSection === "details" && (
+        <CompanyDetailView company={detailCompany} onBack={() => nav.reset({ section: "directory", detailCompanyId: null })} copy={copy} />
+      )}
+
+      {/* Projects view */}
+      {activeSection === "projects" && (
+        <div className="space-y-4">
+          {countryCompanies.map((entry) => (
+            <div key={entry.id} className="overflow-hidden rounded-2xl border-2 border-[#E2D8C4] bg-white shadow-sm transition-all hover:shadow-md">
+              <button type="button" onClick={() => onSelectCompany(entry.id)}
+                className="flex w-full items-center justify-between gap-4 p-4 text-right">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#F7F3EC] text-2xl shrink-0 shadow-sm">
+                    {entry.logo}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[14px] font-bold text-[#082555]" style={{ fontFamily: AR }}>
+                      {entry.name}
+                    </p>
+                    <p className="text-[11px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+                      {(entry.headquarters || []).join(" • ")}
+                    </p>
+                  </div>
+                </div>
+                <span className={`shrink-0 rounded-lg px-3 py-1.5 text-[11px] font-bold ${
+                  selectedCompanyId === entry.id ? "bg-[#C9A84C] text-[#082555]" : "bg-[#F7F3EC] text-[#9A8A6A]"
+                }`} style={{ fontFamily: MONO }}>
+                  {entry.projects.length}
+                </span>
+              </button>
+
+              {entry.projects.length > 0 && (
+                <div className="border-t-2 border-[#E2D8C4] bg-[#FAFAFA] p-3 space-y-2">
+                  {entry.projects.map((project) => {
+                    const isSelected = selectedCompanyId === entry.id && selectedProjectId === project.id;
+                    return (
+                      <button key={project.id} type="button"
+                        onClick={() => onSelectProject(entry.id, project.id)}
+                        className={`flex min-h-[56px] w-full items-center justify-between rounded-xl px-4 py-2.5 text-right transition-all border-2 ${
+                          isSelected ? "bg-[#C9A84C]/10 border-[#C9A84C]" : "bg-white border-transparent hover:border-[#E2D8C4]"
+                        }`}>
+                        <div>
+                          <p className="text-[13px] font-bold text-[#082555]" style={{ fontFamily: AR }}>
+                            {project.name}
+                          </p>
+                          <p className="text-[11px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+                            {project.location} • {project.stage}
+                          </p>
+                        </div>
+                        <span className={`rounded-xl px-4 py-1.5 text-[11px] font-bold transition-all ${
+                          isSelected ? "bg-[#C9A84C] text-[#082555]" : "border-2 border-[#E2D8C4] text-[#9A8A6A]"
+                        }`}>
+                          {isSelected ? copy.selected : copy.choose}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {entry.projects.length === 0 && (
+                <div className="border-t-2 border-[#E2D8C4] bg-[#FAFAFA] px-4 py-4 text-center text-[12px] font-bold text-[#9A8A6A]"
+                  style={{ fontFamily: AR }}>
+                  {copy.noCompanyProjects}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Create view */}
+      {activeSection === "create" && (
+        <div className="space-y-4">
+          {/* Add Company */}
+          <div className="overflow-hidden rounded-2xl border border-[#E2D8C4] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+            <div className="flex items-center gap-3 bg-gradient-to-r from-[#082555] to-[#0d3070] px-5 py-4">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#C9A84C]/20 text-base">🏢</span>
+              <p className="text-[13px] font-bold text-white" style={{ fontFamily: AR }}>{copy.addCompany}</p>
+            </div>
+            <form onSubmit={submitCompany} className="space-y-3.5 p-5">
+              <FormField label={copy.companyName} value={companyForm.name}
+                onChange={(e) => setCompanyForm((c) => ({ ...c, name: e.target.value }))}
+                placeholder={copy.enterCompanyName} />
+              <FormField label={copy.specialization} value={companyForm.specialization}
+                onChange={(e) => setCompanyForm((c) => ({ ...c, specialization: e.target.value }))}
+                placeholder={copy.enterSpecialization} />
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500" style={{ fontFamily: AR }}>
+                    {copy.type}
+                  </span>
+                  <select value={companyForm.type}
+                    onChange={(e) => setCompanyForm((c) => ({ ...c, type: e.target.value }))}
+                    className="min-h-[44px] w-full rounded-xl border border-[#E2D8C4] bg-white px-3.5 py-2.5 text-[13px] font-bold text-[#082555] outline-none transition-all duration-150 hover:border-[#C9A84C]/60 focus:border-[#C9A84C] focus:ring-2 focus:ring-[#C9A84C]/20"
+                    style={{ fontFamily: AR }}>
+                    <option value="Contractor">{copy.contracting}</option>
+                    <option value="Consultant">{copy.consulting}</option>
+                  </select>
+                </label>
+                <FormField label={copy.country} value={companyForm.country}
+                  onChange={(e) => setCompanyForm((c) => ({ ...c, country: e.target.value }))}
+                  placeholder={settings?.language === "en" ? "Saudi Arabia" : "السعودية"} />
+              </div>
+              <FormField label={copy.mainCities} value={companyForm.headquarters}
+                onChange={(e) => setCompanyForm((c) => ({ ...c, headquarters: e.target.value }))}
+                placeholder={copy.citiesPlaceholder} />
+              <button type="submit"
+                className="w-full h-11 rounded-xl bg-gradient-to-r from-[#082555] to-[#0d3070] text-[13px] font-bold text-white shadow-md transition-all duration-150 hover:shadow-lg active:scale-[0.98]"
+                style={{ fontFamily: AR }}>
+                {copy.saveCompany}
+              </button>
+            </form>
+          </div>
+
+          {/* Add Project */}
+          <div className="overflow-hidden rounded-2xl border border-[#E2D8C4] bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
+            <div className="flex items-center justify-between bg-gradient-to-r from-[#b8893d] to-[#C9A84C] px-5 py-4">
+              <div className="flex items-center gap-3">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#082555]/15 text-base">📁</span>
+                <p className="text-[13px] font-bold text-[#082555]" style={{ fontFamily: AR }}>{copy.addProject}</p>
+              </div>
+              <span className="rounded-full bg-[#082555]/12 px-2.5 py-1 text-[10px] font-bold text-[#082555]" style={{ fontFamily: AR }}>
+                {company?.name || copy.chooseCompanyFirst}
+              </span>
+            </div>
+            <form onSubmit={submitProject} className="space-y-3.5 p-5">
+              <FormField label={copy.projectName} value={projectForm.name}
+                onChange={(e) => setProjectForm((c) => ({ ...c, name: e.target.value }))}
+                placeholder={copy.enterProjectName} />
+              <div className="grid grid-cols-2 gap-3">
+                <FormField label={copy.location} value={projectForm.location}
+                  onChange={(e) => setProjectForm((c) => ({ ...c, location: e.target.value }))}
+                  placeholder={settings?.language === "en" ? "Riyadh" : "الرياض"} />
+                <FormField label={copy.stage} value={projectForm.stage}
+                  onChange={(e) => setProjectForm((c) => ({ ...c, stage: e.target.value }))}
+                  placeholder={copy.pricingStage} />
+              </div>
+              <FormField label={copy.budget} value={projectForm.budget}
+                onChange={(e) => setProjectForm((c) => ({ ...c, budget: e.target.value }))}
+                placeholder="0" type="number" />
+              <button type="submit" disabled={!company}
+                className={`w-full h-11 rounded-xl text-[13px] font-bold transition-all duration-150 active:scale-[0.98] shadow-md ${
+                  company
+                    ? "bg-gradient-to-r from-[#b8893d] to-[#C9A84C] text-[#082555] hover:shadow-lg"
+                    : "cursor-not-allowed bg-[#F7F3EC] text-[#C0B89A] border border-[#E2D8C4]"
+                }`} style={{ fontFamily: AR }}>
+                {copy.saveProject}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

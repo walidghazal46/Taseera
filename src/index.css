@@ -1,0 +1,98 @@
+@import url("https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Tajawal:wght@400;500;700;800;900&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --color-navy: #0d2545;
+  --color-navy-light: #162e52;
+  --color-gold: #d4a843;
+  --color-gold-light: #f0d080;
+  --color-gold-dark: #b8893d;
+  --color-cream: #faf6ef;
+  --color-border: #e8dcc8;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+  height: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+body {
+  margin: 0;
+  font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, ui-sans-serif, system-ui, sans-serif;
+  background: var(--color-navy);
+  color: #082555;
+  height: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow: hidden;
+}
+
+img,
+video,
+canvas,
+svg,
+iframe {
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input, select, textarea {
+  font-family: 'Cairo', 'Tajawal', sans-serif;
+}
+
+/* Smooth scroll for scrollable containers */
+.overflow-y-auto {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.overflow-y-auto::-webkit-scrollbar {
+  display: none;
+}
+
+/* Subtle button press animation */
+button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Focus visible styles */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+}
