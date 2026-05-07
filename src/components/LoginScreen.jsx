@@ -20,6 +20,42 @@ export default function LoginScreen({
   const text = getAppText(language);
   const isLight = theme === "light";
 
+  const mapEmailAuthError = useCallback((code) => {
+    const fallback = language === "en"
+      ? "Unable to sign in right now. Please try again."
+      : "تعذر تسجيل الدخول الآن. حاول مرة أخرى.";
+    const byCode = {
+      "auth/user-not-found": language === "en"
+        ? "No account found with this email."
+        : "لا يوجد حساب بهذا البريد.",
+      "auth/wrong-password": language === "en"
+        ? "The password is incorrect."
+        : "كلمة المرور غير صحيحة.",
+      "auth/invalid-credential": language === "en"
+        ? "Email or password is incorrect."
+        : "البريد أو كلمة المرور غير صحيحة.",
+      "auth/invalid-login-credentials": language === "en"
+        ? "Email or password is incorrect."
+        : "البريد أو كلمة المرور غير صحيحة.",
+      "auth/invalid-email": language === "en"
+        ? "Please enter a valid email address."
+        : "يرجى إدخال بريد إلكتروني صالح.",
+      "auth/email-already-in-use": language === "en"
+        ? "This email is already registered."
+        : "هذا البريد مسجل بالفعل.",
+      "auth/weak-password": language === "en"
+        ? "Password must be at least 6 characters."
+        : "كلمة المرور يجب أن تكون 6 أحرف على الأقل.",
+      "auth/too-many-requests": language === "en"
+        ? "Too many attempts. Wait a bit, then try again."
+        : "عدد المحاولات كبير. انتظر قليلًا ثم حاول مرة أخرى.",
+      "auth/network-request-failed": language === "en"
+        ? "Network error. Check your connection and try again."
+        : "هناك مشكلة في الشبكة. تحقق من الاتصال ثم حاول مرة أخرى.",
+    };
+    return byCode[code] || fallback;
+  }, [language]);
+
   const mapGoogleError = useCallback((code) => {
     const fallback = language === "en" ? "Google sign-in failed." : "فشل تسجيل الدخول بجوجل.";
     const byCode = {
@@ -85,15 +121,7 @@ export default function LoginScreen({
         onLogin("authenticated", { uid: cred.user.uid, userName: cred.user.displayName || cred.user.email.split("@")[0], userEmail: cred.user.email });
       }
     } catch (err) {
-      const msgs = {
-        "auth/user-not-found": language === "en" ? "No account with this email." : "لا يوجد حساب بهذا البريد.",
-        "auth/wrong-password": language === "en" ? "Incorrect password." : "كلمة المرور غير صحيحة.",
-        "auth/email-already-in-use": language === "en" ? "Email already registered." : "البريد مسجّل مسبقاً.",
-        "auth/invalid-email": language === "en" ? "Invalid email." : "بريد إلكتروني غير صالح.",
-        "auth/weak-password": language === "en" ? "Password must be 6+ characters." : "كلمة المرور 6 أحرف على الأقل.",
-        "auth/invalid-credential": language === "en" ? "Incorrect email or password." : "البريد أو كلمة المرور غير صحيحة.",
-      };
-      setError(msgs[err.code] || (language === "en" ? "An error occurred." : "حدث خطأ، حاول مجدداً."));
+      setError(mapEmailAuthError(err?.code));
     } finally { setLoading(false); }
   };
 

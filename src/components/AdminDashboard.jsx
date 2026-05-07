@@ -47,6 +47,7 @@ import {
 } from "../services/qsPremiumApi";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
+const USERS_PAGE_SIZE = 12;
 
 const MENU = [
   { id: "dashboard", labelAr: "Dashboard", labelEn: "Dashboard" },
@@ -354,6 +355,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
   const [usersCursor, setUsersCursor] = useState(null);
   const [usersHasMore, setUsersHasMore] = useState(false);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [usersPage, setUsersPage] = useState(1);
   const [queryText, setQueryText] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -431,8 +433,16 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
   const canManageRuntimeSettings = hasPermission(adminProfile, "approvePayments");
 
   const isSearchingAllUsers = queryText.trim().length >= 2;
-
   const filteredUsers = useMemo(() => users, [users]);
+  const loadedUsersPages = Math.max(1, Math.ceil(filteredUsers.length / USERS_PAGE_SIZE));
+  const totalUsersPages = Math.max(
+    1,
+    loadedUsersPages + (usersHasMore && !isSearchingAllUsers ? 1 : 0)
+  );
+  const visibleUsers = useMemo(() => {
+    const startIndex = (usersPage - 1) * USERS_PAGE_SIZE;
+    return filteredUsers.slice(startIndex, startIndex + USERS_PAGE_SIZE);
+  }, [filteredUsers, usersPage]);
   const filteredPayments = useMemo(() => {
     const queryTextLower = paymentSearchText.trim().toLowerCase();
     const fromDate = paymentDateFrom ? new Date(`${paymentDateFrom}T00:00:00`) : null;
@@ -543,7 +553,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
       setUsersLoading(true);
       try {
         const page = await listUsersPage({
-          pageSize: 12,
+          pageSize: USERS_PAGE_SIZE,
           cursor: reset ? null : usersCursor,
           status: statusFilter,
           paid: paidFilter,
@@ -552,6 +562,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
         setUsers((current) => (reset ? page.rows : [...current, ...page.rows]));
         setUsersCursor(page.lastDoc);
         setUsersHasMore(page.hasMore);
+        if (reset) setUsersPage(1);
       } catch (error) {
         onToast?.(error.message || "Failed to load users", "warning");
       } finally {
@@ -670,6 +681,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
 
   useEffect(() => {
     if (activeTab === "users") {
+      setUsersPage(1);
       setUsersCursor(null);
       loadUsers(true);
     }
@@ -692,6 +704,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
           setUsers(rows);
           setUsersHasMore(false);
           setUsersCursor(null);
+          setUsersPage(1);
         }
       } catch (error) {
         if (active) onToast?.(error.message || "Search failed", "warning");
@@ -705,6 +718,21 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
       clearTimeout(timer);
     };
   }, [activeTab, canViewUsers, onToast, queryText]);
+
+  useEffect(() => {
+    setUsersPage((current) => Math.min(current, totalUsersPages));
+  }, [totalUsersPages]);
+
+  const handleUsersPageChange = useCallback(
+    async (nextPage) => {
+      if (nextPage < 1 || nextPage > totalUsersPages || nextPage === usersPage || usersLoading) return;
+      if (nextPage > loadedUsersPages && usersHasMore && !isSearchingAllUsers) {
+        await loadUsers(false);
+      }
+      setUsersPage(nextPage);
+    },
+    [isSearchingAllUsers, loadUsers, loadedUsersPages, totalUsersPages, usersHasMore, usersLoading, usersPage]
+  );
 
   useEffect(() => {
     if (activeTab !== "settings") return undefined;
@@ -843,7 +871,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
         </div>
 
         <div className="p-4 sm:p-5">
-          <div className="mb-5 grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+          <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {MENU.map((item) => {
               const pendingQsBadge = item.id === "qspremium" && activeTab !== "qspremium"
                 ? qsRequests.filter((r) => r.status === "pending").length
@@ -862,16 +890,16 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                   key={item.id}
                   type="button"
                   onClick={() => setActiveTab(item.id)}
-                  className={`group relative min-w-0 overflow-hidden rounded-[28px] border px-5 py-5 text-left transition-all duration-200 ${
+                  className={`group relative min-w-0 max-w-full overflow-hidden rounded-[28px] border px-4 py-4 text-left transition-all duration-200 sm:px-5 sm:py-5 ${
                     isActive
                       ? "border-transparent text-white shadow-[0_18px_45px_rgba(59,91,255,0.28)]"
                       : "border-[#e5ebf8] bg-white text-[#334155] shadow-[0_14px_34px_rgba(15,23,42,0.06)] hover:-translate-y-0.5 hover:border-[#c7d7ff]"
                   }`}
                   style={isActive ? { background: "linear-gradient(135deg,#3053ff 0%,#4b6cff 52%,#2f6af6 100%)" } : undefined}
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3 sm:gap-4">
                     <span
-                      className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-[22px] border text-[30px] ${
+                      className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] border text-[26px] sm:h-16 sm:w-16 sm:rounded-[22px] sm:text-[30px] ${
                         isActive ? "border-white/20 bg-white/14 text-white" : ""
                       }`}
                       style={isActive ? undefined : { background: meta.tint, borderColor: `${meta.accent}22`, color: meta.accent }}
@@ -879,10 +907,10 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                       {meta.icon}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className={`text-[16px] font-extrabold sm:text-[18px] ${isActive ? "text-white" : "text-[#1e293b]"}`}>
+                      <div className={`text-[15px] font-extrabold leading-tight sm:text-[18px] ${isActive ? "text-white" : "text-[#1e293b]"}`}>
                         {isEn ? item.labelEn : item.labelAr}
                       </div>
-                      <div className={`mt-1 text-[11px] font-medium ${isActive ? "text-white/75" : "text-slate-400"}`}>
+                      <div className={`mt-1 text-[11px] font-medium leading-6 sm:leading-5 ${isActive ? "text-white/75" : "text-slate-400"}`}>
                         {item.id === "dashboard" && "Overview and live command center"}
                         {item.id === "users" && "Manage accounts and user activity"}
                         {item.id === "pending" && "Review waiting approvals"}
@@ -894,7 +922,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                         {item.id === "qspremium" && "QS premium plans and requests"}
                       </div>
                     </div>
-                    <span className={`shrink-0 text-[32px] leading-none ${isActive ? "text-white/85" : "text-slate-400 transition-transform group-hover:translate-x-0.5"}`}>
+                    <span className={`shrink-0 text-[26px] leading-none sm:text-[32px] ${isActive ? "text-white/85" : "text-slate-400 transition-transform group-hover:translate-x-0.5"}`}>
                       ›
                     </span>
                   </div>
@@ -1175,7 +1203,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                           </tr>
                         </thead>
                         <tbody>
-                          {filteredUsers.map((row) => {
+                          {visibleUsers.map((row) => {
                             const isEditing = editingUserId === row.id;
                             const isSuperTarget = String(row.email || "").toLowerCase() === "walidghazal46@gmail.com";
                             return (
@@ -1278,15 +1306,28 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                       </table>
                     </div>
 
-                    {usersHasMore && (
-                      <button
-                        type="button"
-                        onClick={() => loadUsers(false)}
-                        disabled={usersLoading}
-                        className="rounded-xl border border-[#dbe2ea] bg-white px-3 py-2 text-[12px] font-bold text-slate-600"
-                      >
-                        {usersLoading ? "..." : t.loadMore}
-                      </button>
+                    {totalUsersPages > 1 && (
+                      <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                        {Array.from({ length: totalUsersPages }, (_, index) => {
+                          const pageNumber = index + 1;
+                          const isActivePage = pageNumber === usersPage;
+                          return (
+                            <button
+                              key={pageNumber}
+                              type="button"
+                              onClick={() => handleUsersPageChange(pageNumber)}
+                              disabled={usersLoading && pageNumber > loadedUsersPages}
+                              className={`min-w-[42px] rounded-xl border px-3 py-2 text-[12px] font-extrabold transition ${
+                                isActivePage
+                                  ? "border-[#1d4ed8] bg-[#1d4ed8] text-white shadow-sm"
+                                  : "border-[#dbe2ea] bg-white text-slate-600 hover:border-[#93c5fd] hover:text-[#1d4ed8]"
+                              }`}
+                            >
+                              {usersLoading && pageNumber > loadedUsersPages ? "..." : pageNumber}
+                            </button>
+                          );
+                        })}
+                      </div>
                     )}
                   </>
                 )}
