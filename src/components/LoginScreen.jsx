@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getAppText } from "../data/appText";
 import { auth, googleProvider } from "../firebase";
+import taseeraLogoLight from "../assets/taseera-logo-light.png";
 import {
   createUserWithEmailAndPassword,
   getRedirectResult,
@@ -18,7 +19,7 @@ export default function LoginScreen({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const text = getAppText(language);
-  const isLight = theme === "light";
+  const isLight = true;
 
   const mapEmailAuthError = useCallback((code) => {
     const fallback = language === "en"
@@ -178,7 +179,7 @@ export default function LoginScreen({
   const fieldPy = mode === "register" ? "py-2" : "py-2.5";
   const inputClass = `w-full rounded-2xl border px-4 ${fieldPy} text-[13px] outline-none transition
     ${isLight
-      ? "border-[#d8cdb8] bg-white text-slate-900 placeholder:text-slate-400 focus:border-[#d4a843] focus:ring-2 focus:ring-[#d4a843]/20"
+      ? "border-[#e2e9ff] bg-white/88 text-[#2d3a74] placeholder:text-[#a0a8ca] shadow-[inset_0_1px_0_rgba(255,255,255,0.85)] focus:border-[#52dfe4] focus:ring-2 focus:ring-[#79d6ff]/24"
       : "border-white/15 bg-white/10 text-white placeholder:text-white/40 focus:border-[#d4a843] focus:ring-2 focus:ring-[#d4a843]/20"}`;
 
   return (
@@ -186,15 +187,16 @@ export default function LoginScreen({
       dir={language === "ar" ? "rtl" : "ltr"}
       className={`flex h-[100dvh] flex-col overflow-hidden ${
         isLight
-          ? "bg-gradient-to-b from-[#0d2545] via-[#163352] to-[#1a3a60]"
+          ? "bg-[radial-gradient(circle_at_top_left,rgba(101,225,245,0.18),transparent_24%),radial-gradient(circle_at_top_right,rgba(180,140,255,0.16),transparent_24%),linear-gradient(180deg,#fcfdff_0%,#f3f7ff_48%,#fafcff_100%)]"
           : "bg-gradient-to-b from-[#061422] via-[#0a1e3d] to-[#0f2650]"
       }`}
       style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}
     >
       {/* Background pattern */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-[#d4a843]/5 blur-3xl" />
-        <div className="absolute top-1/2 -left-40 h-80 w-80 rounded-full bg-[#d4a843]/4 blur-3xl" />
+        <div className="absolute -top-32 -left-24 h-80 w-80 rounded-full bg-[#74def0]/18 blur-3xl" />
+        <div className="absolute top-24 -right-16 h-64 w-64 rounded-full bg-[#bfa7ff]/18 blur-3xl" />
+        <div className="absolute bottom-0 left-0 h-72 w-72 rounded-full bg-[#4a97ff]/10 blur-3xl" />
       </div>
 
       <div
@@ -207,38 +209,33 @@ export default function LoginScreen({
         {/* ── Logo ── */}
         <div className="flex flex-col items-center pt-8 pb-5">
           <div
-            className="mx-auto overflow-hidden rounded-[3rem] w-[min(47vw,12rem)]"
+            className="mx-auto overflow-hidden rounded-[2.6rem] border border-white/80 bg-white/78 p-1.5 shadow-[0_24px_60px_rgba(122,142,232,0.18)] backdrop-blur-xl w-[min(52vw,13.2rem)]"
             style={{
-              boxShadow: "0 0 0 1px rgba(255,255,255,0.04)",
-              background: "radial-gradient(circle at center, rgba(8,27,53,0) 58%, rgba(8,27,53,0.38) 76%, rgba(8,27,53,0.72) 88%, rgba(8,27,53,0.96) 100%)",
+              boxShadow: "0 0 0 1px rgba(255,255,255,0.45), 0 30px 80px rgba(120,138,224,0.18)",
             }}
           >
             <img
-              src="./taseera-logo.png"
+              src={taseeraLogoLight}
               alt="Taseera"
-              className="block w-full rounded-[3rem] object-contain"
-              style={{
-                WebkitMaskImage: "radial-gradient(circle at center, rgba(0,0,0,1) 56%, rgba(0,0,0,0.96) 68%, rgba(0,0,0,0.82) 80%, rgba(0,0,0,0.45) 91%, rgba(0,0,0,0) 100%)",
-                maskImage: "radial-gradient(circle at center, rgba(0,0,0,1) 56%, rgba(0,0,0,0.96) 68%, rgba(0,0,0,0.82) 80%, rgba(0,0,0,0.45) 91%, rgba(0,0,0,0) 100%)",
-              }}
+              className="block w-full rounded-[2.3rem] object-contain"
             />
           </div>
-          <p className="mt-2 text-center text-[11px] font-medium leading-relaxed text-white/70 max-w-[18rem]">
+          <p className="mt-5 text-center text-[11px] font-medium leading-relaxed text-[#8a94bf] max-w-[18rem]">
             {text.login.hero}
           </p>
         </div>
 
         {/* ── Main card ── */}
-        <div className="rounded-3xl border border-white/10 bg-white/8 px-5 pt-4 pb-4 shadow-[0_24px_64px_rgba(0,0,0,0.4)] backdrop-blur-sm space-y-2.5">
+        <div className="space-y-2.5 rounded-[34px] border border-white/80 bg-white/74 px-5 pt-4 pb-4 shadow-[0_26px_80px_rgba(118,136,224,0.18)] backdrop-blur-xl">
 
           {/* Mode switcher */}
-          <div className="flex gap-1 rounded-2xl bg-white/8 p-1">
+          <div className="flex gap-1 rounded-2xl bg-[#edf2ff] p-1">
             {[{ id: "login", label: text.login.login }, { id: "register", label: text.login.register }].map((m) => (
               <button key={m.id} type="button" onClick={() => { setMode(m.id); setError(""); }}
                 className={`flex-1 rounded-xl py-2 text-[13px] font-bold transition-all ${
                   mode === m.id
-                    ? "bg-[#d4a843] text-white shadow-[0_4px_12px_rgba(212,168,67,0.35)]"
-                    : "text-white/60"
+                    ? "bg-[linear-gradient(90deg,#7260ff_0%,#3395ff_52%,#4de2e4_100%)] text-white shadow-[0_10px_24px_rgba(95,125,255,0.28)]"
+                    : "text-[#8d97bf]"
                 }`}>
                 {m.label}
               </button>
@@ -264,31 +261,31 @@ export default function LoginScreen({
 
           {/* Submit */}
           <button type="button" onClick={submit} disabled={loading}
-            className="w-full rounded-2xl bg-[#d4a843] py-3 text-[13px] font-bold text-white shadow-[0_8px_24px_rgba(212,168,67,0.4)] transition active:scale-[0.98] disabled:opacity-60">
+            className="w-full rounded-2xl bg-[linear-gradient(90deg,#7a58ff_0%,#3595ff_50%,#50e0e5_100%)] py-3 text-[13px] font-bold text-white shadow-[0_16px_32px_rgba(95,125,255,0.24)] transition active:scale-[0.98] disabled:opacity-60">
             {loading ? (language === "en" ? "Please wait…" : "جارٍ التحميل…") : (mode === "register" ? text.login.submitRegister : text.login.submitLogin)}
           </button>
 
           {error && (
-            <p className="rounded-xl bg-red-500/20 border border-red-500/30 px-3 py-1.5 text-center text-[11px] font-semibold text-red-300">
+            <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-center text-[11px] font-semibold text-rose-600">
               {error}
             </p>
           )}
 
-          <p className="text-center text-[10px] leading-relaxed text-white/40">
+          <p className="text-center text-[10px] leading-relaxed text-[#97a1c7]">
             {mode === "register" ? text.login.registerHint : text.login.loginHint}
           </p>
         </div>
 
         {/* ── Divider ── */}
         <div className="flex items-center gap-3 py-1">
-          <div className="h-px flex-1 bg-white/10" />
-          <span className="text-[10px] text-white/30">{language === "en" ? "or" : "أو"}</span>
-          <div className="h-px flex-1 bg-white/10" />
+          <div className="h-px flex-1 bg-[#dbe4ff]" />
+          <span className="text-[10px] text-[#9ca5c9]">{language === "en" ? "or" : "أو"}</span>
+          <div className="h-px flex-1 bg-[#dbe4ff]" />
         </div>
 
         {/* ── Google ── */}
         <button type="button" onClick={signInWithGoogle} disabled={loading}
-          className="flex w-full items-center justify-center gap-2.5 rounded-2xl border border-white/15 bg-white/8 px-4 py-3 text-[13px] font-bold text-white transition hover:bg-white/12 active:scale-[0.98] disabled:opacity-60">
+          className="flex w-full items-center justify-center gap-2.5 rounded-2xl border border-[#dfe6ff] bg-white/82 px-4 py-3 text-[13px] font-bold text-[#21356a] shadow-[0_10px_24px_rgba(115,131,208,0.08)] transition hover:border-[#8dd9ee] hover:bg-white active:scale-[0.98] disabled:opacity-60">
           <svg width="21" height="21" viewBox="0 0 48 48" aria-hidden="true" className="shrink-0">
             <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
             <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.16C6.51 42.62 14.62 48 24 48z"/>
@@ -301,14 +298,16 @@ export default function LoginScreen({
         {/* ── Guest + Language ── */}
         <div className="mt-2 flex items-center gap-2">
           <button type="button" onClick={() => onGuest("guest")}
-            className="flex-1 rounded-2xl border border-[#d4a843]/40 py-3 text-[13px] font-bold text-[#d4a843] transition hover:bg-[#d4a843]/10 active:scale-[0.98]">
+            className="flex-1 rounded-2xl border border-[#90d9ee] py-3 text-[13px] font-bold text-[#4aa9ff] transition hover:bg-[#eefaff] active:scale-[0.98]">
             {text.login.guest}
           </button>
           <div className="flex items-center gap-1.5 shrink-0">
             {[{ id: "ar", label: "ع" }, { id: "en", label: "EN" }].map((lang) => (
               <button key={lang.id} type="button" onClick={() => onChangeLanguage?.(lang.id)}
                 className={`flex h-12 w-12 items-center justify-center rounded-xl text-[11px] font-bold transition ${
-                  language === lang.id ? "bg-[#d4a843] text-white" : "border border-white/20 text-white/50 bg-white/5"
+                  language === lang.id
+                    ? "bg-[linear-gradient(135deg,#8e68ff_0%,#48dddf_100%)] text-white shadow-[0_10px_22px_rgba(98,125,236,0.24)]"
+                    : "border border-[#dfe6ff] bg-white/82 text-[#98a1c7]"
                 }`}>
                 {lang.label}
               </button>

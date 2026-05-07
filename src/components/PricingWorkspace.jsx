@@ -3466,7 +3466,7 @@ function MarketComparisonCard({ myPrice, mkt, status, sym }) {
         )}
       </div>
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="mb-5 grid grid-cols-2 gap-3">
         <div className="rounded-2xl border-2 border-[#F7F3EC] bg-[#FAFAFA] p-3 flex flex-col items-center">
              <div className="text-[10px] font-bold text-[#9A8A6A] uppercase tracking-widest mb-1">سعرك</div>
              <div className="flex items-baseline gap-1">
@@ -3965,8 +3965,7 @@ function AnalysisScreen({
 
       {calc && (
         <div
-          className="grid gap-3 px-1"
-          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(148px, 1fr))" }}
+          className="grid grid-cols-3 gap-2 px-1 sm:gap-3"
         >
           {[
             { label: "إجمالي المواد", value: calc.matT, color: "#C9A84C" },
@@ -4002,12 +4001,11 @@ function AnalysisScreen({
           </div>
 
           <div
-            className="grid gap-3"
-            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(172px, 1fr))" }}
+            className="grid grid-cols-2 gap-3"
           >
 
             {/* مجموع البنود المباشرة */}
-            <div className="min-w-0 rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
+            <div className="min-w-0 rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-3 py-3 sm:px-4">
               <div className="mb-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>مجموع البنود المباشرة</div>
               <div className="flex items-baseline gap-1 text-[20px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>
                 <span>{fmtNum(calc.direct)}</span>
@@ -4019,7 +4017,7 @@ function AnalysisScreen({
             </div>
 
             {/* المصاريف غير المباشرة — editable */}
-            <div className="min-w-0 rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
+            <div className="min-w-0 rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-3 py-3 sm:px-4">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>المصاريف غير المباشرة</span>
                 <div className="flex items-center gap-1 rounded-lg border border-[#E2D8C4] bg-white px-2 py-1">
@@ -4043,7 +4041,7 @@ function AnalysisScreen({
             </div>
 
             {/* هامش الربح — editable */}
-            <div className="min-w-0 rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
+            <div className="min-w-0 rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-3 py-3 sm:px-4">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>هامش الربح</span>
                 <div className="flex items-center gap-1 rounded-lg border border-[#6FCF97]/50 bg-[#6FCF97]/8 px-2 py-1">
@@ -4067,7 +4065,7 @@ function AnalysisScreen({
             </div>
 
             {/* ضريبة القيمة المضافة — editable */}
-            <div className="min-w-0 rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
+            <div className="min-w-0 rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-3 py-3 sm:px-4">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>ضريبة القيمة المضافة</span>
                 <div className="flex items-center gap-1 rounded-lg border border-[#E07B2A]/50 bg-[#E07B2A]/8 px-2 py-1">
@@ -4091,7 +4089,7 @@ function AnalysisScreen({
             </div>
 
             {/* إجمالي قبل الضريبة */}
-            <div className="min-w-0 rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
+            <div className="min-w-0 rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-3 py-3 sm:px-4">
               <div className="mb-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>إجمالي البند قبل الضريبة</div>
               <div className="flex items-baseline gap-1 text-[20px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>
                 <span>{fmtNum(calc.finalTotal)}</span>
@@ -4103,7 +4101,7 @@ function AnalysisScreen({
             </div>
 
             {/* إجمالي بعد الضريبة */}
-            <div className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-4 py-3">
+            <div className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-3 py-3 sm:px-4">
               <div className="mb-2 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>إجمالي البند بعد الضريبة</div>
               <div className="flex items-baseline gap-1 text-[20px] font-bold text-[#C9A84C]" style={{ fontFamily: MONO }}>
                 <span>{fmtNum(calc.totalWithTax)}</span>
@@ -4142,7 +4140,7 @@ function AnalysisScreen({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-5 border-t border-white/10 pt-5 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-3 border-t border-white/10 pt-5 sm:gap-5">
             <div className="space-y-1.5">
               <span className="text-[11px] font-bold text-[#9A8A6A] uppercase tracking-widest">Gross Proposal</span>
               <div className="text-[18px] font-bold text-white leading-none" style={{ fontFamily: MONO }}>{fmtNum(calc.finalTotal)} <span className="text-[11px] opacity-60 ml-1">{sym}</span></div>

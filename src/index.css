@@ -6,13 +6,18 @@
 
 :root {
   color-scheme: light;
-  --color-navy: #0d2545;
-  --color-navy-light: #162e52;
-  --color-gold: #d4a843;
-  --color-gold-light: #f0d080;
-  --color-gold-dark: #b8893d;
-  --color-cream: #faf6ef;
-  --color-border: #e8dcc8;
+  --color-navy: #1f3c7a;
+  --color-navy-light: #5f78d9;
+  --color-cyan: #44e2e7;
+  --color-sky: #2f91ff;
+  --color-violet: #9c68ff;
+  --color-lilac: #d9c6ff;
+  --color-cream: #f8f9ff;
+  --color-surface: rgba(255, 255, 255, 0.84);
+  --color-border: rgba(143, 169, 255, 0.22);
+  --color-text: #2a3870;
+  --color-muted: #8d97c2;
+  --color-shadow: 0 28px 80px rgba(103, 127, 221, 0.16);
 }
 
 * {
@@ -31,8 +36,12 @@ html {
 body {
   margin: 0;
   font-family: 'Cairo', 'Tajawal', 'Segoe UI', Tahoma, ui-sans-serif, system-ui, sans-serif;
-  background: var(--color-navy);
-  color: #082555;
+  background:
+    radial-gradient(circle at top left, rgba(111, 223, 245, 0.18), transparent 28%),
+    radial-gradient(circle at top right, rgba(179, 142, 255, 0.14), transparent 26%),
+    radial-gradient(circle at bottom left, rgba(79, 148, 255, 0.12), transparent 28%),
+    linear-gradient(180deg, #fbfcff 0%, #f4f7ff 48%, #f8fbff 100%);
+  color: var(--color-text);
   height: 100%;
   width: 100%;
   max-width: 100%;

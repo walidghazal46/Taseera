@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getAppText } from "../data/appText";
 import useBackStack from "../hooks/useBackStack";
 import useAdminSession from "../hooks/useAdminSession";
-import taseeraLogo from "../assets/taseera-logo.png";
+import taseeraLogo from "../assets/taseera-logo-light.png";
 import AdminDashboard from "./AdminDashboard";
 import SubscriptionPanel from "./SubscriptionPanel";
 import { requestAccountDeletion } from "../services/subscriptionApi";
@@ -98,7 +98,7 @@ function PremiumInput({ label, value, onChange, placeholder, type = "text", opti
 
 function GlassCard({ children, className = "" }) {
   return (
-    <div className={`overflow-hidden rounded-2xl border border-slate-100/80 bg-white shadow-[0_2px_20px_rgba(0,0,0,0.06)] transition-all duration-200 hover:shadow-[0_6px_28px_rgba(0,0,0,0.1)] hover:-translate-y-[1px] ${className}`}>
+    <div className={`w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-100/80 bg-white shadow-[0_2px_20px_rgba(0,0,0,0.06)] transition-all duration-200 hover:shadow-[0_6px_28px_rgba(0,0,0,0.1)] hover:-translate-y-[1px] ${className}`}>
       {children}
     </div>
   );
@@ -106,12 +106,12 @@ function GlassCard({ children, className = "" }) {
 
 function CardHeader({ icon, title, extra, accent }) {
   return (
-    <div className={`flex items-center justify-between border-b border-slate-100 px-4 py-3 ${accent ? "bg-gradient-to-r from-[#071e40] to-[#0d2545]" : "bg-gradient-to-r from-slate-50 to-white"}`}>
-      <div className="flex items-center gap-2.5">
+    <div className={`flex min-w-0 items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 ${accent ? "bg-gradient-to-r from-[#071e40] to-[#0d2545]" : "bg-gradient-to-r from-slate-50 to-white"}`}>
+      <div className="flex min-w-0 flex-1 items-center gap-2.5">
         <span className={`flex h-7 w-7 items-center justify-center rounded-xl text-sm shadow-sm ${accent ? "bg-white/10" : "bg-slate-100"}`}>{icon}</span>
-        <p className={`text-[12px] font-bold ${accent ? "text-white" : "text-slate-700"}`} style={{ fontFamily: F }}>{title}</p>
+        <p className={`min-w-0 break-words text-[12px] font-bold ${accent ? "text-white" : "text-slate-700"}`} style={{ fontFamily: F }}>{title}</p>
       </div>
-      {extra}
+      <div className="shrink-0">{extra}</div>
     </div>
   );
 }
@@ -533,15 +533,12 @@ function AccountTab({
     <div className="space-y-3">
 
       {/* ── Hero Profile Card ── */}
-      <div className="relative overflow-hidden rounded-[22px] shadow-[0_12px_40px_rgba(8,37,85,0.3)]">
-        {/* Deep gradient bg */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#071e40] via-[#0d2545] to-[#1a3870]" />
-        {/* Decorative orbs */}
-        <div className="pointer-events-none absolute -top-10 -right-10 h-40 w-40 rounded-full bg-[#d4a843]/10 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-[#3b6ab5]/20 blur-2xl" />
-        {/* Subtle grid */}
-        <div className="pointer-events-none absolute inset-0 opacity-[0.03]"
-          style={{ backgroundImage: "repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 1px,transparent 24px),repeating-linear-gradient(90deg,#fff 0,#fff 1px,transparent 1px,transparent 24px)" }} />
+      <div className="relative w-full min-w-0 max-w-full overflow-hidden rounded-[24px] border border-white/80 bg-white/78 shadow-[0_20px_60px_rgba(119,138,224,0.16)] backdrop-blur-xl">
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(102,95,255,0.09)_0%,rgba(47,145,255,0.06)_48%,rgba(77,226,229,0.09)_100%)]" />
+        <div className="pointer-events-none absolute -top-10 -right-10 h-40 w-40 rounded-full bg-[#7edff0]/16 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-[#c0acff]/14 blur-2xl" />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.05]"
+          style={{ backgroundImage: "repeating-linear-gradient(0deg,#7b8fd7 0,#7b8fd7 1px,transparent 1px,transparent 24px),repeating-linear-gradient(90deg,#7b8fd7 0,#7b8fd7 1px,transparent 1px,transparent 24px)" }} />
 
         <div className="relative">
           {/* Avatar + identity */}
@@ -549,27 +546,27 @@ function AccountTab({
             <div className="relative shrink-0">
               {/* outer glow ring */}
               <div className="absolute inset-0 rounded-[18px] bg-[#d4a843]/30 blur-md scale-110" />
-              <div className="relative flex h-16 w-16 items-center justify-center rounded-[18px] bg-gradient-to-br from-[#d4a843]/30 to-[#d4a843]/10 text-2xl font-black text-[#d4a843] ring-2 ring-[#d4a843]/50">
+              <div className="relative flex h-16 w-16 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,rgba(114,98,255,0.18)_0%,rgba(74,225,228,0.18)_100%)] text-2xl font-black text-[#7287d4] ring-2 ring-[#c9d6ff]">
                 {isGuest ? "👤" : initials}
               </div>
               {!isGuest && (
-                <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-400 ring-2 ring-[#0d2545]">
+                <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-400 ring-2 ring-white">
                   <span className="h-2 w-2 rounded-full bg-white" />
                 </span>
               )}
             </div>
 
             <div className="min-w-0 flex-1 pt-1">
-              <p className="text-[17px] font-black text-white leading-tight" style={{ fontFamily: F }}>
+              <p className="text-[17px] font-black leading-tight text-[#28417c]" style={{ fontFamily: F }}>
                 {isGuest ? text.settings.guest : settings.userName}
               </p>
-              <p className="mt-1 text-[11px] text-white/50 truncate" style={{ fontFamily: F }}>
+              <p className="mt-1 truncate text-[11px] text-[#8f99c3]" style={{ fontFamily: F }}>
                 {isGuest ? text.settings.browseMode : settings.userEmail}
               </p>
               {!isGuest && (
-                <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/20 px-2.5 py-0.5">
+                <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_4px_#4ade80]" />
-                  <span className="text-[9px] font-bold text-emerald-300 uppercase tracking-wide">{isAr ? "متصل" : "Active"}</span>
+                  <span className="text-[9px] font-bold uppercase tracking-wide text-emerald-600">{isAr ? "متصل" : "Active"}</span>
                 </div>
               )}
             </div>
@@ -581,34 +578,34 @@ function AccountTab({
               <button
                 type="button"
                 onClick={() => setShowSaved(true)}
-                className="relative overflow-hidden flex items-center gap-3 rounded-xl bg-amber-500/15 border border-amber-500/20 px-3 py-2.5 text-right transition hover:bg-amber-500/25 active:scale-[0.97]"
+                className="relative flex items-center gap-3 overflow-hidden rounded-xl border border-[#d7e4ff] bg-white/76 px-3 py-2.5 text-right transition hover:bg-white active:scale-[0.97]"
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-500 text-white text-base shadow-sm">📋</div>
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#7082ff_0%,#45dde4_100%)] text-base text-white shadow-sm">📋</div>
                 <div>
-                  <p className="text-[24px] font-black text-white leading-none">{savedAnalyses.length}</p>
-                  <p className="mt-0.5 text-[8px] font-bold text-white/40 uppercase tracking-wide leading-tight" style={{ fontFamily: F }}>{copy.savedAnalyses}</p>
+                  <p className="text-[24px] font-black leading-none text-[#28417c]">{savedAnalyses.length}</p>
+                  <p className="mt-0.5 text-[8px] font-bold uppercase tracking-wide leading-tight text-[#8f99c3]" style={{ fontFamily: F }}>{copy.savedAnalyses}</p>
                 </div>
-                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-white/30 text-[10px]">‹</span>
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-[#b0badb]">‹</span>
               </button>
-              <button type="button" onClick={() => setShowRfqs(true)} className="relative overflow-hidden flex items-center gap-3 rounded-xl bg-sky-500/15 border border-sky-500/20 px-3 py-2.5 transition hover:bg-sky-500/25 active:scale-95">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-400 to-sky-500 text-white text-base shadow-sm">📬</div>
+              <button type="button" onClick={() => setShowRfqs(true)} className="relative flex items-center gap-3 overflow-hidden rounded-xl border border-[#d7e4ff] bg-white/76 px-3 py-2.5 transition hover:bg-white active:scale-95">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#8d69ff_0%,#4ca0ff_100%)] text-base text-white shadow-sm">📬</div>
                 <div>
-                  <p className="text-[24px] font-black text-white leading-none">{rfqRequests.length}</p>
-                  <p className="mt-0.5 text-[8px] font-bold text-white/40 uppercase tracking-wide leading-tight" style={{ fontFamily: F }}>{copy.rfqs}</p>
+                  <p className="text-[24px] font-black leading-none text-[#28417c]">{rfqRequests.length}</p>
+                  <p className="mt-0.5 text-[8px] font-bold uppercase tracking-wide leading-tight text-[#8f99c3]" style={{ fontFamily: F }}>{copy.rfqs}</p>
                 </div>
-                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-white/30 text-[10px]">‹</span>
+                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-[#b0badb]">‹</span>
               </button>
             </div>
           )}
 
           {/* Session info strip */}
-          <div className="mx-4 mb-4 overflow-hidden rounded-xl border border-white/8 bg-white/5 px-4 py-2.5">
-            <p className="text-[8px] font-bold uppercase tracking-widest text-[#d4a843]/70 mb-1">{text.settings.sessionStatus}</p>
-            <p className="text-[11px] text-white/70" style={{ fontFamily: F }}>
+          <div className="mx-4 mb-4 overflow-hidden rounded-xl border border-[#d7e4ff] bg-white/72 px-4 py-2.5">
+            <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-[#91a0cf]">{text.settings.sessionStatus}</p>
+            <p className="text-[11px] text-[#6375ac]" style={{ fontFamily: F }}>
               {isGuest ? text.settings.guestSession : `${text.settings.signedInAs} ${settings.userName}`}
             </p>
             {!isGuest && sessionMeta?.lastLoginAt && (
-              <p className="mt-0.5 text-[10px] text-white/35" style={{ fontFamily: F }}>
+              <p className="mt-0.5 text-[10px] text-[#98a4ca]" style={{ fontFamily: F }}>
                 {text.settings.signedInAt}: {sessionMeta.lastLoginAt}
               </p>
             )}
@@ -622,28 +619,28 @@ function AccountTab({
                   className="flex-1 rounded-xl bg-gradient-to-r from-[#d4a843] to-[#e8c97a] py-2.5 text-[11px] font-bold text-[#082555] shadow-[0_4px_14px_rgba(212,168,67,0.4)] transition-all hover:shadow-[0_4px_20px_rgba(212,168,67,0.55)] active:scale-[0.97]"
                   style={{ fontFamily: F }}>{text.settings.loginNow}</button>
                 <button type="button" onClick={() => onOpenAuthScreen?.("register")}
-                  className="flex-1 rounded-xl border border-white/15 bg-white/8 py-2.5 text-[11px] font-bold text-white transition hover:bg-white/15 active:scale-[0.97]"
+                  className="flex-1 rounded-xl border border-[#d7e4ff] bg-white/72 py-2.5 text-[11px] font-bold text-[#5d72b5] transition hover:bg-white active:scale-[0.97]"
                   style={{ fontFamily: F }}>{text.settings.createAccountNow}</button>
               </>
             ) : (
               <div className="grid w-full grid-cols-3 gap-2">
                 <button type="button" onClick={() => onOpenAuthScreen?.("login")}
-                  className="flex flex-col items-center justify-center gap-1 rounded-xl border border-white/15 bg-white/8 py-2.5 text-center text-[10px] font-bold text-white transition hover:bg-white/15 active:scale-[0.97]"
+                  className="flex flex-col items-center justify-center gap-1 rounded-xl border border-[#d7e4ff] bg-white/72 py-2.5 text-center text-[10px] font-bold text-[#5d72b5] transition hover:bg-white active:scale-[0.97]"
                   style={{ fontFamily: F }}>
                   <span>{text.settings.switchAccount}</span>
                 </button>
                 <button type="button" onClick={onLogout}
-                  className="flex flex-col items-center justify-center gap-1 rounded-xl border border-red-500/25 bg-red-500/12 py-2.5 text-center text-[10px] font-bold text-red-300 transition hover:bg-red-500/22 active:scale-[0.97]"
+                  className="flex flex-col items-center justify-center gap-1 rounded-xl border border-red-200 bg-red-50 py-2.5 text-center text-[10px] font-bold text-red-500 transition hover:bg-red-100 active:scale-[0.97]"
                   style={{ fontFamily: F }}>
                   <span>{text.settings.logout}</span>
                 </button>
                 {deleteSent ? (
-                  <div className="flex items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10 py-2.5 text-center text-[9px] font-bold text-amber-300 px-1" style={{ fontFamily: F }}>
+                  <div className="flex items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-1 py-2.5 text-center text-[9px] font-bold text-amber-600" style={{ fontFamily: F }}>
                     {isAr ? "طلب حذف معلق" : "Deletion pending"}
                   </div>
                 ) : (
                   <button type="button" onClick={() => setShowDeleteConfirm(true)}
-                    className="flex flex-col items-center justify-center gap-1 rounded-xl border border-red-600/40 bg-red-600/10 py-2.5 text-center text-[10px] font-bold text-red-400 transition hover:bg-red-600/20 active:scale-[0.97]"
+                    className="flex flex-col items-center justify-center gap-1 rounded-xl border border-red-200 bg-red-50 py-2.5 text-center text-[10px] font-bold text-red-500 transition hover:bg-red-100 active:scale-[0.97]"
                     style={{ fontFamily: F }}>
                     <span>{isAr ? "حذف الحساب" : "Delete Account"}</span>
                   </button>
@@ -807,7 +804,7 @@ function AccountTab({
         <GlassCard>
           <CardHeader icon="🛡️" title={text.settings.adminTitle} accent
             extra={<span className="rounded-full bg-red-500/20 border border-red-400/30 px-2.5 py-0.5 text-[9px] font-bold text-red-300 uppercase tracking-wide">Admin</span>} />
-          <div className="p-4">
+          <div className="w-full max-w-full overflow-x-hidden p-4">
             {adminLoading ? (
               <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#d4a843] border-t-transparent" />
@@ -828,29 +825,29 @@ function AccountTab({
       )}
 
       {/* ── App Info Footer ── */}
-      <div className="relative overflow-hidden rounded-2xl shadow-[0_4px_16px_rgba(8,37,85,0.12)]">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#071e40] via-[#0b1e38] to-[#091628]" />
-        <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 50% 0%, rgba(212,168,67,0.12), transparent 60%)" }} />
-        <div className="pointer-events-none absolute inset-0 opacity-[0.03]"
-          style={{ backgroundImage: "repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 1px,transparent 20px),repeating-linear-gradient(90deg,#fff 0,#fff 1px,transparent 1px,transparent 20px)" }} />
+      <div className="relative overflow-hidden rounded-[28px] border border-white/80 bg-white/78 shadow-[0_20px_60px_rgba(119,138,224,0.14)] backdrop-blur-xl">
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(102,95,255,0.08)_0%,rgba(47,145,255,0.05)_48%,rgba(77,226,229,0.08)_100%)]" />
+        <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 50% 0%, rgba(116,222,240,0.16), transparent 60%)" }} />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.05]"
+          style={{ backgroundImage: "repeating-linear-gradient(0deg,#7b8fd7 0,#7b8fd7 1px,transparent 1px,transparent 20px),repeating-linear-gradient(90deg,#7b8fd7 0,#7b8fd7 1px,transparent 1px,transparent 20px)" }} />
 
         <div className="relative px-4 py-5 text-center">
           <div className="mx-auto mb-3 relative w-fit">
-            <div className="absolute inset-2 rounded-[22px] bg-[#d4a843]/45 blur-[14px] scale-125" />
+            <div className="absolute inset-2 rounded-[22px] bg-[linear-gradient(135deg,rgba(109,98,255,0.22)_0%,rgba(73,223,226,0.2)_100%)] blur-[18px] scale-125" />
             <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl p-0">
               <img
                 src={taseeraLogo}
                 alt="Taseera app icon"
-                className="h-full w-full rounded-2xl object-contain shadow-[0_0_26px_rgba(212,168,67,0.35)]"
+                className="h-full w-full rounded-2xl object-contain shadow-[0_0_26px_rgba(106,127,224,0.22)]"
               />
             </div>
           </div>
-          <p className="text-[15px] font-black text-white" style={{ fontFamily: F }}>{settings.appName}</p>
-          <p className="mt-0.5 text-[10px] text-[#d4a843]/60 font-bold uppercase tracking-widest" style={{ fontFamily: F }}>
+          <p className="bg-[linear-gradient(90deg,#685fff_0%,#2f90ff_52%,#3ddcdf_100%)] bg-clip-text text-[15px] font-black text-transparent" style={{ fontFamily: F }}>{settings.appName}</p>
+          <p className="mt-0.5 text-[10px] text-[#8f9ac5] font-bold uppercase tracking-widest" style={{ fontFamily: F }}>
             {text.settings.version} {settings.appVersion}
           </p>
-          <div className="my-3 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-          <p className="text-[9px] text-white leading-relaxed" style={{ fontFamily: F }}>
+          <div className="my-3 h-px bg-gradient-to-r from-transparent via-[#d7e2ff] to-transparent" />
+          <p className="text-[9px] leading-relaxed text-[#6677ae]" style={{ fontFamily: F }}>
             {text.settings.disclaimer}
           </p>
         </div>

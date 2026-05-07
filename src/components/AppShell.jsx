@@ -5,7 +5,7 @@ import {
   SettingsIcon,
   SuppliersIcon,
 } from "./icons";
-import taseeraLogo from "../assets/taseera-logo.png";
+import taseeraLogo from "../assets/taseera-logo-light.png";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
 
@@ -77,19 +77,19 @@ export default function AppShell({
   return (
     <div
       dir={isRtl ? "rtl" : "ltr"}
-      className="fixed inset-0 flex flex-col overflow-hidden bg-[#F7F3EC]"
+      className="fixed inset-0 flex flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(108,224,245,0.16),transparent_24%),radial-gradient(circle_at_top_right,rgba(181,141,255,0.14),transparent_26%),linear-gradient(180deg,#fbfcff_0%,#f5f7ff_48%,#f9fbff_100%)]"
     >
       {/* Top Brand Bar */}
       <div
-        className="relative z-20 flex shrink-0 items-center justify-between bg-[#082555] px-3 pb-3 shadow-xl sm:px-5 sm:py-4"
+        className="relative z-20 mx-3 mt-3 flex shrink-0 items-center justify-between rounded-[30px] border border-white/70 bg-white/72 px-3 pb-3 shadow-[0_18px_50px_rgba(104,128,223,0.16)] backdrop-blur-xl sm:mx-5 sm:px-5 sm:py-4"
         style={{ paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 1rem))" }}
       >
         <div className="flex min-w-0 items-center gap-2.5 sm:gap-3.5">
           <button
             type="button"
             onClick={onBack}
-            className={`flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white transition-all ${
-              canGoBack ? "opacity-100 hover:bg-white/10" : "opacity-65 hover:opacity-90"
+            className={`flex h-10 w-10 items-center justify-center rounded-2xl border border-[#d7dfff] bg-white/85 text-[#6c78ad] transition-all ${
+              canGoBack ? "opacity-100 hover:border-[#88c9ff] hover:text-[#3a7fff]" : "opacity-65 hover:opacity-90"
             }`}
             aria-label={language === "en" ? "Go back" : "رجوع"}
           >
@@ -106,7 +106,7 @@ export default function AppShell({
           </div>
           <div className="hidden min-[430px]:block">
             <p
-              className="text-[16px] font-extrabold leading-none text-white"
+              className="bg-[linear-gradient(90deg,#625cff_0%,#2c8fff_50%,#35dadd_100%)] bg-clip-text text-[16px] font-extrabold leading-none text-transparent"
               style={{ fontFamily: AR }}
             >
               Taseera - تسعيرة
@@ -115,9 +115,9 @@ export default function AppShell({
         </div>
 
         {/* Active page indicator */}
-        <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 min-[380px]:flex">
-          <span className="h-2 w-2 rounded-full bg-[#C9A84C] animate-pulse" />
-          <span className="text-[10px] font-bold text-white/80 uppercase tracking-widest" style={{ fontFamily: AR }}>
+        <div className="hidden items-center gap-2 rounded-full border border-[#dfe6ff] bg-white/85 px-3 py-1.5 min-[380px]:flex">
+          <span className="h-2 w-2 rounded-full bg-[linear-gradient(135deg,#6e66ff_0%,#36dddf_100%)] animate-pulse" />
+          <span className="bg-[linear-gradient(90deg,#665fff_0%,#2990ff_52%,#39dddf_100%)] bg-clip-text text-[10px] font-bold uppercase tracking-widest text-transparent" style={{ fontFamily: AR }}>
             {localizedItems.find(i => i.id === activePage)?.label}
           </span>
         </div>
@@ -126,19 +126,19 @@ export default function AppShell({
       {/* Main content */}
       <main
         ref={mainRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden bg-[#F7F3EC] flex flex-col"
+        className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden bg-transparent"
       >
-        <div className="mx-auto w-full max-w-2xl px-4 py-4 flex-1 flex flex-col">
+        <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-4">
           {children}
         </div>
       </main>
 
       {/* Bottom Navigation */}
       <nav
-        className="shrink-0 border-t border-white/5 bg-[#07193a]"
+        className="mx-3 mb-3 shrink-0 rounded-[30px] border border-white/70 bg-white/78 backdrop-blur-xl sm:mx-5"
         style={{
           paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
-          boxShadow: "0 -12px 40px rgba(0,0,0,0.4)",
+          boxShadow: "0 -16px 50px rgba(104,128,223,0.15)",
         }}
       >
         <div className="mx-auto flex w-full max-w-2xl items-center justify-around px-2 py-2">
@@ -158,15 +158,16 @@ export default function AppShell({
                 <div
                   className={`absolute inset-x-1.5 inset-y-0 rounded-2xl border transition-all duration-300 ${
                     isActive
-                      ? `${config.activeBg} ${config.activeBorder} ${config.activeGlow} scale-100 opacity-100`
+                      ? `${config.activeBorder} ${config.activeGlow} scale-100 opacity-100`
                       : "border-transparent scale-95 opacity-0"
                   }`}
+                  style={isActive ? { background: "linear-gradient(135deg, rgba(99,95,255,0.16) 0%, rgba(47,145,255,0.14) 52%, rgba(68,226,231,0.18) 100%)" } : undefined}
                 />
 
                 {/* Icon */}
                 <span
                   className={`relative flex h-8 w-8 items-center justify-center transition-all duration-300 ${
-                    isActive ? config.activeText : "text-slate-500/80 group-hover:text-slate-400"
+                    isActive ? config.activeText : "text-[#95a0c6] group-hover:text-[#5d6fb6]"
                   }`}
                 >
                   <Icon className="h-[22px] w-[22px]" />
@@ -175,7 +176,7 @@ export default function AppShell({
                 {/* Label */}
                 <span
                   className={`relative mt-1 text-center font-bold tracking-wide transition-all duration-300 ${
-                    isActive ? config.activeText : "text-slate-500/80 group-hover:text-slate-400"
+                    isActive ? config.activeText : "text-[#95a0c6] group-hover:text-[#5d6fb6]"
                   }`}
                   style={{ fontFamily: AR, fontSize: isActive ? "10.5px" : "10px" }}
                 >

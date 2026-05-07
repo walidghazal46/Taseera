@@ -14,15 +14,15 @@ export default function PageHeader({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-[22px] bg-[#082555] shadow-[0_8px_32px_rgba(8,37,85,0.28)] ${
+      className={`relative overflow-hidden rounded-[26px] border border-white/80 bg-white/76 shadow-[0_20px_60px_rgba(119,138,224,0.16)] backdrop-blur-xl ${
         isUltraTight ? "px-5 py-3" : isTight ? "px-5 py-3.5" : isCompact ? "px-5 py-4" : "px-6 py-5"
       }`}
     >
       {/* Layered background gradients for depth */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#C9A84C]/18 via-transparent to-[#0d3070]/60" />
-        <div className="absolute bottom-0 right-0 h-24 w-40 rounded-full bg-[#C9A84C]/6 blur-2xl" />
-        <div className="absolute -top-4 -left-4 h-20 w-32 rounded-full bg-[#1a5a9a]/20 blur-2xl" />
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(102,95,255,0.09)_0%,rgba(48,145,255,0.04)_45%,rgba(77,226,229,0.08)_100%)]" />
+        <div className="absolute bottom-0 right-0 h-24 w-40 rounded-full bg-[#78ddf0]/12 blur-2xl" />
+        <div className="absolute -top-4 -left-4 h-24 w-36 rounded-full bg-[#c0acff]/12 blur-2xl" />
       </div>
 
       <div className="relative flex items-start justify-between gap-4">
@@ -33,7 +33,7 @@ export default function PageHeader({
               <div className="flex items-center gap-2">
                 <span className="h-[3px] w-5 rounded-full bg-gradient-to-r from-[#C9A84C] to-[#E8C97A]" />
                 <p
-                  className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#C9A84C]"
+                  className="bg-[linear-gradient(90deg,#7562ff_0%,#2b94ff_55%,#41dddf_100%)] bg-clip-text text-[10px] font-bold uppercase tracking-[0.22em] text-transparent"
                   style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}
                 >
                   {eyebrow}
@@ -41,7 +41,7 @@ export default function PageHeader({
               </div>
               {badge && (
                 <span
-                  className="rounded-full bg-[#C9A84C]/20 border border-[#C9A84C]/35 px-2.5 py-0.5 text-[9px] font-bold text-[#E8C97A]"
+                  className="rounded-full border border-[#dfe7ff] bg-white/82 px-2.5 py-0.5 text-[9px] font-bold text-[#6a75b0]"
                   style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}
                 >
                   {badge}
@@ -53,7 +53,7 @@ export default function PageHeader({
           {/* Title */}
           {title ? (
             <h2
-              className={`${hideEyebrow ? "" : "mt-0.5"} text-[18px] font-bold leading-snug text-white`}
+              className={`${hideEyebrow ? "" : "mt-0.5"} text-[18px] font-bold leading-snug text-[#20376e]`}
               style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}
             >
               {title}
@@ -63,7 +63,7 @@ export default function PageHeader({
           {/* Description */}
           {description ? (
             <p
-              className={`${title ? "mt-1.5" : hideEyebrow ? "mt-0" : "mt-1"} text-[11px] font-medium leading-relaxed text-[#8BA4C8]`}
+              className={`${title ? "mt-1.5" : hideEyebrow ? "mt-0" : "mt-1"} text-[11px] font-medium leading-relaxed text-[#8e98c2]`}
               style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}
             >
               {description}

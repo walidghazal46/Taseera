@@ -862,16 +862,16 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
   );
 
   return (
-    <div className="space-y-4" style={{ fontFamily: AR }}>
-      <div className="overflow-hidden rounded-[32px] border border-[#dbe4ff] bg-[linear-gradient(180deg,#ffffff_0%,#f9fbff_100%)] shadow-[0_30px_80px_rgba(37,99,235,0.08)]">
-        <div className="border-b border-[#dbe7ff] bg-[linear-gradient(135deg,#082555_0%,#163a6b_52%,#1f4aa1_100%)] px-5 py-5 text-white">
+    <div className="w-full max-w-full space-y-4 overflow-x-hidden" style={{ fontFamily: AR }}>
+      <div className="w-full max-w-full overflow-hidden rounded-[32px] border border-[#dbe4ff] bg-[linear-gradient(180deg,#ffffff_0%,#f9fbff_100%)] shadow-[0_30px_80px_rgba(37,99,235,0.08)]">
+        <div className="min-w-0 border-b border-[#dbe7ff] bg-[linear-gradient(135deg,#082555_0%,#163a6b_52%,#1f4aa1_100%)] px-4 py-5 text-white sm:px-5">
           <p className="text-[12px] font-bold uppercase tracking-[0.2em] text-white/70">Secure Control Center</p>
           <h2 className="mt-2 text-[24px] font-extrabold sm:text-[28px]">{t.title}</h2>
-          <p className="mt-2 text-[12px] text-white/75">{adminProfile.email} • {adminProfile.adminType === "super" ? "Super Admin" : "Admin Limited"}</p>
+          <p className="mt-2 break-all text-[12px] text-white/75">{adminProfile.email} • {adminProfile.adminType === "super" ? "Super Admin" : "Admin Limited"}</p>
         </div>
 
-        <div className="p-4 sm:p-5">
-          <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="w-full max-w-full p-4 sm:p-5">
+          <div className="mb-5 grid w-full max-w-full grid-cols-2 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3">
             {MENU.map((item) => {
               const pendingQsBadge = item.id === "qspremium" && activeTab !== "qspremium"
                 ? qsRequests.filter((r) => r.status === "pending").length
@@ -890,16 +890,16 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                   key={item.id}
                   type="button"
                   onClick={() => setActiveTab(item.id)}
-                  className={`group relative min-w-0 max-w-full overflow-hidden rounded-[28px] border px-4 py-4 text-left transition-all duration-200 sm:px-5 sm:py-5 ${
+                  className={`group relative w-full min-w-0 max-w-full overflow-hidden rounded-[24px] border px-3 py-3 text-left transition-all duration-200 sm:rounded-[28px] sm:px-5 sm:py-5 ${
                     isActive
                       ? "border-transparent text-white shadow-[0_18px_45px_rgba(59,91,255,0.28)]"
                       : "border-[#e5ebf8] bg-white text-[#334155] shadow-[0_14px_34px_rgba(15,23,42,0.06)] hover:-translate-y-0.5 hover:border-[#c7d7ff]"
                   }`}
                   style={isActive ? { background: "linear-gradient(135deg,#3053ff 0%,#4b6cff 52%,#2f6af6 100%)" } : undefined}
                 >
-                  <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="flex min-w-0 items-center gap-2.5 sm:gap-4">
                     <span
-                      className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] border text-[26px] sm:h-16 sm:w-16 sm:rounded-[22px] sm:text-[30px] ${
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border text-[20px] sm:h-16 sm:w-16 sm:rounded-[22px] sm:text-[30px] ${
                         isActive ? "border-white/20 bg-white/14 text-white" : ""
                       }`}
                       style={isActive ? undefined : { background: meta.tint, borderColor: `${meta.accent}22`, color: meta.accent }}
@@ -907,10 +907,10 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                       {meta.icon}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className={`text-[15px] font-extrabold leading-tight sm:text-[18px] ${isActive ? "text-white" : "text-[#1e293b]"}`}>
+                      <div className={`text-[13px] font-extrabold leading-tight sm:text-[18px] ${isActive ? "text-white" : "text-[#1e293b]"}`}>
                         {isEn ? item.labelEn : item.labelAr}
                       </div>
-                      <div className={`mt-1 text-[11px] font-medium leading-6 sm:leading-5 ${isActive ? "text-white/75" : "text-slate-400"}`}>
+                      <div className={`mt-1 text-[10px] font-medium leading-5 sm:text-[11px] sm:leading-5 ${isActive ? "text-white/75" : "text-slate-400"}`}>
                         {item.id === "dashboard" && "Overview and live command center"}
                         {item.id === "users" && "Manage accounts and user activity"}
                         {item.id === "pending" && "Review waiting approvals"}
@@ -922,7 +922,7 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                         {item.id === "qspremium" && "QS premium plans and requests"}
                       </div>
                     </div>
-                    <span className={`shrink-0 text-[26px] leading-none sm:text-[32px] ${isActive ? "text-white/85" : "text-slate-400 transition-transform group-hover:translate-x-0.5"}`}>
+                    <span className={`shrink-0 text-[18px] leading-none sm:text-[32px] ${isActive ? "text-white/85" : "text-slate-400 transition-transform group-hover:translate-x-0.5"}`}>
                       ›
                     </span>
                   </div>
@@ -1188,7 +1188,144 @@ export default function AdminDashboard({ language = "ar", adminProfile, onToast,
                       </p>
                     )}
 
-                    <div className="overflow-x-auto rounded-2xl border border-[#e2e8f0]">
+                    <div className="grid grid-cols-1 gap-3 md:hidden">
+                      {visibleUsers.map((row) => {
+                        const isEditing = editingUserId === row.id;
+                        const isSuperTarget = String(row.email || "").toLowerCase() === "walidghazal46@gmail.com";
+                        return (
+                          <details key={row.id} className="group w-full min-w-0 max-w-full rounded-[24px] border border-[#e2e8f0] bg-white shadow-sm">
+                            <summary className="flex cursor-pointer list-none items-start justify-between gap-3 p-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="min-w-0 flex-1 truncate text-[14px] font-extrabold text-[#1e293b]">{row.name || "-"}</p>
+                                  <span className={`rounded-full px-2 py-1 text-[9px] font-bold ${
+                                    row.status === "approved" ? "bg-emerald-50 text-emerald-700" :
+                                    row.status === "suspended" ? "bg-amber-50 text-amber-700" :
+                                    "bg-slate-100 text-slate-600"
+                                  }`}>
+                                    {row.status || "pending"}
+                                  </span>
+                                </div>
+                                <p className="mt-1 truncate text-[11px] text-slate-500">{row.email || "-"}</p>
+                              </div>
+                              <span className="shrink-0 rounded-xl bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500 transition group-open:rotate-180">⌄</span>
+                            </summary>
+
+                            <div className="space-y-3 border-t border-[#eef2f7] p-3">
+                              <div className="min-w-0">
+                                {isEditing ? (
+                                  <input
+                                    className="w-full rounded-xl border border-[#dbe2ea] px-3 py-2 text-[12px] font-bold text-slate-700"
+                                    value={editDraft.name || ""}
+                                    onChange={(e) => setEditDraft((d) => ({ ...d, name: e.target.value }))}
+                                  />
+                                ) : null}
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="min-w-0 rounded-2xl bg-slate-50 px-3 py-2">
+                                  <p className="text-[10px] font-bold text-slate-400">{t.phone}</p>
+                                  {isEditing ? (
+                                    <input
+                                      className="mt-1 w-full rounded-lg border border-[#dbe2ea] px-2 py-1 text-[11px] font-bold text-slate-700"
+                                      value={editDraft.phone || ""}
+                                      onChange={(e) => setEditDraft((d) => ({ ...d, phone: e.target.value }))}
+                                    />
+                                  ) : (
+                                    <p className="mt-1 break-words text-[11px] font-bold text-slate-700">{row.phone || "-"}</p>
+                                  )}
+                                </div>
+                                <div className="min-w-0 rounded-2xl bg-slate-50 px-3 py-2">
+                                  <p className="text-[10px] font-bold text-slate-400">{t.subscription}</p>
+                                  <p className="mt-1 break-words text-[11px] font-bold text-slate-700">{row.subscriptionType || "free"}</p>
+                                </div>
+                                <div className="min-w-0 rounded-2xl bg-slate-50 px-3 py-2">
+                                  <p className="text-[10px] font-bold text-slate-400">{t.paid}</p>
+                                  <p className="mt-1 break-words text-[11px] font-bold text-slate-700">{row.isPaid ? "Yes" : "No"}</p>
+                                </div>
+                                <div className="min-w-0 rounded-2xl bg-slate-50 px-3 py-2">
+                                  <p className="text-[10px] font-bold text-slate-400">{t.createdAt}</p>
+                                  <p className="mt-1 break-words text-[11px] font-bold text-slate-700">{fmtDate(row.createdAt)}</p>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-wrap gap-2">
+                                {canEditUsers && !isEditing && !isSuperTarget && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingUserId(row.id);
+                                      setEditDraft({ name: row.name || "", phone: row.phone || "" });
+                                    }}
+                                    className="rounded-xl bg-blue-50 px-3 py-2 text-[11px] font-bold text-blue-700"
+                                  >
+                                    {t.edit}
+                                  </button>
+                                )}
+                                {canEditUsers && isEditing && !isSuperTarget && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        try {
+                                          await updateUserByAdmin(adminProfile, row.id, { name: editDraft.name || "", phone: editDraft.phone || "" });
+                                          onToast?.("User updated", "success");
+                                          setEditingUserId(null);
+                                          loadUsers(true);
+                                        } catch (error) {
+                                          onToast?.(error.message, "warning");
+                                        }
+                                      }}
+                                      className="rounded-xl bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-700"
+                                    >
+                                      {t.save}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditingUserId(null)}
+                                      className="rounded-xl bg-slate-100 px-3 py-2 text-[11px] font-bold text-slate-600"
+                                    >
+                                      {t.cancel}
+                                    </button>
+                                  </>
+                                )}
+                                {canSuspendUsers && !isSuperTarget && (
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      try {
+                                        await setUserSuspended(adminProfile, row.id, row.status !== "suspended");
+                                        onToast?.("User status updated", "success");
+                                        loadUsers(true);
+                                      } catch (error) {
+                                        onToast?.(error.message, "warning");
+                                      }
+                                    }}
+                                    className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-700"
+                                  >
+                                    {row.status === "suspended" ? t.activate : t.suspend}
+                                  </button>
+                                )}
+                                {canDeleteUsers && !isSuperTarget && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmDeleteUser({ id: row.id, name: row.name || row.email || "User" })}
+                                    className="rounded-xl bg-rose-50 px-3 py-2 text-[11px] font-bold text-rose-700"
+                                  >
+                                    {t.remove}
+                                  </button>
+                                )}
+                                {isSuperTarget && (
+                                  <span className="rounded-xl bg-indigo-50 px-3 py-2 text-[11px] font-bold text-indigo-700">Super Admin Protected</span>
+                                )}
+                              </div>
+                            </div>
+                          </details>
+                        );
+                      })}
+                    </div>
+
+                    <div className="hidden overflow-x-auto rounded-2xl border border-[#e2e8f0] md:block">
                       <table className="min-w-[980px] w-full text-left">
                         <thead className="bg-[#f8fafc] text-[11px] font-bold text-slate-600">
                           <tr>
