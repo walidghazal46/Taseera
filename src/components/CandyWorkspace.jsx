@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { CSI_DIVISIONS, MARKET_RATES, RESOURCE_PRICES, getDefaultResources } from "../data/csiData";
+import { CSI_DIVISIONS, MARKET_RATES, getDefaultResources } from "../data/csiData";
 
 const AR   = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
 const MONO = "'IBM Plex Mono',monospace";
@@ -586,116 +586,6 @@ function AnalysisView({ item, division, country, onBack, onCreateRfq }) {
 
 
   const handleExportPdf = useCallback(() => {
-    const rowsSection = (title, rows) => `
-      <h3>${title}</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>الوصف</th>
-            <th>الوحدة</th>
-            <th>الكمية</th>
-            <th>سعر الوحدة</th>
-            <th>الإجمالي</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows.map((row) => `
-            <tr>
-              <td>${row.resource}</td>
-              <td>${row.unit}</td>
-              <td>${row.qty}</td>
-              <td>${fmt(row.rate, cur)}</td>
-              <td>${fmt(row.qty * row.rate, cur)}</td>
-            </tr>
-          `).join("")}
-        </tbody>
-      </table>
-    `;
-
-    const html = `<!DOCTYPE html>
-      <html dir="rtl" lang="ar">
-        <head>
-          <meta charset="utf-8" />
-          <title>تحليل بند — ${item.ar}</title>
-          <style>
-            body{font-family:Arial,sans-serif;padding:24px;color:#082555;direction:rtl}
-            h1{font-size:18px;margin:0 0 4px}
-            h2{font-size:14px;margin:0 0 18px;color:#64748b}
-            h3{font-size:14px;margin:18px 0 8px}
-            table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:12px}
-            th{background:#082555;color:#C9A84C;padding:8px;text-align:right}
-            td{padding:7px 8px;border-bottom:1px solid #e5e7eb}
-            .box{border:1px solid #dbe2f0;border-radius:12px;padding:14px 16px;margin-top:12px}
-            .summary{background:#082555;color:#fff}
-            .summary strong{color:#C9A84C}
-            ul{margin:8px 0 0;padding-right:18px}
-            li{margin-bottom:4px}
-            @media print{button{display:none} body{padding:12px}}
-          </style>
-        </head>
-        <body>
-          <h1>${item.num} — ${item.ar}</h1>
-          <h2>${division.ar} | ${new Date().toLocaleDateString("ar-SA")}</h2>
-          <div class="box summary">
-            <div><strong>سعر الوحدة النهائي:</strong> ${fmt(finalRate, cur)} لكل ${item.unit}</div>
-            <div style="margin-top:6px"><strong>إجمالي البند:</strong> ${fmt(boqAmt, cur)}</div>
-            <div style="margin-top:6px"><strong>الكمية:</strong> ${qty} ${item.unit}</div>
-          </div>
-          ${rowsSection("المواد", mats)}
-          ${rowsSection("العمالة", labs)}
-          ${rowsSection("المعدات", plts)}
-          <div class="box">
-            <strong>الافتراضات المستخدمة</strong>
-            <ul>
-              <li>هالك المواد: ${assum.waste}%</li>
-              <li>نقل لكل وحدة: ${fmt(transpAmt, cur)}</li>
-              <li>أعباء الموقع: ${assum.siteOH}%</li>
-              <li>الإدارة العامة: ${assum.hoOH}%</li>
-              <li>المخاطر: ${assum.risk}%</li>
-              <li>الربح: ${assum.profit}%</li>
-            </ul>
-          </div>
-          ${notes.trim() ? `<div class="box"><strong>ملاحظات</strong><p>${notes.trim().replace(/\n/g, "<br/>")}</p></div>` : ""}
-          <script>window.onload=function(){setTimeout(function(){window.print();},300)}</script>
-        </body>
-      </html>`;
-
-    // Build plain-text email body (used when PDF export fails on mobile)
-    const fmtRow = (r) => `  • ${r.resource} | ${r.qty} ${r.unit} × ${fmt(r.rate, cur)} = ${fmt(r.qty * r.rate, cur)}`;
-    const emailSubject = `تحليل بند ${item.num} — ${item.ar}`;
-    const emailBody = [
-      `تحليل بند المقاولات`,
-      `البند: ${item.num} — ${item.ar}`,
-      `القسم: ${division.ar}`,
-      `الوحدة: ${item.unit}  |  الكمية: ${qty}`,
-      `التاريخ: ${new Date().toLocaleDateString("ar-SA")}`,
-      ``,
-      `📊 الملخص:`,
-      `سعر الوحدة النهائي: ${fmt(finalRate, cur)}`,
-      `إجمالي البند:        ${fmt(boqAmt, cur)}`,
-      ``,
-      `📋 المواد:`,
-      ...mats.map(fmtRow),
-      ``,
-      `👷 العمالة:`,
-      ...labs.map(fmtRow),
-      ``,
-      `🔧 المعدات:`,
-      ...plts.map(fmtRow),
-      ``,
-      `⚙️ الافتراضات:`,
-      `  هالك المواد: ${assum.waste}%`,
-      `  نقل لكل وحدة: ${fmt(transpAmt, cur)}`,
-      `  أعباء الموقع: ${assum.siteOH}%`,
-      `  الإدارة العامة: ${assum.hoOH}%`,
-      `  المخاطر: ${assum.risk}%`,
-      `  الربح: ${assum.profit}%`,
-      notes.trim() ? `\nملاحظات:\n${notes.trim()}` : ``,
-      ``,
-      `---`,
-      `تم التصدير من تطبيق Taseera — تسعيرة`,
-    ].join('\n');
-
     // Show in-app export preview modal (no external browser opened)
     setExportModal({
       item, division, cur, qty, finalRate, boqAmt, mats, labs, plts, assum, transpAmt,

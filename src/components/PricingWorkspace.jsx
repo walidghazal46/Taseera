@@ -3,15 +3,14 @@ import * as XLSX from 'xlsx';
 import AdSenseUnit from "./AdSenseUnit";
 import CandyWorkspace from "./CandyWorkspace";
 import { SaveIcon, TagIcon, BuildingsIcon, PricingIcon, ChevronLeftIcon, ArrowRightIcon, ShareIcon, PrinterIcon, FileIcon } from "./icons";
-import { CSI_DIVISIONS, COUNTRIES, CURRENCY_INFO, getDefaultResources, AREA_PRICING_BASE } from "../data/csiData";
-import usePersistentState from "../hooks/usePersistentState";
+import { CSI_DIVISIONS, COUNTRIES, getDefaultResources, AREA_PRICING_BASE, CURRENCY_INFO } from "../data/csiData";
 import useAdminSession from "../hooks/useAdminSession";
-import { AD_SLOT_IDS, DEFAULT_AD_BANNER, incrementUsageCounter, listenAdBanner, saveAdBanner } from "../services/subscriptionApi";
+import { AD_SLOT_IDS, listenAdBanner, saveAdBanner } from "../services/adminService";
 import { SUPER_ADMIN_EMAIL } from "../constants/admin";
-import { listenQSPremiumStatus } from "../services/qsPremiumApi";
+import { DEFAULT_AD_BANNER, PLAN_DEFINITIONS } from "../services/subscriptionService";
 import SubscriptionPanel from "./SubscriptionPanel";
-import QSPremiumGate from "./QSPremiumGate";
 import ScreenProtection from "./ScreenProtection";
+import { ensureToolAccess } from "../services/accessControlService";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
 const MONO = "'IBM Plex Mono',monospace";
@@ -472,107 +471,6 @@ function GuestLoginModal({ open, onClose, onOpenAuthScreen, subtitle, language =
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-// ─── GUEST AREA WRAPPER ────────────────────────────────────────────────────────
-function GuestAreaWrapper({ isGuest, onOpenAuthScreen, children, language = "ar" }) {
-  const [showPrompt, setShowPrompt] = useState(false);
-  if (!isGuest) return <>{children}</>;
-  return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="relative select-none">
-        <div className="pointer-events-none opacity-80">{children}</div>
-        <div className="absolute inset-0 z-10 cursor-pointer" onClick={() => setShowPrompt(true)} />
-      </div>
-      <GuestLoginModal open={showPrompt} onClose={() => setShowPrompt(false)}
-        onOpenAuthScreen={onOpenAuthScreen}
-        language={language}
-        subtitle={language === "en" ? "Sign in or create a free account to continue and use building pricing." : "سجّل دخولك أو أنشئ حساباً مجانياً للمتابعة واستخدام تسعير المباني"} />
-    </div>
-  );
-}
-
-// ─── TASEERA PRO GATE ──────────────────────────────────────────────────────────
-const TPRO_PRICES = {
-  sa: { label: "٢٠٠ ريال", labelEn: "200 SAR", flag: "🇸🇦" },
-  eg: { label: "٢,٨٠٠ جنيه", labelEn: "2,800 EGP", flag: "🇪🇬" },
-  ae: { label: "٢٠٠ درهم", labelEn: "200 AED", flag: "🇦🇪" },
-};
-const TPRO_FEATURES = [
-  "تسعير تكلفة بناء كامل بدقة",
-  "حساب المساحة × الأدوار × التشطيب",
-  "تفاصيل تكلفة كل تخصص (هيكل، ميكانيكا، كهرباء...)",
-  "مقارنة سيناريوهات متعددة",
-  "تصدير وحفظ التسعير",
-];
-
-function TaseeraProGate({ country, isGuest, onOpenSubscription, onOpenAuthScreen, language = "ar" }) {
-  const isEn = language === "en";
-  const priceInfo = TPRO_PRICES[(country || "sa").toLowerCase()] || TPRO_PRICES.sa;
-  const features = isEn
-    ? [
-        "Full building pricing with high accuracy",
-        "Area × floors × finish level calculation",
-        "Cost breakdown by discipline",
-        "Compare multiple project scenarios",
-        "Export and save pricing results",
-      ]
-    : TPRO_FEATURES;
-  return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ fontFamily: AR, direction: "rtl" }}>
-      {/* Hero */}
-      <div className="rounded-[24px] overflow-hidden mb-4"
-        style={{ background: "linear-gradient(135deg,#c8941a 0%,#d4a843 50%,#e8c060 100%)" }}>
-        <div className="px-5 pt-6 pb-4">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ring-1 ring-[#0d2545]/20"
-              style={{ background: "linear-gradient(145deg,#b8821a,#8a5e10)" }}>
-              <BuildingsIcon className="h-7 w-7 text-[#f5d060]" />
-            </div>
-            <div>
-              <p className="text-[10px] font-bold text-[#0d2545]/60 uppercase tracking-widest">Taseera Pro Package</p>
-              <h2 className="text-[20px] font-black text-[#0d2545] leading-tight">{isEn ? "Complete QS Package" : "باقة بنود المقايسات الكاملة"}</h2>
-            </div>
-          </div>
-          {/* Price pill */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#0d2545]/20 bg-[#0d2545]/10 px-4 py-2">
-            <span className="text-[22px] font-black text-[#0d2545]">{priceInfo.label}</span>
-            <span className="text-[12px] text-[#0d2545]/60">{isEn ? "one-time" : "مرة واحدة"}</span>
-          </div>
-        </div>
-        {/* Features */}
-        <div className="bg-[#0d2545]/8 px-5 py-4">
-          <ul className="space-y-2">
-            {features.map((f, i) => (
-              <li key={i} className="flex items-center gap-2.5 text-[13px] font-bold text-[#0d2545]">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#0d2545] text-[#d4a843] text-[10px]">✓</span>
-                {f}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
-      {/* CTA */}
-      {!isGuest ? (
-        <button type="button" onClick={onOpenSubscription}
-          className="w-full rounded-2xl py-3.5 text-[15px] font-black text-[#082555] shadow-lg active:scale-[0.98] transition-all"
-          style={{ background: "linear-gradient(130deg,#d4a843,#e8c060)" }}>
-          {isEn ? "Request Subscription ←" : "طلب الاشتراك في الباقة ←"}
-        </button>
-      ) : (
-        <button type="button" onClick={() => onOpenAuthScreen?.()}
-          className="w-full rounded-2xl py-3.5 text-[15px] font-black text-white shadow-lg active:scale-[0.98] transition-all"
-          style={{ background: "linear-gradient(130deg,#dc2626,#ef4444)", boxShadow: "0 0 20px rgba(220,38,38,0.35)" }}>
-          {isEn ? "🔐 Sign in first to request subscription" : "🔐 سجّل دخولك أولاً لطلب الاشتراك"}
-        </button>
-      )}
-
-      <p className="mt-3 text-center text-[11px] text-slate-400">
-        {isEn ? "♻ Partial refund available during the trial period" : "♻ استرداد جزئي خلال فترة التجربة المجانية"}
-      </p>
     </div>
   );
 }
@@ -1670,8 +1568,6 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     email: settings?.userEmail,
     displayName: settings?.userName,
   });
-  const [guestItemOpenCount, setGuestItemOpenCount] = usePersistentState("taseera.v3.guestItemOpenCount", 0);
-  const [guestAreaTrialCount, setGuestAreaTrialCount] = usePersistentState("taseera.v3.guestAreaTrialCount", 0);
   const [analysisTopAdBanner, setAnalysisTopAdBanner] = useState(null);
   const [analysisActionsAdBanner, setAnalysisActionsAdBanner] = useState(null);
   const [analysisBottomAdBanner, setAnalysisBottomAdBanner] = useState(null);
@@ -1685,8 +1581,6 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     draft: { ...DEFAULT_AD_BANNER },
     saving: false,
   });
-  const [qsPremiumSubscription, setQsPremiumSubscription] = useState(undefined);
-
   // Analysis Parameters (Moved up for persistence and export)
   const [qty, setQty] = useState(1);
   const [overhead, setOverhead] = useState(() => Number(settings?.overheadPercent) || 12);
@@ -1713,30 +1607,12 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     };
   }, []);
 
-  useEffect(() => {
-    if (authMode === "guest" || !sessionMeta?.uid) {
-      setQsPremiumSubscription(null);
-      return undefined;
-    }
-    return listenQSPremiumStatus(sessionMeta.uid, (data) => {
-      setQsPremiumSubscription(data ?? null);
-    });
-  }, [authMode, sessionMeta?.uid]);
-
   const isGuest = authMode === "guest";
   const isAdminUnlocked = !isGuest && (
     userProfile?.canAccessAdmin === true ||
     String(settings?.userEmail || "").toLowerCase() === SUPER_ADMIN_EMAIL
   );
-  const hasQSPremiumAccess = !isGuest && qsPremiumSubscription?.status === "active";
-  const isSubscribed = isAdminUnlocked || hasQSPremiumAccess || (!isGuest && userProfile?.isPaid === true);
-  const itemLimit = isSubscribed ? Number.POSITIVE_INFINITY : isGuest ? 2 : 4;
-  const areaLimit = isSubscribed ? Number.POSITIVE_INFINITY : isGuest ? 1 : 3;
-  const itemUsed = isGuest ? Number(guestItemOpenCount) || 0 : Number(userProfile?.itemAnalysisOpenCount) || 0;
-  const areaUsed = isGuest ? Number(guestAreaTrialCount) || 0 : Number(userProfile?.areaPricingTrialCount) || 0;
-  const itemLocked = !isSubscribed && itemUsed >= itemLimit;
-  const areaLocked = !isSubscribed && areaUsed >= areaLimit;
-  const itemRemaining = Number.isFinite(itemLimit) ? Math.max(0, itemLimit - itemUsed) : null;
+  const isSubscribed = isAdminUnlocked || userProfile?.subscriptionStatus === "active" || userProfile?.lifetime === true;
   const [exportPreview, setExportPreview] = useState(null);
 
   const openExportPreview = useCallback((payload) => {
@@ -1979,9 +1855,8 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   }, [navigationBridge]);
 
   const handleCalculateArea = async (params) => {
-    const allowed = await consumeAccess("area");
+    const allowed = await ensureUnifiedAccess();
     if (!allowed) {
-      openSubscriptionScreen();
       return;
     }
 
@@ -2173,124 +2048,6 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
       const finalTotal = withOverhead + profitAmt;
       const unitPrice = q > 0 ? finalTotal / q : finalTotal;
 
-      const rowsHtml = resourcesList.map((r) => `
-        <tr>
-          <td>${r.type}</td>
-          <td>${r.name}</td>
-          <td>${fmtNum(r.qty)}</td>
-          <td>${r.unit}</td>
-          <td>${fmtNum(r.rate)}</td>
-          <td>${fmtNum(r.total)}</td>
-        </tr>
-      `).join("");
-
-      const html = `
-        <!doctype html>
-        <html lang="ar" dir="rtl">
-          <head>
-            <meta charset="utf-8" />
-            <title>تحليل بند ${selectedItem.num}</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 24px; color: #082555; }
-              h1, h2, h3, p { margin: 0; }
-              .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:24px; }
-              .brand { text-align:left; color:#9A8A6A; font-size:12px; font-weight:700; letter-spacing:2px; }
-              .card { border:1px solid #E2D8C4; border-radius:16px; padding:16px; margin-bottom:16px; }
-              .grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px; }
-              .metric { background:#F7F3EC; border-radius:12px; padding:12px; }
-              .metric .label { color:#9A8A6A; font-size:12px; font-weight:700; margin-bottom:6px; }
-              .metric .value { font-size:22px; font-weight:700; }
-              table { width:100%; border-collapse:collapse; margin-top:12px; }
-              th, td { border:1px solid #E2D8C4; padding:10px; text-align:right; font-size:12px; }
-              th { background:#F7F3EC; }
-              .footer { margin-top:20px; color:#9A8A6A; font-size:11px; }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <div>
-                <h1>تحليل بند المقاولات</h1>
-                <p style="margin-top:8px;">${selectedItem.num} - ${selectedItem.ar}</p>
-                <p style="margin-top:6px; color:#9A8A6A;">${selectedItem.divAr} · ${selectedItem.unit}</p>
-                <p style="margin-top:6px; color:#9A8A6A;">التاريخ: ${now}</p>
-              </div>
-              <div class="brand">TASEERA<br/>PRICING INTELLIGENCE</div>
-            </div>
-
-            <div class="card">
-              <div class="grid">
-                <div class="metric"><div class="label">سعر الوحدة النهائي</div><div class="value">${fmtNum(unitPrice)} ${c.currency}</div></div>
-                <div class="metric"><div class="label">إجمالي العرض</div><div class="value">${fmtNum(finalTotal)} ${c.currency}</div></div>
-                <div class="metric"><div class="label">هامش الربح (${profit}%)</div><div class="value">${fmtNum(profitAmt)} ${c.currency}</div></div>
-                <div class="metric"><div class="label">إجمالي البنود المباشرة</div><div class="value">${fmtNum(direct)} ${c.currency}</div></div>
-              </div>
-            </div>
-
-            <div class="card">
-              <h3 style="margin-bottom:12px;">إعدادات التحليل الحالية</h3>
-              <div class="grid">
-                <div class="metric"><div class="label">الكمية</div><div class="value">${fmtNum(q)}</div></div>
-                <div class="metric"><div class="label">Factor</div><div class="value">${factor}</div></div>
-                <div class="metric"><div class="label">Overhead</div><div class="value">${overhead}%</div></div>
-                <div class="metric"><div class="label">Profit</div><div class="value">${profit}%</div></div>
-              </div>
-            </div>
-
-            <div class="card">
-              <h3>تفصيل الموارد بالقيم الحالية</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>النوع</th>
-                    <th>الوصف</th>
-                    <th>الكمية</th>
-                    <th>الوحدة</th>
-                    <th>السعر</th>
-                    <th>الإجمالي</th>
-                  </tr>
-                </thead>
-                <tbody>${rowsHtml}</tbody>
-              </table>
-            </div>
-
-            <div class="footer">هذا الملف يعكس القيم الحالية داخل جلسة التحليل فقط، ولا يتم حفظ التعديلات في قاعدة البيانات.</div>
-          </body>
-        </html>
-      `;
-
-      // Build plain-text email body with all item data (used as fallback)
-      const emailRows = resourcesList.map(r =>
-        `  • ${r.type}: ${r.name} | الكمية: ${fmtNum(r.qty)} ${r.unit} | السعر: ${fmtNum(r.rate)} ${c.currency} | الإجمالي: ${fmtNum(r.total)} ${c.currency}`
-      ).join('\n');
-      const emailSubject = `تحليل بند ${selectedItem.num} — ${selectedItem.ar}`;
-      const emailBody = [
-        `تحليل بند المقاولات`,
-        `البند: ${selectedItem.num} — ${selectedItem.ar}`,
-        `القسم: ${selectedItem.divAr || ""}`,
-        `الوحدة: ${selectedItem.unit}`,
-        `التاريخ: ${now}`,
-        ``,
-        `📊 النتائج:`,
-        `سعر الوحدة النهائي: ${fmtNum(unitPrice)} ${c.currency}`,
-        `إجمالي العرض:       ${fmtNum(finalTotal)} ${c.currency}`,
-        `الكمية: ${fmtNum(q)} ${selectedItem.unit}`,
-        ``,
-        `💰 التفصيل:`,
-        `مواد:                ${fmtNum(matT)} ${c.currency}`,
-        `عمالة:               ${fmtNum(labT)} ${c.currency}`,
-        `معدات:               ${fmtNum(eqpT)} ${c.currency}`,
-        `إجمالي مباشر:        ${fmtNum(direct)} ${c.currency}`,
-        `أعباء غير مباشرة (${overhead}%): ${fmtNum(indirect)} ${c.currency}`,
-        `هامش ربح (${profit}%):  ${fmtNum(profitAmt)} ${c.currency}`,
-        `Factor: ${f}`,
-        ``,
-        `📋 الموارد التفصيلية:`,
-        emailRows,
-        ``,
-        `---`,
-        `تم التصدير من تطبيق Taseera — تسعيرة`,
-      ].join('\n');
-
       // Show in-app export preview (works on mobile — no external browser opened)
       openExportPreview({ item: selectedItem, c, q, f, overhead, profit, matT, labT, eqpT, direct, indirect, profitAmt, finalTotal, unitPrice, resourcesList, now });
     }
@@ -2299,72 +2056,33 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
   const openSubscriptionScreen = useCallback(() => {
-    if (isGuest) {
-      // Store intent so the app opens subscription automatically after login
-      sessionStorage.setItem("pendingSubscriptionAfterLogin", "1");
-      onOpenAuthScreen?.();
-    } else {
-      setShowSubscriptionModal(true);
-    }
-  }, [isGuest, onOpenAuthScreen]);
+    setShowSubscriptionModal(true);
+  }, []);
 
-  const itemLockMessage = isGuest
-    ? "لقد وصلت للحد المجاني للبنود. يرجى تسجيل الدخول والاشتراك لفتح جميع البنود."
-    : "لقد وصلت للحد المجاني للبنود. اشترك الآن للوصول الكامل غير المحدود.";
-  const areaLockMessage = isGuest
-    ? "لقد استخدمت التجربة المجانية لتسعير مبني. يرجى تسجيل الدخول والاشتراك لإكمال الاستخدام."
-    : "لقد وصلت لحد التجربة المجانية لتسعير مبني. اشترك الآن للوصول الكامل.";
+  const ensureUnifiedAccess = useCallback(async () => {
+    const access = await ensureToolAccess({
+      authMode,
+      sessionMeta,
+      userProfile,
+      language: settings?.language || "ar",
+    });
 
-  const consumeAccess = useCallback(async (scope) => {
-    if (isSubscribed) return true;
-
-    if (scope === "items") {
-      if (itemLocked) {
-        showToast(itemLockMessage);
-        return false;
+    if (!access.allowed) {
+      if (access.message) {
+        showToast(access.message);
       }
-      if (isGuest) {
-        setGuestItemOpenCount((current) => (Number(current) || 0) + 1);
-        return true;
+      if (access.showPlans) {
+        openSubscriptionScreen();
       }
-      if (sessionMeta?.uid) {
-        try {
-          await incrementUsageCounter(sessionMeta.uid, "itemAnalysisOpenCount");
-        } catch (_error) {
-          showToast("تعذر تحديث العداد. حاول مرة أخرى.");
-          return false;
-        }
-      }
-      return true;
-    }
-
-    if (scope === "area") {
-      if (areaLocked) {
-        showToast(areaLockMessage);
-        return false;
-      }
-      if (isGuest) {
-        setGuestAreaTrialCount((current) => (Number(current) || 0) + 1);
-        return true;
-      }
-      if (sessionMeta?.uid) {
-        try {
-          await incrementUsageCounter(sessionMeta.uid, "areaPricingTrialCount");
-        } catch (_error) {
-          showToast("تعذر تحديث العداد. حاول مرة أخرى.");
-          return false;
-        }
-      }
-      return true;
+      return false;
     }
 
     return true;
-  }, [areaLockMessage, areaLocked, isGuest, isSubscribed, itemLockMessage, itemLocked, sessionMeta?.uid, setGuestAreaTrialCount, setGuestItemOpenCount, showToast]);
+  }, [authMode, openSubscriptionScreen, sessionMeta, settings?.language, showToast, userProfile]);
 
   async function handleSelfPrice(item, div) {
-    const allowed = await consumeAccess("items");
+    const allowed = await ensureUnifiedAccess();
     if (!allowed) {
-      openSubscriptionScreen();
       return;
     }
     const full = {
@@ -2385,9 +2103,8 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   }
 
   async function handleSelectItem(item, div) {
-    const allowed = await consumeAccess("items");
+    const allowed = await ensureUnifiedAccess();
     if (!allowed) {
-      openSubscriptionScreen();
       return;
     }
     const full = {
@@ -2452,6 +2169,10 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
       });
       if (!canLeave) return;
       return;
+    }
+    if (["items", "area", "candy"].includes(nextMode)) {
+      const allowed = await ensureUnifiedAccess();
+      if (!allowed) return;
     }
     if (nextMode !== "selection" && nextMode !== mode) pushWorkspaceStep();
     setMode(nextMode);
@@ -2522,11 +2243,11 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     return false;
   }, [mode, tab, exportPreview, setExportPreview, confirmDiscardAnalysisChanges]);
 
-  useEffect(() => navigationBridge?.registerBackHandler?.(handleWorkspaceBack), [handleWorkspaceBack, navigationBridge?.registerBackHandler]);
+  useEffect(() => navigationBridge?.registerBackHandler?.(handleWorkspaceBack), [handleWorkspaceBack, navigationBridge]);
 
   useEffect(() => {
     navigationBridge?.onEntryChange?.({ mode, tab });
-  }, [mode, tab, navigationBridge?.onEntryChange]);
+  }, [mode, tab, navigationBridge]);
 
   const tabs = [
     { id: "csi",      label: isEn ? "Items" : "البنود",    icon: "📋" },
@@ -2570,34 +2291,21 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
         {mode === "selection" && (
           <ModeSelection
             onSelect={handleModeChange}
-            areaLocked={areaLocked}
-            areaMessage={areaLockMessage}
             onOpenSubscription={openSubscriptionScreen}
             language={settings?.language || "ar"}
           />
         )}
 
         {mode === "candy" && (
-        <QSPremiumGate
-          country={country}
-          userId={sessionMeta?.uid}
-          userEmail={sessionMeta?.email}
-          userName={sessionMeta?.displayName}
-          onOpenAuthScreen={onOpenAuthScreen}
-          systemBridge={systemBridge}
-          isAdminUnlocked={isAdminUnlocked}
-          language={settings?.language || "ar"}
-        >
-            <ScreenProtection enabled={true}>
-              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <CandyWorkspace
-                  country={country}
-                  onBack={() => handleModeChange("selection")}
-                  onCreateRfq={onCreateRfq}
-                />
-              </div>
-            </ScreenProtection>
-          </QSPremiumGate>
+          <ScreenProtection enabled={true}>
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <CandyWorkspace
+                country={country}
+                onBack={() => handleModeChange("selection")}
+                onCreateRfq={onCreateRfq}
+              />
+            </div>
+          </ScreenProtection>
         )}
 
         {mode === "items" && (
@@ -2623,8 +2331,8 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 country={country}
                 onSelectItem={handleSelectItem}
                 onSelfPrice={handleSelfPrice}
-                itemLocked={itemLocked}
-                itemRemaining={itemRemaining}
+                itemLocked={false}
+                itemRemaining={null}
                 onOpenSubscription={openSubscriptionScreen}
                 afterDiv28AdBanner={csiAfterDiv28AdBanner}
                 isGuest={isGuest}
@@ -2669,8 +2377,8 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 country={country}
                 onSelectItem={handleSelectItem}
                 onSelfPrice={handleSelfPrice}
-                itemLocked={itemLocked}
-                itemRemaining={itemRemaining}
+                itemLocked={false}
+                itemRemaining={null}
                 onOpenSubscription={openSubscriptionScreen}
               />
             )}
@@ -2678,28 +2386,15 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
         )}
 
         {mode === "area" && (
-          /* Registered user who used up their trial → full gate */
-          (areaLocked && !isGuest) ? (
-            <TaseeraProGate
-              country={country}
-              isGuest={false}
-              onOpenSubscription={openSubscriptionScreen}
-              onOpenAuthScreen={onOpenAuthScreen}
-              language={settings?.language || "ar"}
-            />
-          ) : (
-            <GuestAreaWrapper isGuest={isGuest} onOpenAuthScreen={onOpenAuthScreen} language={settings?.language || "ar"}>
-              <AreaPricingForm
-                country={country}
-                onCalculate={handleCalculateArea}
-                adBanner={areaFormAdBanner}
-                canManageAds={isAdminUnlocked}
-                onManageAds={handleOpenAdEditor}
-                onToggleAdVisibility={handleToggleAdVisibility}
-                onRemoveAd={handleRemoveAd}
-              />
-            </GuestAreaWrapper>
-          )
+          <AreaPricingForm
+            country={country}
+            onCalculate={handleCalculateArea}
+            adBanner={areaFormAdBanner}
+            canManageAds={isAdminUnlocked}
+            onManageAds={handleOpenAdEditor}
+            onToggleAdVisibility={handleToggleAdVisibility}
+            onRemoveAd={handleRemoveAd}
+          />
         )}
 
         {mode === "area-results" && (
@@ -2924,7 +2619,6 @@ function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhea
     }));
   };
 
-  const BADGE_COLORS = { mat: "bg-blue-100 text-blue-700", lab: "bg-green-100 text-green-700", eqp: "bg-orange-100 text-orange-700" };
   const GROUP_HEADERS = [
     { key: "مواد",   label: "المواد",   emoji: "🧱", color: "bg-blue-50 border-blue-200",   btn: "bg-blue-600"   },
     { key: "عمالة", label: "العمالة",  emoji: "👷", color: "bg-green-50 border-green-200",  btn: "bg-green-600"  },
@@ -3724,23 +3418,6 @@ function AnalysisScreen({
   }
   function updateQty(type, i, val) {
     setResources((prev) => { const copy = { ...prev, [type]: [...prev[type]] }; copy[type][i] = { ...copy[type][i], qty: parseFloat(val) || 0 }; return copy; });
-  }
-  function updateLineTotal(type, i, val) {
-    const q = Number(qty) || 1;
-    const f = Number(factor) || 1;
-    setResources((prev) => {
-      const copy = { ...prev, [type]: [...prev[type]] };
-      const currentItem = copy[type][i];
-      if (!currentItem) return prev;
-      const baseQty = Number(currentItem.qty) || 0;
-      const nextTotal = Math.max(0, parseFloat(val) || 0);
-      const divisor = baseQty * q * f;
-      copy[type][i] = {
-        ...currentItem,
-        rate: divisor > 0 ? nextTotal / divisor : 0,
-      };
-      return copy;
-    });
   }
   function deleteResource(type, i) {
     setResources((prev) => ({ ...prev, [type]: prev[type].filter((_, idx) => idx !== i) }));

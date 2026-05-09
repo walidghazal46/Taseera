@@ -49,10 +49,21 @@ service cloud.firestore {
     }
 
     function isValidPaymentRequestCreate() {
-      return request.resource.data.userId == authUid() &&
+      return (
+        request.resource.data.userId == authUid() &&
         request.resource.data.orderId is string &&
         request.resource.data.userSerial is string &&
-        request.resource.data.requestStatus in ["pending_review", "waiting_receipt"];
+        request.resource.data.requestStatus in ["pending_review", "waiting_receipt"]
+      ) || (
+        request.resource.data.uid == authUid() &&
+        request.resource.data.userId == authUid() &&
+        request.resource.data.userCode is string &&
+        request.resource.data.selectedPlan in ["monthly", "six_months", "yearly", "lifetime"] &&
+        request.resource.data.amount is number &&
+        request.resource.data.currency == "SAR" &&
+        request.resource.data.paymentMethod in ["bank_transfer", "instapay", "cash_wallet", "stc_pay"] &&
+        request.resource.data.status == "pending"
+      );
     }
 
     function touchesAdminFields() {
@@ -108,7 +119,7 @@ service cloud.firestore {
 
     match /paymentRequests/{requestId} {
       allow read: if (isAdmin() && (hasPermission("viewPayments") || hasPermission("approvePayments")))
-        || (isSignedIn() && resource.data.userId == authUid());
+        || (isSignedIn() && (resource.data.userId == authUid() || resource.data.uid == authUid()));
       allow create: if isSignedIn() && isValidPaymentRequestCreate();
       allow update: if isAdmin() && hasPermission("approvePayments");
       allow delete: if isSuperAdmin();
@@ -151,6 +162,11 @@ service cloud.firestore {
         )
         || isAdmin() && hasPermission("approvePayments");
       allow delete: if isSuperAdmin() || (isAdmin() && hasPermission("approvePayments"));
+    }
+
+    match /subscriptions/{subscriptionId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == authUid());
+      allow create, update, delete: if isAdmin() && hasPermission("approvePayments");
     }
 
     match /{document=**} {

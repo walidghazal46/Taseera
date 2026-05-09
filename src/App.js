@@ -7,7 +7,6 @@ import Modal from "./components/Modal";
 import useAndroidBridge from "./hooks/useAndroidBridge";
 import usePersistentState from "./hooks/usePersistentState";
 import {
-  importedPricingRows,
   importedPricingSource,
   pricingCatalog,
   sampleCompanies,
@@ -56,6 +55,17 @@ function clearForcedScreenQuery() {
 
 function createId(prefix) {
   return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function ensureGuestSessionId(previousSession = null) {
+  if (previousSession?.guestId) return previousSession.guestId;
+  if (typeof window === "undefined") return createId("guest");
+  const storageKey = `${APP_STORAGE_PREFIX}.guestId`;
+  const existing = window.localStorage.getItem(storageKey);
+  if (existing) return existing;
+  const next = createId("guest");
+  window.localStorage.setItem(storageKey, next);
+  return next;
 }
 
 function parseNumericInput(value) {
@@ -210,7 +220,7 @@ export default function App() {
   const [companies, setCompanies] = usePersistentState(`${APP_STORAGE_PREFIX}.companies`, sampleCompanies);
   const [suppliers, setSuppliers] = usePersistentState(`${APP_STORAGE_PREFIX}.suppliers`, sampleSuppliers);
   const [savedAnalyses, setSavedAnalyses] = usePersistentState(`${APP_STORAGE_PREFIX}.savedAnalyses`, []);
-  const [rfqRequests, setRfqRequests] = usePersistentState(`${APP_STORAGE_PREFIX}.rfqRequests`, []);
+  const [rfqRequests] = usePersistentState(`${APP_STORAGE_PREFIX}.rfqRequests`, []);
   const [selectedCompanyId, setSelectedCompanyId] = usePersistentState(`${APP_STORAGE_PREFIX}.selectedCompanyId`, null);
   const [selectedProjectId, setSelectedProjectId] = usePersistentState(`${APP_STORAGE_PREFIX}.selectedProjectId`, null);
   const [selectedPricingItemId, setSelectedPricingItemId] = usePersistentState(`${APP_STORAGE_PREFIX}.selectedPricingItemId`, null);
@@ -352,12 +362,16 @@ export default function App() {
 
   const handleAuthEntry = useCallback((mode, payload = {}) => {
     pageBackHandlerRef.current = () => false;
+    const isGuestMode = mode === "guest";
+    const guestId = isGuestMode ? ensureGuestSessionId(authSession) : null;
     setAuthMode(mode);
     setAuthSession({
       mode,
       uid: payload.uid || null,
-      userName: payload.userName || settings.userName,
-      userEmail: payload.userEmail || settings.userEmail,
+      guestId,
+      userName: isGuestMode ? (settings.language === "en" ? "Guest" : "زائر") : (payload.userName || settings.userName),
+      userEmail: isGuestMode ? "" : (payload.userEmail || settings.userEmail),
+      accountType: isGuestMode ? "guest" : "user",
       lastLoginAt: new Date().toLocaleString("en-GB"),
     });
     setActivePage("pricing");
@@ -365,10 +379,14 @@ export default function App() {
     setAuthScreenMode(null);
     clearForcedScreenQuery();
     setRouteStack([createRoute(mode, "pricing")]);
-    setSettings((c) => ({ ...c, userName: payload.userName || c.userName, userEmail: payload.userEmail || c.userEmail }));
+    setSettings((c) => ({
+      ...c,
+      userName: isGuestMode ? c.userName : (payload.userName || c.userName),
+      userEmail: isGuestMode ? c.userEmail : (payload.userEmail || c.userEmail),
+    }));
     window.history.pushState({ source: "taseera-guard" }, "");
     if (mode !== "guest") showStatus(settings.language === "en" ? "Signed in successfully." : "تم تسجيل الدخول بنجاح.", "success");
-  }, [setActivePage, setAuthMode, setAuthSession, setRouteStack, setSettings, settings.language, settings.userName, settings.userEmail, showStatus]);
+  }, [authSession, setActivePage, setAuthMode, setAuthSession, setRouteStack, setSettings, settings.language, settings.userName, settings.userEmail, showStatus]);
 
   const handleLogout = useCallback(() => {
     pageBackHandlerRef.current = () => false;

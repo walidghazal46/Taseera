@@ -66,12 +66,22 @@ export default function AppShell({
     label: navText?.[item.id] || (language === "en" ? item.labelEn : item.label),
   }));
 
+  const scrollMainToTop = () => {
+    const el = mainRef.current;
+    if (!el) return;
+    if (typeof el.scrollTo === "function") {
+      el.scrollTo({ top: 0, behavior: "auto" });
+      return;
+    }
+    el.scrollTop = 0;
+  };
+
   useEffect(() => {
-    mainRef.current?.scrollTo({ top: 0, behavior: "auto" });
+    scrollMainToTop();
   }, [activePage]);
 
   useEffect(() => {
-    mainRef.current?.scrollTo({ top: 0, behavior: "auto" });
+    scrollMainToTop();
   }, [scrollResetVersion]);
 
   return (

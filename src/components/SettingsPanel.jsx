@@ -5,7 +5,7 @@ import useAdminSession from "../hooks/useAdminSession";
 import taseeraLogo from "../assets/taseera-logo-light.png";
 import AdminDashboard from "./AdminDashboard";
 import SubscriptionPanel from "./SubscriptionPanel";
-import { requestAccountDeletion } from "../services/subscriptionApi";
+import { requestAccountDeletion } from "../services/subscriptionService";
 
 const F = "'Cairo','Tajawal',sans-serif";
 
@@ -228,140 +228,6 @@ function HowToUseModal({ language, onClose }) {
   );
 }
 
-/* ─── Pricing Tab ─────────────────────────────────────────────────────────── */
-function PricingTab({ settings, onUpdateSetting, copy }) {
-  const isAr = settings.language !== "en";
-  const countryOptions = [
-    { value: "السعودية", label: "🇸🇦 " + (isAr ? "السعودية" : "Saudi Arabia") },
-    { value: "جمهورية مصر العربية", label: "🇪🇬 " + (isAr ? "مصر" : "Egypt") },
-    { value: "الإمارات العربية المتحدة", label: "🇦🇪 " + (isAr ? "الإمارات" : "UAE") },
-  ];
-  const ratioItems = useMemo(() => [
-    { key: "profitPercent",   label: copy.profitPercent,   value: Number(settings.profitPercent)   || 0, icon: "📈", from: "from-emerald-400", to: "to-emerald-500", ring: "ring-emerald-200", text: "text-emerald-700", light: "bg-emerald-50" },
-    { key: "overheadPercent", label: copy.overheadPercent, value: Number(settings.overheadPercent) || 0, icon: "⚙️",  from: "from-blue-400",    to: "to-blue-500",    ring: "ring-blue-200",    text: "text-blue-700",    light: "bg-blue-50" },
-    { key: "taxPercent",      label: copy.taxPercent,       value: Number(settings.taxPercent)      || 0, icon: "🏛️", from: "from-violet-400",  to: "to-violet-500",  ring: "ring-violet-200",  text: "text-violet-700",  light: "bg-violet-50" },
-  ], [copy, settings]);
-
-  return (
-    <div className="space-y-3">
-      {/* Live environment banner */}
-      <div className="relative overflow-hidden rounded-2xl shadow-[0_4px_24px_rgba(212,168,67,0.18)]">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#3a2200] via-[#4d2e00] to-[#2a1800]" />
-        <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: "radial-gradient(ellipse at 80% 50%, rgba(212,168,67,0.15), transparent 60%)" }} />
-        <div className="pointer-events-none absolute -top-4 -right-4 h-24 w-24 rounded-full bg-[#d4a843]/20 blur-2xl" />
-
-        <div className="relative px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="absolute inset-0 rounded-xl bg-[#d4a843]/30 blur-md scale-110" />
-                <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-[#d4a843]/20 text-xl ring-1 ring-[#d4a843]/30">🌍</div>
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#d4a843] opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-[#d4a843]" />
-                  </span>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#d4a843]/80" style={{ fontFamily: F }}>{copy.pricingEnvironment}</p>
-                </div>
-                <p className="text-[14px] font-black text-white leading-tight" style={{ fontFamily: F }}>
-                  {settings.country}
-                </p>
-                <p className="mt-0.5 text-[10px] text-white/40" style={{ fontFamily: F }}>
-                  {settings.currency} · {copy.profitSummary} {settings.profitPercent}%
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-col items-end gap-1">
-              <span className="rounded-full bg-[#d4a843] px-3 py-1 text-[9px] font-black text-[#2a1800] shadow-md uppercase tracking-wide" style={{ fontFamily: F }}>
-                {copy.pricingActive}
-              </span>
-              <span className="text-[9px] text-white/30" style={{ fontFamily: F }}>
-                ×{settings.locationFactor || 1}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Country & city */}
-      <GlassCard>
-        <CardHeader icon="🗺️" title={copy.pricingCountryTitle} accent />
-        <div className="grid grid-cols-2 gap-3 p-4">
-          <PremiumInput label={copy.country} type="select" value={settings.country}
-            onChange={(v) => onUpdateSetting("country", v)} options={countryOptions} icon="🌍" />
-          <PremiumInput label={copy.city} value={settings.city}
-            onChange={(v) => onUpdateSetting("city", v)} placeholder={isAr ? "الرياض" : "Riyadh"} icon="📍" />
-          <PremiumInput label={isAr ? "رقم الهاتف" : "Phone Number"} value={settings.userPhone}
-            onChange={(v) => onUpdateSetting("userPhone", v)} placeholder="+966 50..." icon="📱" />
-          <PremiumInput label={copy.currency} value={settings.currency}
-            onChange={(v) => onUpdateSetting("currency", v)} placeholder="SAR" icon="💲" />
-          <PremiumInput label={copy.locationFactor} type="number" value={settings.locationFactor}
-            onChange={(v) => onUpdateSetting("locationFactor", v)} placeholder="1.0" icon="📐" />
-        </div>
-      </GlassCard>
-
-      {/* Ratio visual cards with interactive sliders */}
-      <GlassCard>
-        <CardHeader icon="📊" title={copy.pricingRatios} accent />
-        <div className="p-4 space-y-3">
-          {ratioItems.map((r) => (
-            <div key={r.key} className={`relative overflow-hidden rounded-2xl ${r.light} ring-1 ${r.ring} p-3.5`}>
-              {/* Background glow */}
-              <div className={`pointer-events-none absolute -top-4 -right-4 h-20 w-20 rounded-full bg-gradient-to-br ${r.from} ${r.to} opacity-15 blur-xl`} />
-
-              <div className="relative flex items-center gap-3 mb-2.5">
-                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${r.from} ${r.to} text-white text-sm shadow-sm`}>
-                  {r.icon}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-[10px] font-bold uppercase tracking-wider ${r.text}`} style={{ fontFamily: F }}>{r.label}</p>
-                </div>
-                <div className={`flex items-baseline gap-0.5 rounded-xl px-2.5 py-1 bg-white/70`}>
-                  <span className={`text-[22px] font-black leading-none ${r.text}`}>{r.value}</span>
-                  <span className={`text-[13px] font-bold ${r.text} opacity-70`}>%</span>
-                </div>
-              </div>
-
-              {/* Slider track */}
-              <div className="relative h-6 flex items-center">
-                <div className="absolute w-full h-2 rounded-full bg-white/60 ring-1 ring-white/40 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full bg-gradient-to-r ${r.from} ${r.to} transition-all duration-150`}
-                    style={{ width: `${Math.min(r.value, 50) * 2}%` }}
-                  />
-                </div>
-                <input
-                  type="range" min="0" max="50" step="0.5"
-                  value={r.value}
-                  onChange={(e) => onUpdateSetting(r.key, e.target.value)}
-                  className="absolute w-full h-6 opacity-0 cursor-pointer"
-                  style={{ touchAction: "none" }}
-                />
-                {/* Thumb indicator */}
-                <div
-                  className={`absolute h-4 w-4 rounded-full bg-gradient-to-br ${r.from} ${r.to} ring-2 ring-white shadow-md pointer-events-none transition-all duration-150`}
-                  style={{ left: `calc(${Math.min(r.value, 50) * 2}% - 8px)` }}
-                />
-              </div>
-
-              {/* Fine-tune number input */}
-              <input
-                type="number" min="0" max="100" step="0.1"
-                value={settings[r.key]}
-                onChange={(e) => onUpdateSetting(r.key, e.target.value)}
-                className={`mt-2 w-full rounded-lg border bg-white/60 px-2 py-1 text-center text-[11px] font-bold outline-none transition-all focus:bg-white focus:ring-2 ${r.ring} ${r.text} border-white/60`}
-                style={{ fontFamily: F }}
-              />
-            </div>
-          ))}
-        </div>
-      </GlassCard>
-    </div>
-  );
-}
-
 /* ─── Account Tab ─────────────────────────────────────────────────────────── */
 function AccountTab({
   settings, authMode, onLogout, onUpdateSetting, onSettingsAction,
@@ -533,114 +399,121 @@ function AccountTab({
     <div className="space-y-3">
 
       {/* ── Hero Profile Card ── */}
-      <div className="relative w-full min-w-0 max-w-full overflow-hidden rounded-[24px] border border-white/80 bg-white/78 shadow-[0_20px_60px_rgba(119,138,224,0.16)] backdrop-blur-xl">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(102,95,255,0.09)_0%,rgba(47,145,255,0.06)_48%,rgba(77,226,229,0.09)_100%)]" />
-        <div className="pointer-events-none absolute -top-10 -right-10 h-40 w-40 rounded-full bg-[#7edff0]/16 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-[#c0acff]/14 blur-2xl" />
-        <div className="pointer-events-none absolute inset-0 opacity-[0.05]"
-          style={{ backgroundImage: "repeating-linear-gradient(0deg,#7b8fd7 0,#7b8fd7 1px,transparent 1px,transparent 24px),repeating-linear-gradient(90deg,#7b8fd7 0,#7b8fd7 1px,transparent 1px,transparent 24px)" }} />
+      <div className="relative w-full min-w-0 max-w-full overflow-hidden rounded-[30px] border border-[#d7e4ff] bg-[#fafcff] shadow-[0_20px_60px_rgba(107,132,210,0.16)]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(88,232,231,0.08),transparent_28%),radial-gradient(circle_at_top_right,rgba(72,191,235,0.10),transparent_24%)]" />
+        <div className="pointer-events-none absolute left-6 top-7 grid grid-cols-5 gap-3 opacity-35">
+          {Array.from({ length: 15 }).map((_, i) => (
+            <span key={i} className="h-1.5 w-1.5 rounded-full bg-[#bfd0f7]" />
+          ))}
+        </div>
 
-        <div className="relative">
-          {/* Avatar + identity */}
-          <div className="flex items-start gap-4 px-5 pt-6 pb-4">
+        <div className="relative p-5 sm:p-7">
+          <div className="flex flex-row-reverse items-start justify-between gap-4">
             <div className="relative shrink-0">
-              {/* outer glow ring */}
-              <div className="absolute inset-0 rounded-[18px] bg-[#d4a843]/30 blur-md scale-110" />
-              <div className="relative flex h-16 w-16 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,rgba(114,98,255,0.18)_0%,rgba(74,225,228,0.18)_100%)] text-2xl font-black text-[#7287d4] ring-2 ring-[#c9d6ff]">
+              <div className="flex h-24 w-24 items-center justify-center rounded-[28px] bg-[linear-gradient(135deg,#2f6bff_0%,#3f57d8_100%)] text-[32px] font-black text-white shadow-[0_16px_30px_rgba(47,107,255,0.22)]">
                 {isGuest ? "👤" : initials}
               </div>
               {!isGuest && (
-                <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-400 ring-2 ring-white">
-                  <span className="h-2 w-2 rounded-full bg-white" />
+                <span className="absolute -bottom-1 -left-1 flex h-7 w-7 items-center justify-center rounded-full bg-[#34d399] ring-4 ring-white">
+                  <span className="h-3 w-3 rounded-full bg-white" />
                 </span>
               )}
             </div>
 
-            <div className="min-w-0 flex-1 pt-1">
-              <p className="text-[17px] font-black leading-tight text-[#28417c]" style={{ fontFamily: F }}>
+            <div className="min-w-0 flex-1 pt-1 text-right">
+              <p className="text-[24px] font-black leading-tight text-[#174a9f] sm:text-[30px]" style={{ fontFamily: F }}>
                 {isGuest ? text.settings.guest : settings.userName}
               </p>
-              <p className="mt-1 truncate text-[11px] text-[#8f99c3]" style={{ fontFamily: F }}>
+              <p className="mt-2 truncate text-[14px] font-semibold text-[#7d91c0] sm:text-[18px]" style={{ fontFamily: F }}>
                 {isGuest ? text.settings.browseMode : settings.userEmail}
               </p>
               {!isGuest && (
-                <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_4px_#4ade80]" />
-                  <span className="text-[9px] font-bold uppercase tracking-wide text-emerald-600">{isAr ? "متصل" : "Active"}</span>
+                <div className="mt-4 inline-flex items-center gap-3 rounded-full border border-[#b9f0db] bg-white px-4 py-2 shadow-sm">
+                  <span className="h-3 w-3 rounded-full bg-[#34d399]" />
+                  <span className="text-[13px] font-black text-[#0fa968]" style={{ fontFamily: F }}>{isAr ? "متصل" : "Active"}</span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Inline stats */}
           {!isGuest && (
-            <div className="mx-4 mb-4 grid grid-cols-2 gap-2">
+            <div className="mt-6 grid grid-cols-2 gap-3 md:gap-4">
+              <button
+                type="button"
+                onClick={() => setShowRfqs(true)}
+                className="relative overflow-hidden rounded-[22px] border-2 border-[#cfe0ff] bg-white px-3 py-4 text-right shadow-[0_10px_24px_rgba(135,165,235,0.12)] transition hover:shadow-[0_14px_30px_rgba(135,165,235,0.18)] active:scale-[0.98] sm:px-5 sm:py-6"
+              >
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[24px] leading-none text-[#2f6bff] sm:left-4 sm:text-[32px]">‹</span>
+                <div className="flex flex-col-reverse items-center justify-between gap-3 sm:flex-row">
+                  <div className="flex-1 text-center">
+                    <p className="text-[40px] font-black leading-none text-[#174a9f] sm:text-[50px]">{rfqRequests.length}</p>
+                    <p className="mt-2 text-[14px] font-black leading-snug text-[#174a9f] sm:mt-3 sm:text-[20px]" style={{ fontFamily: F }}>{copy.rfqs}</p>
+                  </div>
+                  <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-[#edf3ff] text-[36px] text-[#2f6bff] shadow-inner sm:h-28 sm:w-28 sm:text-[48px]">🛒</div>
+                </div>
+              </button>
+
               <button
                 type="button"
                 onClick={() => setShowSaved(true)}
-                className="relative flex items-center gap-3 overflow-hidden rounded-xl border border-[#d7e4ff] bg-white/76 px-3 py-2.5 text-right transition hover:bg-white active:scale-[0.97]"
+                className="relative overflow-hidden rounded-[22px] border-2 border-[#c8f0df] bg-[#fbfffc] px-3 py-4 text-right shadow-[0_10px_24px_rgba(117,215,170,0.12)] transition hover:shadow-[0_14px_30px_rgba(117,215,170,0.18)] active:scale-[0.98] sm:px-5 sm:py-6"
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#7082ff_0%,#45dde4_100%)] text-base text-white shadow-sm">📋</div>
-                <div>
-                  <p className="text-[24px] font-black leading-none text-[#28417c]">{savedAnalyses.length}</p>
-                  <p className="mt-0.5 text-[8px] font-bold uppercase tracking-wide leading-tight text-[#8f99c3]" style={{ fontFamily: F }}>{copy.savedAnalyses}</p>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[24px] leading-none text-[#16a34a] sm:left-4 sm:text-[32px]">‹</span>
+                <div className="flex flex-col-reverse items-center justify-between gap-3 sm:flex-row">
+                  <div className="flex-1 text-center">
+                    <p className="text-[40px] font-black leading-none text-[#0f9b5f] sm:text-[50px]">{savedAnalyses.length}</p>
+                    <p className="mt-2 text-[14px] font-black leading-snug text-[#0f9b5f] sm:mt-3 sm:text-[20px]" style={{ fontFamily: F }}>{copy.savedAnalyses}</p>
+                  </div>
+                  <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-[#eafbf3] text-[36px] text-[#18a865] shadow-inner sm:h-28 sm:w-28 sm:text-[48px]">📋</div>
                 </div>
-                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-[#b0badb]">‹</span>
-              </button>
-              <button type="button" onClick={() => setShowRfqs(true)} className="relative flex items-center gap-3 overflow-hidden rounded-xl border border-[#d7e4ff] bg-white/76 px-3 py-2.5 transition hover:bg-white active:scale-95">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[linear-gradient(135deg,#8d69ff_0%,#4ca0ff_100%)] text-base text-white shadow-sm">📬</div>
-                <div>
-                  <p className="text-[24px] font-black leading-none text-[#28417c]">{rfqRequests.length}</p>
-                  <p className="mt-0.5 text-[8px] font-bold uppercase tracking-wide leading-tight text-[#8f99c3]" style={{ fontFamily: F }}>{copy.rfqs}</p>
-                </div>
-                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-[#b0badb]">‹</span>
               </button>
             </div>
           )}
 
-          {/* Session info strip */}
-          <div className="mx-4 mb-4 overflow-hidden rounded-xl border border-[#d7e4ff] bg-white/72 px-4 py-2.5">
-            <p className="mb-1 text-[8px] font-bold uppercase tracking-widest text-[#91a0cf]">{text.settings.sessionStatus}</p>
-            <p className="text-[11px] text-[#6375ac]" style={{ fontFamily: F }}>
+          <div className="mt-5 overflow-hidden rounded-[24px] border-2 border-[#d9e6ff] bg-white px-5 py-5 shadow-[0_10px_24px_rgba(135,165,235,0.08)]">
+            <div className="flex items-center justify-end gap-2 text-right">
+              <span className="text-[18px] text-[#6c63ff]">🕘</span>
+              <p className="text-[18px] font-black text-[#355aa0]" style={{ fontFamily: F }}>{text.settings.sessionStatus}</p>
+            </div>
+            <p className="mt-4 text-right text-[22px] font-black leading-tight text-[#174a9f] sm:text-[28px]" style={{ fontFamily: F }}>
               {isGuest ? text.settings.guestSession : `${text.settings.signedInAs} ${settings.userName}`}
             </p>
             {!isGuest && sessionMeta?.lastLoginAt && (
-              <p className="mt-0.5 text-[10px] text-[#98a4ca]" style={{ fontFamily: F }}>
+              <p className="mt-4 text-right text-[14px] font-semibold text-[#7388b7] sm:text-[18px]" style={{ fontFamily: F }}>
                 {text.settings.signedInAt}: {sessionMeta.lastLoginAt}
               </p>
             )}
           </div>
 
-          {/* Auth buttons */}
-          <div className="flex flex-wrap gap-2 px-4 pb-5">
+          <div className="mt-6 flex flex-wrap gap-3">
             {isGuest ? (
               <>
                 <button type="button" onClick={() => onOpenAuthScreen?.("login")}
-                  className="flex-1 rounded-xl bg-gradient-to-r from-[#d4a843] to-[#e8c97a] py-2.5 text-[11px] font-bold text-[#082555] shadow-[0_4px_14px_rgba(212,168,67,0.4)] transition-all hover:shadow-[0_4px_20px_rgba(212,168,67,0.55)] active:scale-[0.97]"
+                  className="flex-1 rounded-xl bg-gradient-to-r from-[#d4a843] to-[#e8c97a] py-2.5 text-[12px] font-bold text-[#082555] shadow-[0_4px_14px_rgba(212,168,67,0.4)] transition-all hover:shadow-[0_4px_20px_rgba(212,168,67,0.55)] active:scale-[0.97]"
                   style={{ fontFamily: F }}>{text.settings.loginNow}</button>
                 <button type="button" onClick={() => onOpenAuthScreen?.("register")}
-                  className="flex-1 rounded-xl border border-[#d7e4ff] bg-white/72 py-2.5 text-[11px] font-bold text-[#5d72b5] transition hover:bg-white active:scale-[0.97]"
+                  className="flex-1 rounded-xl border border-[#d7e4ff] bg-white/84 py-2.5 text-[12px] font-bold text-[#476192] transition hover:bg-white active:scale-[0.97]"
                   style={{ fontFamily: F }}>{text.settings.createAccountNow}</button>
               </>
             ) : (
               <div className="grid w-full grid-cols-3 gap-2">
                 <button type="button" onClick={() => onOpenAuthScreen?.("login")}
-                  className="flex flex-col items-center justify-center gap-1 rounded-xl border border-[#d7e4ff] bg-white/72 py-2.5 text-center text-[10px] font-bold text-[#5d72b5] transition hover:bg-white active:scale-[0.97]"
+                  className="flex min-h-[56px] items-center justify-center rounded-2xl border border-[#5b8cff] bg-[linear-gradient(135deg,#2f6bff_0%,#3f57d8_100%)] px-3 py-3 text-center text-[14px] font-black text-white shadow-[0_12px_24px_rgba(47,107,255,0.2)] transition hover:brightness-105 active:scale-[0.97]"
                   style={{ fontFamily: F }}>
                   <span>{text.settings.switchAccount}</span>
                 </button>
                 <button type="button" onClick={onLogout}
-                  className="flex flex-col items-center justify-center gap-1 rounded-xl border border-red-200 bg-red-50 py-2.5 text-center text-[10px] font-bold text-red-500 transition hover:bg-red-100 active:scale-[0.97]"
+                  className="flex min-h-[56px] items-center justify-center rounded-2xl border border-[#8e6dff] bg-[linear-gradient(135deg,#8b5cf6_0%,#6d4cff_100%)] px-3 py-3 text-center text-[14px] font-black text-white shadow-[0_12px_24px_rgba(139,92,246,0.2)] transition hover:brightness-105 active:scale-[0.97]"
                   style={{ fontFamily: F }}>
                   <span>{text.settings.logout}</span>
                 </button>
                 {deleteSent ? (
-                  <div className="flex items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-1 py-2.5 text-center text-[9px] font-bold text-amber-600" style={{ fontFamily: F }}>
+                  <div className="flex items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-1 py-2.5 text-center text-[10px] font-bold text-amber-700" style={{ fontFamily: F }}>
                     {isAr ? "طلب حذف معلق" : "Deletion pending"}
                   </div>
                 ) : (
                   <button type="button" onClick={() => setShowDeleteConfirm(true)}
-                    className="flex flex-col items-center justify-center gap-1 rounded-xl border border-red-200 bg-red-50 py-2.5 text-center text-[10px] font-bold text-red-500 transition hover:bg-red-100 active:scale-[0.97]"
+                    className="flex min-h-[56px] items-center justify-center rounded-2xl border border-[#ff8ca0] bg-[linear-gradient(135deg,#ff4d6d_0%,#ea4a72_100%)] px-3 py-3 text-center text-[14px] font-black text-white shadow-[0_12px_24px_rgba(255,77,109,0.18)] transition hover:brightness-105 active:scale-[0.97]"
                     style={{ fontFamily: F }}>
                     <span>{isAr ? "حذف الحساب" : "Delete Account"}</span>
                   </button>
@@ -724,7 +597,7 @@ function AccountTab({
         <CardHeader icon="🌐" title={text.settings.languageSwitch} accent />
         <div className="p-3">
           <div className="flex gap-1.5 rounded-xl bg-slate-100 p-1.5">
-            {[{ lang: "ar", label: "العربية", flag: "🇸🇦" }, { lang: "en", label: "English", flag: "🇬🇧" }].map(({ lang, label, flag }) => {
+            {[{ lang: "ar", label: isAr ? "العربية" : "Arabic", flag: "🇸🇦" }, { lang: "en", label: "English", flag: "🇬🇧" }].map(({ lang, label, flag }) => {
               const active = settings.language === lang;
               return (
                 <button key={lang} type="button" onClick={() => onUpdateSetting("language", lang)}
@@ -765,7 +638,7 @@ function AccountTab({
       {/* ── How to Use ── */}
       <button type="button" onClick={() => setShowHowToUse(true)}
         className="group relative w-full overflow-hidden rounded-2xl shadow-[0_4px_16px_rgba(8,37,85,0.14)] transition-all duration-200 hover:shadow-[0_8px_28px_rgba(8,37,85,0.22)] hover:-translate-y-px active:scale-[0.98]">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#071e40] via-[#0d2545] to-[#162e52]" />
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,#c799f7_0%,#48bfeb_52%,#58e8e7_100%)]" />
         <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: "radial-gradient(ellipse at 20% 50%, rgba(212,168,67,0.12), transparent 60%)" }} />
         <div className="pointer-events-none absolute top-0 left-0 h-full w-1 rounded-l-2xl bg-gradient-to-b from-[#d4a843] to-[#d4a843]/20" />
 
@@ -838,11 +711,11 @@ function AccountTab({
       )}
 
       {/* ── App Info Footer ── */}
-      <div className="relative overflow-hidden rounded-[28px] border border-white/80 bg-white/78 shadow-[0_20px_60px_rgba(119,138,224,0.14)] backdrop-blur-xl">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(102,95,255,0.08)_0%,rgba(47,145,255,0.05)_48%,rgba(77,226,229,0.08)_100%)]" />
-        <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 50% 0%, rgba(116,222,240,0.16), transparent 60%)" }} />
+      <div className="relative overflow-hidden rounded-[28px] border border-[#c9d4f7] bg-[#dce1fc]/88 shadow-[0_20px_60px_rgba(128,156,235,0.18)] backdrop-blur-xl">
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(199,153,247,0.14)_0%,rgba(220,225,252,0.7)_48%,rgba(74,213,231,0.18)_100%)]" />
+        <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 50% 0%, rgba(88,232,231,0.16), transparent 60%)" }} />
         <div className="pointer-events-none absolute inset-0 opacity-[0.05]"
-          style={{ backgroundImage: "repeating-linear-gradient(0deg,#7b8fd7 0,#7b8fd7 1px,transparent 1px,transparent 20px),repeating-linear-gradient(90deg,#7b8fd7 0,#7b8fd7 1px,transparent 1px,transparent 20px)" }} />
+          style={{ backgroundImage: "repeating-linear-gradient(0deg,rgba(72,191,235,0.18) 0,rgba(72,191,235,0.18) 1px,transparent 1px,transparent 20px),repeating-linear-gradient(90deg,rgba(72,191,235,0.18) 0,rgba(72,191,235,0.18) 1px,transparent 1px,transparent 20px)" }} />
 
         <div className="relative px-4 py-5 text-center">
           <div className="mx-auto mb-3 relative w-fit">
@@ -855,12 +728,12 @@ function AccountTab({
               />
             </div>
           </div>
-          <p className="bg-[linear-gradient(90deg,#685fff_0%,#2f90ff_52%,#3ddcdf_100%)] bg-clip-text text-[15px] font-black text-transparent" style={{ fontFamily: F }}>{settings.appName}</p>
-          <p className="mt-0.5 text-[10px] text-[#8f9ac5] font-bold uppercase tracking-widest" style={{ fontFamily: F }}>
+          <p className="bg-[linear-gradient(90deg,#9f6ae6_0%,#48bfeb_56%,#4ad5e7_100%)] bg-clip-text text-[15px] font-black text-transparent" style={{ fontFamily: F }}>{settings.appName}</p>
+          <p className="mt-0.5 text-[10px] text-[#8c9cc7] font-bold uppercase tracking-widest" style={{ fontFamily: F }}>
             {text.settings.version} {settings.appVersion}
           </p>
-          <div className="my-3 h-px bg-gradient-to-r from-transparent via-[#d7e2ff] to-transparent" />
-          <p className="text-[9px] leading-relaxed text-[#6677ae]" style={{ fontFamily: F }}>
+          <div className="my-3 h-px bg-gradient-to-r from-transparent via-[#c7d7fb] to-transparent" />
+          <p className="text-[9px] leading-relaxed text-[#7185b7]" style={{ fontFamily: F }}>
             {text.settings.disclaimer}
           </p>
         </div>
@@ -886,7 +759,12 @@ export default function SettingsPanel({
   const { profile: adminProfile, loading: adminLoading } = useAdminSession({
     uid: sessionMeta?.uid, email: settings.userEmail, displayName: settings.userName,
   });
-  const isSubscribed = !isGuest && (isSuperAdminEmail || adminProfile?.canAccessAdmin === true || adminProfile?.isPaid === true);
+  const isSubscribed = !isGuest && (
+    isSuperAdminEmail ||
+    adminProfile?.canAccessAdmin === true ||
+    adminProfile?.subscriptionStatus === "active" ||
+    adminProfile?.lifetime === true
+  );
   const initialSection = settings?.settingsPanelSection || "account";
   const nav = useBackStack({
     initialEntry: { section: initialSection },
@@ -923,19 +801,19 @@ export default function SettingsPanel({
                 }}
                 className={`relative flex flex-1 flex-col items-center gap-1 rounded-[14px] py-3 px-1 text-center transition-all duration-200 ${
                   active
-                    ? "bg-[#d4a843] shadow-[0_4px_16px_rgba(212,168,67,0.5)]"
-                    : "hover:bg-white/8 active:bg-white/12"
+                    ? "bg-[#2a3870] shadow-[0_6px_18px_rgba(42,56,112,0.34)]"
+                    : "hover:bg-white/12 active:bg-white/18"
                 }`}
                 style={{ fontFamily: F }}
               >
-                <span className={`text-[18px] leading-none transition-all duration-200 ${active ? "scale-110 drop-shadow-sm" : "opacity-50"}`}>
+                <span className={`text-[18px] leading-none text-white transition-all duration-200 ${active ? "scale-110 drop-shadow-sm" : "opacity-100"}`}>
                   {tab.icon}
                 </span>
-                <span className={`text-[10px] font-bold leading-none transition-colors duration-200 ${active ? "text-[#082555]" : "text-white/45"}`}>
+                <span className="text-[10px] font-bold leading-none text-white">
                   {copy[tab.labelKey]}
                 </span>
                 {active && (
-                  <span className="absolute bottom-1.5 left-1/2 h-1 w-4 -translate-x-1/2 rounded-full bg-[#082555]/25" />
+                  <span className="absolute bottom-1.5 left-1/2 h-1 w-4 -translate-x-1/2 rounded-full bg-[#58e8e7]" />
                 )}
               </button>
             );

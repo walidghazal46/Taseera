@@ -233,6 +233,7 @@ const COUNTRIES = [
     flagUrl: "https://flagcdn.com/sa.svg",
     labelAr: "المملكة العربية السعودية",
     labelEn: "Saudi Arabia",
+    subtitleEn: "Kingdom pricing market",
     color: "#1a7a3c",
     bg: "linear-gradient(135deg, #f0faf4 0%, #e4f4ec 60%, #d8efdf 100%)",
     border: "#a8d8b8",
@@ -246,6 +247,7 @@ const COUNTRIES = [
     flagUrl: "https://flagcdn.com/eg.svg",
     labelAr: "جمهورية مصر العربية",
     labelEn: "Egypt",
+    subtitleEn: "Egypt pricing market",
     color: "#c62828",
     bg: "linear-gradient(135deg, #fff5f5 0%, #fde8e8 60%, #fad4d4 100%)",
     border: "#f0b0b0",
@@ -259,6 +261,7 @@ const COUNTRIES = [
     flagUrl: uaeFlagRound,
     labelAr: "الإمارات العربية المتحدة",
     labelEn: "United Arab Emirates",
+    subtitleEn: "UAE pricing market",
     color: "#1565c0",
     bg: "linear-gradient(135deg, #f0f6ff 0%, #e2eeff 60%, #d4e4ff 100%)",
     border: "#a8c4ee",
@@ -512,7 +515,7 @@ export default function CountryPicker({
                       marginTop: 2, marginBottom: 0, letterSpacing: "0.2px",
                     }}
                   >
-                    {isAr ? country.labelEn : country.labelAr}
+                    {isAr ? country.labelEn : country.subtitleEn}
                   </p>
                 </div>
 

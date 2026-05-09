@@ -13,6 +13,7 @@ export default function SettingsPage(props) {
         description={text.pages.settings.description}
         density="ultra-tight"
         hideEyebrow
+        variant="dark"
       />
       <SettingsPanel {...props} />
     </div>

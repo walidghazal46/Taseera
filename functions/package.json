@@ -7,10 +7,11 @@
     "shell": "firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
+    "sync:missing-users": "node scripts/sync-missing-auth-users.js",
     "logs": "firebase functions:log"
   },
   "engines": {
-    "node": "24"
+    "node": "22"
   },
   "main": "index.js",
   "dependencies": {

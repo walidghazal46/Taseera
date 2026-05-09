@@ -26,8 +26,8 @@ android {
         applicationId = "com.taseera.app"
         minSdk = 24
         targetSdk = 35
-        versionCode = 14
-        versionName = "14"
+        versionCode = 15
+        versionName = "15"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -55,6 +55,7 @@ dependencies {
     implementation(libs.androidx.webkit)
     implementation(libs.material)
     implementation(libs.nanohttpd)
+    implementation(libs.gson)
 
     // Firebase BoM
     implementation(platform("com.google.firebase:firebase-bom:34.12.0"))

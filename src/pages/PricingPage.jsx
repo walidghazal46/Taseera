@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import CountryPicker from "../components/CountryPicker";
 import PageHeader from "../components/PageHeader";
 import PricingWorkspace from "../components/PricingWorkspace";
@@ -8,11 +8,36 @@ import { COUNTRY_NAME_TO_CODE } from "../data/csiData";
 export default function PricingPage(props) {
   const text = getAppText(props.settings?.language);
   const [selectedCountry, setSelectedCountry] = useState(null);
+  const workspaceBackHandlerRef = useRef(() => false);
 
   const handleSelectCountry = (country) => {
     props.onUpdateSetting?.("country", country);
     setSelectedCountry(country);
   };
+
+  useEffect(() => {
+    if (!props.navigationBridge?.registerBackHandler) return undefined;
+    return props.navigationBridge.registerBackHandler(() => {
+      if (workspaceBackHandlerRef.current?.()) return true;
+      if (selectedCountry) {
+        setSelectedCountry(null);
+        return true;
+      }
+      return false;
+    });
+  }, [props.navigationBridge, selectedCountry]);
+
+  const bridgedNavigation = useMemo(() => ({
+    ...(props.navigationBridge || {}),
+    registerBackHandler: (handler) => {
+      workspaceBackHandlerRef.current = handler || (() => false);
+      return () => {
+        if (workspaceBackHandlerRef.current === handler) {
+          workspaceBackHandlerRef.current = () => false;
+        }
+      };
+    },
+  }), [props.navigationBridge]);
 
   if (!selectedCountry) {
     return (
@@ -40,7 +65,7 @@ export default function PricingPage(props) {
         title=""
         description={text.pages.pricing.description}
       />
-      <PricingWorkspace {...props} initialCountry={countryCode} />
+      <PricingWorkspace {...props} navigationBridge={bridgedNavigation} initialCountry={countryCode} />
     </div>
   );
 }

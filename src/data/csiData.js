@@ -736,7 +736,7 @@ export function getDefaultResources(item, div, mktRates, countryCode = "sa") {
 
   // 07 THERMAL & MOISTURE
   if (div.rateKey === "thermal") {
-    if (name.includes("xps") || name.includes("صلب") && name.includes("عزل حراري")) {
+    if (name.includes("xps") || (name.includes("صلب") && name.includes("عزل حراري"))) {
       return {
         مواد: [
           { name: "ألواح XPS صلبة 5سم", qty: 1.05, unit: "م²", rate: r(mkt * 0.55), badge: "mat", icon: "🟦" },
