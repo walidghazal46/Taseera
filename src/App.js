@@ -20,7 +20,7 @@ import SuppliersPage from "./pages/SuppliersPage";
 import { getAppText } from "./data/appText";
 
 const APP_STORAGE_PREFIX = "taseera.v3";
-const APP_VERSION = "16"; // always reflects current build — overrides localStorage
+const APP_VERSION = "1.0.0.26"; // always reflects current build — overrides localStorage
 
 function makeSeedMergeKey(entry) {
   const name = String(entry?.name || "").trim().toLowerCase();

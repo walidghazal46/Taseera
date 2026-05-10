@@ -180,7 +180,6 @@ export default function SettingsPanel({
             <ActionButton onClick={() => setShowPrivacy(true)}>{text.settings.privacy}</ActionButton>
             <ActionButton tone="mint" onClick={() => systemBridge?.openEmail?.("walidghazal46@gmail.com", isAr ? "تواصل من تطبيق تسعيرة" : "Contact from Taseera", "")}>
               {text.settings.contact}
-              <span className="mt-1 block text-[9px] font-bold opacity-70">walidghazal46@gmail.com</span>
             </ActionButton>
             <ActionButton tone="gold" onClick={() => setShowGuide(true)}>{isAr ? "كيفية الاستخدام" : "How to use"}</ActionButton>
             <ActionButton tone="blue" onClick={() => onSettingsAction?.("update")}>{text.settings.update}</ActionButton>
@@ -196,10 +195,10 @@ export default function SettingsPanel({
         </SettingsCard>
 
         <SettingsCard icon="👤" title={text.settings.sessionStatus} subtitle={authMode === "guest" ? text.settings.guestSessionBody : `${text.settings.signedInAs} ${displayName}`} className="sm:col-span-2">
-          <div className="grid gap-2 sm:grid-cols-3">
-            <ActionButton onClick={() => onOpenAuthScreen?.("login")}>{authMode === "guest" ? text.settings.loginNow : text.settings.switchAccount}</ActionButton>
-            <ActionButton tone="gold" onClick={() => onSettingsAction?.("rate")}>{text.settings.rate}</ActionButton>
-            {authMode !== "guest" ? <ActionButton tone="rose" onClick={onLogout}>{text.settings.logout}</ActionButton> : null}
+          <div className="grid grid-cols-3 gap-2">
+            <ActionButton square onClick={() => onOpenAuthScreen?.("login")}>{authMode === "guest" ? text.settings.loginNow : text.settings.switchAccount}</ActionButton>
+            <ActionButton square tone="gold" onClick={() => onSettingsAction?.("rate")}>{text.settings.rate}</ActionButton>
+            {authMode !== "guest" ? <ActionButton square tone="rose" onClick={onLogout}>{text.settings.logout}</ActionButton> : null}
           </div>
         </SettingsCard>
       </div>
@@ -207,7 +206,7 @@ export default function SettingsPanel({
       <footer className="rounded-2xl border border-[#dbe5ff] bg-white/80 px-4 py-4 text-center shadow-sm">
         <img src={taseeraLogo} alt="Taseera" className="mx-auto h-12 w-auto object-contain" />
         <p className="mt-2 text-[13px] font-black text-[#102a56]" style={{ fontFamily: F }}>{settings.appName}</p>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[#7a8ba9]" style={{ fontFamily: F }}>{text.settings.version} {settings.appVersion}</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#7a8ba9]" style={{ fontFamily: F }}>{text.settings.version} 1.0.0.26</p>
         <p className="mx-auto mt-2 max-w-md text-[10px] leading-5 text-[#66789d]" style={{ fontFamily: F }}>{text.settings.disclaimer}</p>
       </footer>
 
