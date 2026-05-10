@@ -30,7 +30,7 @@ function ActionButton({ children, onClick, tone = "blue", square = false }) {
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center justify-center rounded-xl border text-center text-[12px] font-black leading-tight transition ${square ? "aspect-square min-h-0 px-2 py-2" : "min-h-[44px] px-3 py-2"} ${tones[tone] || tones.blue}`}
+      className={`flex items-center justify-center rounded-xl border text-center text-[12px] font-black leading-tight transition ${square ? "min-h-0 h-10 px-2 py-1" : "min-h-[44px] px-3 py-2"} ${tones[tone] || tones.blue}`}
       style={{ fontFamily: F }}
     >
       {children}
