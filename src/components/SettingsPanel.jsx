@@ -148,7 +148,8 @@ export default function SettingsPanel({
         </div>
       </section>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      {/* Row 1: 3 cards side by side on sm+ */}
+      <div className="grid gap-3 sm:grid-cols-3">
         <SettingsCard icon="🌐" title={text.settings.languageSwitch} subtitle={isAr ? "اختر لغة الواجهة" : "Choose interface language"}>
           <div className="grid grid-cols-2 gap-2 rounded-2xl bg-[#eef5ff] p-1.5">
             {[{ lang: "ar", label: "العربية" }, { lang: "en", label: "English" }].map((item) => {
@@ -185,8 +186,11 @@ export default function SettingsPanel({
             <ActionButton tone="blue" onClick={() => onSettingsAction?.("update")}>{text.settings.update}</ActionButton>
           </div>
         </SettingsCard>
+      </div>
 
-        <SettingsCard icon="💬" title={isAr ? "تواصل معنا" : "Contact Us"} subtitle={isAr ? "اختر قناة التواصل المناسبة" : "Choose a contact channel"} className="sm:col-span-2">
+      {/* Row 2: تواصل معنا + حالة الجلسة */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <SettingsCard icon="💬" title={isAr ? "تواصل معنا" : "Contact Us"} subtitle={isAr ? "اختر قناة التواصل المناسبة" : "Choose a contact channel"}>
           <div className="grid grid-cols-3 gap-2">
             <ActionButton square tone="mint" onClick={() => systemBridge?.openExternalUrl?.("https://wa.me/201064463650")}>WhatsApp</ActionButton>
             <ActionButton square tone="blue" onClick={() => systemBridge?.openExternalUrl?.("https://www.linkedin.com/in/walid-ghazal-pmi-pmp%C2%AE-85208678/")}>LinkedIn</ActionButton>
@@ -194,7 +198,7 @@ export default function SettingsPanel({
           </div>
         </SettingsCard>
 
-        <SettingsCard icon="👤" title={text.settings.sessionStatus} subtitle={authMode === "guest" ? text.settings.guestSessionBody : `${text.settings.signedInAs} ${displayName}`} className="sm:col-span-2">
+        <SettingsCard icon="👤" title={text.settings.sessionStatus} subtitle={authMode === "guest" ? text.settings.guestSessionBody : `${text.settings.signedInAs} ${displayName}`}>
           <div className="grid grid-cols-3 gap-2">
             <ActionButton square onClick={() => onOpenAuthScreen?.("login")}>{authMode === "guest" ? text.settings.loginNow : text.settings.switchAccount}</ActionButton>
             <ActionButton square tone="gold" onClick={() => onSettingsAction?.("rate")}>{text.settings.rate}</ActionButton>
