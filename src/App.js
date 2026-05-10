@@ -1,11 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { signOut } from "firebase/auth";
+import { auth } from "./firebase";
 
 import AppShell from "./components/AppShell";
 import LoginScreen from "./components/LoginScreen";
 import MobilePrototypeDemo from "./components/MobilePrototypeDemo";
 import Modal from "./components/Modal";
+import SubscriptionPage from "./components/SubscriptionPage";
+import TrialBanner from "./components/TrialBanner";
+import AdminDashboard from "./components/AdminDashboard";
+
 import useAndroidBridge from "./hooks/useAndroidBridge";
 import usePersistentState from "./hooks/usePersistentState";
+import useAuth from "./hooks/useAuth";
+
 import {
   importedPricingSource,
   pricingCatalog,
@@ -13,6 +21,8 @@ import {
   sampleSettings,
   sampleSuppliers,
 } from "./data/sampleData";
+import { SUBSCRIPTION_STATUS } from "./data/packages";
+
 import CompaniesPage from "./pages/CompaniesPage";
 import PricingPage from "./pages/PricingPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -20,34 +30,29 @@ import SuppliersPage from "./pages/SuppliersPage";
 import { getAppText } from "./data/appText";
 
 const APP_STORAGE_PREFIX = "taseera.v3";
-const APP_VERSION = "1.0.0.26"; // always reflects current build — overrides localStorage
+const APP_VERSION = "1.0.0.27";
 
 function makeSeedMergeKey(entry) {
-  const name = String(entry?.name || "").trim().toLowerCase();
+  const name    = String(entry?.name    || "").trim().toLowerCase();
   const country = String(entry?.country || "").trim().toLowerCase();
   return `${name}::${country}`;
 }
 
 function mergeSeedData(currentItems, seedItems) {
   const safeCurrent = Array.isArray(currentItems) ? currentItems : [];
-  const safeSeed = Array.isArray(seedItems) ? seedItems : [];
+  const safeSeed    = Array.isArray(seedItems)    ? seedItems    : [];
   const existingKeys = new Set(safeCurrent.map(makeSeedMergeKey));
-  const missingSeeds = safeSeed.filter((item) => !existingKeys.has(makeSeedMergeKey(item)));
+  const missingSeeds = safeSeed.filter((i) => !existingKeys.has(makeSeedMergeKey(i)));
   return missingSeeds.length ? [...safeCurrent, ...missingSeeds] : safeCurrent;
 }
 
 function getForcedScreen() {
-  if (typeof window === "undefined") {
-    return null;
-  }
-  const params = new URLSearchParams(window.location.search);
-  return params.get("screen");
+  if (typeof window === "undefined") return null;
+  return new URLSearchParams(window.location.search).get("screen");
 }
 
 function clearForcedScreenQuery() {
-  if (typeof window === "undefined") {
-    return;
-  }
+  if (typeof window === "undefined") return;
   const url = new URL(window.location.href);
   url.searchParams.delete("screen");
   window.history.replaceState(window.history.state, "", url.toString());
@@ -69,9 +74,7 @@ function ensureGuestSessionId(previousSession = null) {
 }
 
 function parseNumericInput(value) {
-  if (value === "" || value === null || value === undefined) {
-    return "";
-  }
+  if (value === "" || value === null || value === undefined) return "";
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : "";
 }
@@ -95,21 +98,17 @@ function createRoute(authMode, page = "companies") {
 function getSystemText(language = "ar") {
   return language === "en"
     ? {
-        consultantCompany: "consulting",
-        contractorCompany: "delivery",
+        consultantCompany: "consulting", contractorCompany: "delivery",
         companyAdded: (name) => `Added company ${name}.`,
         projectAdded: (name) => `Added project ${name}.`,
         supplierAdded: (name) => `Added supplier ${name}.`,
-        supplierInitial: "S",
-        loginRequiredToSave: "Analysis saved locally.",
+        supplierInitial: "S", loginRequiredToSave: "Analysis saved locally.",
         chooseCompanyBeforeSave: "Choose a company and project before saving.",
         analysisSaved: "The analysis was saved and linked to the current project.",
-        loginRequiredForRfq: "RFQ access is open.",
-        genericRequest: "General request",
-        market: "Market",
-        supplyService: "Supply service",
+        loginRequiredForRfq: "RFQ access is open.", genericRequest: "General request",
+        market: "Market", supplyService: "Supply service",
         rfqSubject: (name) => `RFQ - ${name}`,
-        rfqGreeting: (contact, itemName) => `Hello ${contact},%0D%0AWe would like to receive an initial quotation for: ${itemName}.`,
+        rfqGreeting: (contact, itemName) => `Hello ${contact},%0D%0AWe would like to receive a quotation for: ${itemName}.`,
         rfqShareTitle: "Request for quotation",
         rfqShareBody: (name) => `A new RFQ was created for ${name}.`,
         rfqCreated: "The RFQ was created and the proper contact channel was opened.",
@@ -125,30 +124,23 @@ function getSystemText(language = "ar") {
         supportSubject: (appName) => `Technical support - ${appName}`,
         supportBody: "Technical support for Taseera app regarding:",
         supportOpened: "Opened technical support via email.",
-        appStatus: "Application Status",
-        platform: "Platform",
-        version: "Version",
-        savedAnalyses: "Saved analyses",
-        rfqRequests: "RFQ requests",
+        appStatus: "Application Status", platform: "Platform", version: "Version",
+        savedAnalyses: "Saved analyses", rfqRequests: "RFQ requests",
         appStoreOpened: "Opened the rating page or app store.",
         privacyTitle: "Privacy Policy",
       }
     : {
-        consultantCompany: "استشارية",
-        contractorCompany: "تنفيذية",
+        consultantCompany: "استشارية", contractorCompany: "تنفيذية",
         companyAdded: (name) => `تمت إضافة الشركة ${name}.`,
         projectAdded: (name) => `تمت إضافة المشروع ${name}.`,
         supplierAdded: (name) => `تمت إضافة المورد ${name}.`,
-        supplierInitial: "م",
-        loginRequiredToSave: "تم حفظ التحليل محلياً.",
+        supplierInitial: "م", loginRequiredToSave: "تم حفظ التحليل محلياً.",
         chooseCompanyBeforeSave: "اختر شركة ومشروعًا قبل الحفظ.",
         analysisSaved: "تم حفظ التحليل وربطه بالمشروع الحالي.",
-        loginRequiredForRfq: "طلب عرض السعر متاح للجميع.",
-        genericRequest: "طلب عام",
-        market: "السوق",
-        supplyService: "خدمة توريد",
+        loginRequiredForRfq: "طلب عرض السعر متاح للجميع.", genericRequest: "طلب عام",
+        market: "السوق", supplyService: "خدمة توريد",
         rfqSubject: (name) => `طلب عرض سعر - ${name}`,
-        rfqGreeting: (contact, itemName) => `مرحبًا ${contact},%0D%0Aنرغب في استلام عرض سعر مبدئي للبند: ${itemName}.`,
+        rfqGreeting: (contact, itemName) => `مرحبًا ${contact},%0D%0Aنرغب في استلام عرض سعر للبند: ${itemName}.`,
         rfqShareTitle: "طلب عرض سعر",
         rfqShareBody: (name) => `تم إنشاء طلب عرض سعر جديد للبند ${name}.`,
         rfqCreated: "تم إنشاء طلب عرض السعر وفتح قناة التواصل المناسبة.",
@@ -164,11 +156,8 @@ function getSystemText(language = "ar") {
         supportSubject: (appName) => `دعم فني - ${appName}`,
         supportBody: "الدعم الفني تطبيق تسعيرة في :",
         supportOpened: "تم فتح الدعم الفني عبر البريد الإلكتروني.",
-        appStatus: "حالة التطبيق",
-        platform: "المنصة",
-        version: "الإصدار",
-        savedAnalyses: "التحليلات المحفوظة",
-        rfqRequests: "طلبات عروض الأسعار",
+        appStatus: "حالة التطبيق", platform: "المنصة", version: "الإصدار",
+        savedAnalyses: "التحليلات المحفوظة", rfqRequests: "طلبات عروض الأسعار",
         appStoreOpened: "تم فتح صفحة التقييم أو المتجر.",
         privacyTitle: "سياسة الخصوصية",
       };
@@ -179,7 +168,7 @@ function StatusToast({ status }) {
   const toneClass = {
     success: "border-emerald-200 bg-emerald-50 text-emerald-800",
     warning: "border-amber-200 bg-amber-50 text-amber-900",
-    info: "border-slate-200 bg-white text-slate-800",
+    info:    "border-slate-200 bg-white text-slate-800",
   }[status.tone || "info"];
   return (
     <div className="fixed inset-x-0 z-[60] flex justify-center px-4" style={{ top: "calc(env(safe-area-inset-top) + 16px)" }}>
@@ -195,7 +184,9 @@ function InfoDialog({ dialog, onClose }) {
   return (
     <Modal title={dialog.title} onClose={onClose} closeLabel={dialog.closeLabel || "Close"}>
       <div className="grid gap-3 text-right">
-        {dialog.lines?.map((line) => (<p key={line} className="text-sm leading-6 text-slate-700">{line}</p>))}
+        {dialog.lines?.map((line) => (
+          <p key={line} className="text-sm leading-6 text-slate-700">{line}</p>
+        ))}
         {dialog.action ? (
           <button type="button" onClick={dialog.action.onClick} className="rounded-[12px] bg-[linear-gradient(135deg,#16335d_0%,#10213e_100%)] px-3 py-2 text-xs font-bold text-white">
             {dialog.action.label}
@@ -206,52 +197,80 @@ function InfoDialog({ dialog, onClose }) {
   );
 }
 
+// ── Subscription gate screen ─────────────────────────────────────────────────
+function SubscriptionGate({ status, language, profile, onPaymentSubmitted }) {
+  return (
+    <SubscriptionPage
+      language={language}
+      subscriptionStatus={status}
+      profile={profile}
+      onPaymentSubmitted={onPaymentSubmitted}
+    />
+  );
+}
+
 export default function App() {
   const forcedScreen = getForcedScreen();
   const bridge = useAndroidBridge();
 
-  // Core States
-  const [authMode, setAuthMode] = usePersistentState(`${APP_STORAGE_PREFIX}.authMode`, null);
-  const [authSession, setAuthSession] = usePersistentState(`${APP_STORAGE_PREFIX}.authSession`, null);
-  const [activePage, setActivePage] = usePersistentState(`${APP_STORAGE_PREFIX}.activePage`, "pricing");
-  const [settings, setSettings] = usePersistentState(`${APP_STORAGE_PREFIX}.settings`, sampleSettings);
-  // Always inject current build version — never rely on localStorage value
-  const settingsWithVersion = { ...settings, appVersion: APP_VERSION };
-  const [companies, setCompanies] = usePersistentState(`${APP_STORAGE_PREFIX}.companies`, sampleCompanies);
-  const [suppliers, setSuppliers] = usePersistentState(`${APP_STORAGE_PREFIX}.suppliers`, sampleSuppliers);
+  // Firebase auth + profile
+  const { firebaseUser, profile, accessStatus, loading: authLoading, isAdmin, isSuperAdmin } = useAuth();
+
+  // Legacy local state (used for guest mode and local data)
+  const [authMode, setAuthMode]         = usePersistentState(`${APP_STORAGE_PREFIX}.authMode`, null);
+  const [authSession, setAuthSession]   = usePersistentState(`${APP_STORAGE_PREFIX}.authSession`, null);
+  const [activePage, setActivePage]     = usePersistentState(`${APP_STORAGE_PREFIX}.activePage`, "pricing");
+  const [settings, setSettings]         = usePersistentState(`${APP_STORAGE_PREFIX}.settings`, sampleSettings);
+  const settingsWithVersion             = { ...settings, appVersion: APP_VERSION };
+  const [companies, setCompanies]       = usePersistentState(`${APP_STORAGE_PREFIX}.companies`, sampleCompanies);
+  const [suppliers, setSuppliers]       = usePersistentState(`${APP_STORAGE_PREFIX}.suppliers`, sampleSuppliers);
   const [savedAnalyses, setSavedAnalyses] = usePersistentState(`${APP_STORAGE_PREFIX}.savedAnalyses`, []);
-  const [rfqRequests] = usePersistentState(`${APP_STORAGE_PREFIX}.rfqRequests`, []);
-  const [selectedCompanyId, setSelectedCompanyId] = usePersistentState(`${APP_STORAGE_PREFIX}.selectedCompanyId`, null);
-  const [selectedProjectId, setSelectedProjectId] = usePersistentState(`${APP_STORAGE_PREFIX}.selectedProjectId`, null);
+  const [rfqRequests]                   = usePersistentState(`${APP_STORAGE_PREFIX}.rfqRequests`, []);
+  const [selectedCompanyId, setSelectedCompanyId]       = usePersistentState(`${APP_STORAGE_PREFIX}.selectedCompanyId`, null);
+  const [selectedProjectId, setSelectedProjectId]       = usePersistentState(`${APP_STORAGE_PREFIX}.selectedProjectId`, null);
   const [selectedPricingItemId, setSelectedPricingItemId] = usePersistentState(`${APP_STORAGE_PREFIX}.selectedPricingItemId`, null);
-  const [routeStack, setRouteStack] = usePersistentState(`${APP_STORAGE_PREFIX}.routeStack`, [createRoute(null)]);
+  const [routeStack, setRouteStack]     = usePersistentState(`${APP_STORAGE_PREFIX}.routeStack`, [createRoute(null)]);
   const [pageResetVersion, setPageResetVersion] = useState({ companies: 0, pricing: 0, suppliers: 0, settings: 0 });
   const [scrollResetVersion, setScrollResetVersion] = useState(0);
 
+  // Screens
+  const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  const [showSubscriptionPage, setShowSubscriptionPage] = useState(false);
+  const [paymentSubmittedMsg, setPaymentSubmittedMsg] = useState(false); // eslint-disable-line no-unused-vars
+
   useEffect(() => {
-    setCompanies((current) => mergeSeedData(current, sampleCompanies));
-    setSuppliers((current) => mergeSeedData(current, sampleSuppliers));
+    setCompanies((c) => mergeSeedData(c, sampleCompanies));
+    setSuppliers((c) => mergeSeedData(c, sampleSuppliers));
   }, [setCompanies, setSuppliers]);
 
   const mergedCompanies = useMemo(() => mergeSeedData(companies, sampleCompanies), [companies]);
   const mergedSuppliers = useMemo(() => mergeSeedData(suppliers, sampleSuppliers), [suppliers]);
 
-  // UI States
-  const [status, setStatus] = useState(null);
-  const [dialog, setDialog] = useState(null);
+  const [status, setStatus]               = useState(null);
+  const [dialog, setDialog]               = useState(null);
   const [showExitPrompt, setShowExitPrompt] = useState(false);
-  const [rfqModal, setRfqModal] = useState(null); // { itemName }
+  const [rfqModal, setRfqModal]           = useState(null);
   const [exitFromCompanies, setExitFromCompanies] = useState(false);
   const [authScreenMode, setAuthScreenMode] = useState(!authMode ? "login" : null);
 
-  const routeStackRef = useRef(routeStack);
-  const allowExitRef = useRef(false);
+  const routeStackRef     = useRef(routeStack);
+  const allowExitRef      = useRef(false);
   const pageBackHandlerRef = useRef(() => false);
-  const statusTimeoutRef = useRef(null);
+  const statusTimeoutRef  = useRef(null);
 
-  const appText = getAppText(settings.language);
+  const appText    = getAppText(settings.language);
   const systemText = getSystemText(settings.language);
-  const shouldShowLogin = !authMode || authScreenMode !== null || forcedScreen === "login";
+
+  // Auth state: logged in via Firebase OR in guest mode
+  const isFirebaseAuthenticated = !!firebaseUser && !authLoading;
+  const isGuest = authMode === "guest" && !firebaseUser;
+  const shouldShowLogin = !authLoading && !isFirebaseAuthenticated && !isGuest && (forcedScreen !== "mobile-demo");
+  const shouldShowLoginScreen = shouldShowLogin || authScreenMode !== null;
+
+  // Access gate: show subscription page when access is denied
+  const needsSubscription = isFirebaseAuthenticated && accessStatus && !accessStatus.canAccess &&
+    accessStatus.status !== SUBSCRIPTION_STATUS.PENDING_PAYMENT;
+  const isPendingPayment  = isFirebaseAuthenticated && accessStatus?.status === SUBSCRIPTION_STATUS.PENDING_PAYMENT;
 
   const showStatus = useCallback((message, tone = "info") => {
     setStatus({ message, tone });
@@ -260,20 +279,49 @@ export default function App() {
     statusTimeoutRef.current = window.setTimeout(() => setStatus(null), 3200);
   }, [bridge]);
 
-  const openDialog = useCallback((nextDialog) => setDialog(nextDialog), []);
+  const openDialog  = useCallback((d) => setDialog(d), []);
   const closeDialog = useCallback(() => setDialog(null), []);
   const openAuthScreen = useCallback((mode = "login") => setAuthScreenMode(mode), []);
 
   useEffect(() => { routeStackRef.current = routeStack; }, [routeStack]);
+  useEffect(() => () => { if (statusTimeoutRef.current) window.clearTimeout(statusTimeoutRef.current); }, []);
 
+  // Sync Firebase auth → local authMode
   useEffect(() => {
-    return () => { if (statusTimeoutRef.current) window.clearTimeout(statusTimeoutRef.current); };
-  }, []);
+    if (authLoading) return;
+    if (firebaseUser) {
+      if (authMode !== "authenticated") {
+        setAuthMode("authenticated");
+        setAuthSession({
+          mode: "authenticated",
+          uid: firebaseUser.uid,
+          guestId: null,
+          userName: firebaseUser.displayName || firebaseUser.email?.split("@")[0] || "User",
+          userEmail: firebaseUser.email,
+          accountType: "user",
+          lastLoginAt: new Date().toLocaleString("en-GB"),
+        });
+        setSettings((c) => ({
+          ...c,
+          userName:  firebaseUser.displayName || c.userName,
+          userEmail: firebaseUser.email || c.userEmail,
+        }));
+      }
+    } else {
+      // Firebase signed out — only clear if we were authenticated (not guest)
+      if (authMode === "authenticated") {
+        setAuthMode(null);
+        setAuthSession(null);
+        setAuthScreenMode("login");
+        setRouteStack([createRoute(null)]);
+      }
+    }
+  }, [firebaseUser, authLoading]); // eslint-disable-line
 
-  // Selection Sync
+  // Selection sync
   useEffect(() => {
-    const selectedCompanyExists = mergedCompanies.some((c) => c.id === selectedCompanyId);
-    if (!selectedCompanyExists) {
+    const exists = mergedCompanies.some((c) => c.id === selectedCompanyId);
+    if (!exists) {
       const fallback = mergedCompanies[0] || null;
       setSelectedCompanyId(fallback?.id || null);
       setSelectedProjectId(fallback?.projects?.[0]?.id || null);
@@ -281,22 +329,24 @@ export default function App() {
   }, [mergedCompanies, selectedCompanyId, setSelectedCompanyId, setSelectedProjectId]);
 
   useEffect(() => {
-    const selectedCompany = mergedCompanies.find((c) => c.id === selectedCompanyId);
-    if (!selectedCompany) return;
-    const projectExists = selectedCompany.projects.some((p) => p.id === selectedProjectId);
-    if (!projectExists) setSelectedProjectId(selectedCompany.projects[0]?.id || null);
+    const c = mergedCompanies.find((c) => c.id === selectedCompanyId);
+    if (!c) return;
+    const exists = c.projects.some((p) => p.id === selectedProjectId);
+    if (!exists) setSelectedProjectId(c.projects[0]?.id || null);
   }, [mergedCompanies, selectedCompanyId, selectedProjectId, setSelectedProjectId]);
 
-  // Navigation Logic
+  // Navigation
   const registerPageBackHandler = useCallback((handler) => {
     pageBackHandlerRef.current = handler;
     return () => { if (pageBackHandlerRef.current === handler) pageBackHandlerRef.current = () => false; };
   }, []);
 
-  const pushHistoryEntry = useCallback(() => window.history.pushState({ source: "taseera-guard" }, ""), []);
+  const pushHistoryEntry     = useCallback(() => window.history.pushState({ source: "taseera-guard" }, ""), []);
   const notifySubpageNavigation = useCallback(() => setScrollResetVersion((c) => c + 1), []);
 
   const performBackNavigation = useCallback(() => {
+    if (showAdminDashboard) { setShowAdminDashboard(false); return true; }
+    if (showSubscriptionPage) { setShowSubscriptionPage(false); return true; }
     if (pageBackHandlerRef.current?.()) { setShowExitPrompt(false); return true; }
     const currentStack = routeStackRef.current;
     if (currentStack.length > 1) {
@@ -312,16 +362,13 @@ export default function App() {
       setRouteStack([createRoute(authMode, "pricing")]);
       setShowExitPrompt(false); return true;
     }
-    if (shouldShowLogin) {
-      if (bridge.isAndroid) {
-        setExitFromCompanies(false);
-        setShowExitPrompt(true);
-      }
+    if (shouldShowLoginScreen) {
+      if (bridge.isAndroid) { setExitFromCompanies(false); setShowExitPrompt(true); }
       return false;
     }
-    setShowExitPrompt(false);
-    return false;
-  }, [activePage, authMode, bridge.isAndroid, setActivePage, setAuthMode, setRouteStack, shouldShowLogin]);
+    setShowExitPrompt(false); return false;
+  }, [activePage, authMode, bridge.isAndroid, setActivePage, setAuthMode, setRouteStack,
+      shouldShowLoginScreen, showAdminDashboard, showSubscriptionPage]);
 
   useEffect(() => {
     window.history.replaceState({ source: "taseera-root" }, "");
@@ -366,9 +413,7 @@ export default function App() {
     const guestId = isGuestMode ? ensureGuestSessionId(authSession) : null;
     setAuthMode(mode);
     setAuthSession({
-      mode,
-      uid: payload.uid || null,
-      guestId,
+      mode, uid: payload.uid || null, guestId,
       userName: isGuestMode ? (settings.language === "en" ? "Guest" : "زائر") : (payload.userName || settings.userName),
       userEmail: isGuestMode ? "" : (payload.userEmail || settings.userEmail),
       accountType: isGuestMode ? "guest" : "user",
@@ -381,21 +426,24 @@ export default function App() {
     setRouteStack([createRoute(mode, "pricing")]);
     setSettings((c) => ({
       ...c,
-      userName: isGuestMode ? c.userName : (payload.userName || c.userName),
+      userName:  isGuestMode ? c.userName  : (payload.userName  || c.userName),
       userEmail: isGuestMode ? c.userEmail : (payload.userEmail || c.userEmail),
     }));
     window.history.pushState({ source: "taseera-guard" }, "");
     if (mode !== "guest") showStatus(settings.language === "en" ? "Signed in successfully." : "تم تسجيل الدخول بنجاح.", "success");
   }, [authSession, setActivePage, setAuthMode, setAuthSession, setRouteStack, setSettings, settings.language, settings.userName, settings.userEmail, showStatus]);
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
     pageBackHandlerRef.current = () => false;
+    try { await signOut(auth); } catch {}
     setAuthMode(null);
     setAuthSession(null);
     setActivePage("companies");
     setShowExitPrompt(false);
     setAuthScreenMode("login");
     setRouteStack([createRoute(null)]);
+    setShowAdminDashboard(false);
+    setShowSubscriptionPage(false);
     window.history.pushState({ source: "taseera-guard" }, "");
     showStatus(settings.language === "en" ? "Signed out." : "تم تسجيل الخروج.", "info");
   }, [setActivePage, setAuthMode, setAuthSession, setRouteStack, settings.language, showStatus]);
@@ -419,7 +467,19 @@ export default function App() {
     if (performBackNavigation()) pushHistoryEntry();
   }, [performBackNavigation, pushHistoryEntry]);
 
-  // Data Helpers
+  const handlePaymentSubmitted = useCallback(() => {
+    setShowSubscriptionPage(false);
+    setPaymentSubmittedMsg(true);
+    showStatus(
+      settings.language === "en"
+        ? "Payment request submitted. Your account will be activated within 24 hours."
+        : "تم إرسال طلب الدفع. سيتم تفعيل حسابك خلال 24 ساعة.",
+      "success",
+    );
+    setTimeout(() => setPaymentSubmittedMsg(false), 6000);
+  }, [settings.language, showStatus]);
+
+  // Data helpers
   const selectedCompany = useMemo(() => mergedCompanies.find((c) => c.id === selectedCompanyId) || null, [mergedCompanies, selectedCompanyId]);
   const selectedProject = useMemo(() => {
     if (!selectedCompany) return null;
@@ -433,7 +493,7 @@ export default function App() {
     const newC = {
       id: createId("comp"), name: input.name.trim(), type: input.type, country: input.country.trim(),
       logo: inferCompanyLogo(input.specialization, input.type), specialization: input.specialization.trim(),
-      headquarters: (input.headquarters || "").split(/[،,]/).map(i => i.trim()).filter(Boolean),
+      headquarters: (input.headquarters || "").split(/[،,]/).map((i) => i.trim()).filter(Boolean),
       description: settings.language === "en" ? `Specialized in ${input.specialization}.` : `متخصصة في ${input.specialization}.`,
       rating: 4.4, projectsCount: 0, keyProjects: [], projects: [],
     };
@@ -468,7 +528,7 @@ export default function App() {
 
   const handleCreateRfq = useCallback(({ item, supplier, source }) => {
     setRfqModal({ itemName: item?.ar || supplier?.name || "طلب عرض سعر" });
-  }, [setRfqModal]);
+  }, []);
 
   const handleContactSupplier = useCallback(async (s, channel = "phone") => {
     if (channel === "phone" && s.phone) { bridge.openDialer(s.phone); showStatus(systemText.callOpened(s.name), "info"); }
@@ -485,28 +545,44 @@ export default function App() {
 
   const handleOpenAdSettings = useCallback(() => {
     setActivePage("settings");
-    setSettings((current) => ({
-      ...current,
-      settingsPanelSection: "account",
-    }));
+    setSettings((c) => ({ ...c, settingsPanelSection: "account" }));
     setRouteStack([createRoute(authMode, "settings")]);
   }, [authMode, setActivePage, setRouteStack, setSettings]);
 
-  const navigationBridge = useMemo(() => ({ registerBackHandler: registerPageBackHandler, pushHistoryEntry, onEntryChange: notifySubpageNavigation }), [notifySubpageNavigation, pushHistoryEntry, registerPageBackHandler]);
+  const navigationBridge = useMemo(() => ({
+    registerBackHandler: registerPageBackHandler,
+    pushHistoryEntry,
+    onEntryChange: notifySubpageNavigation,
+  }), [notifySubpageNavigation, pushHistoryEntry, registerPageBackHandler]);
 
   const pageProps = {
-    authMode, companies: mergedCompanies, suppliers: mergedSuppliers, settings: settingsWithVersion, pricingCatalog, importedPricingSource, savedAnalyses, rfqRequests, systemBridge: bridge, navigationBridge,
-    selectedPricingItemId, selectedCompanyId, selectedProjectId, company: selectedCompany, project: selectedProject,
-    onSelectPricingItem: setSelectedPricingItemId, onSelectCompany: selectCompany, onSelectProject: selectProject, onAddCompany: addCompany, onAddProject: addProject, onAddSupplier: addSupplier, onUpdateSetting: updateSetting, onLogout: handleLogout, onShowStatus: showStatus, onSaveAnalysis: handleSaveAnalysis, onCreateRfq: handleCreateRfq, onContactSupplier: handleContactSupplier, onSettingsAction: handleSettingsAction, onOpenAuthScreen: openAuthScreen, sessionMeta: authSession,
-    onOpenAdSettings: handleOpenAdSettings,
-    onNavigate: handleNavigate,
+    authMode: isGuest ? "guest" : (isFirebaseAuthenticated ? "authenticated" : authMode),
+    companies: mergedCompanies, suppliers: mergedSuppliers,
+    settings: settingsWithVersion, pricingCatalog, importedPricingSource,
+    savedAnalyses, rfqRequests, systemBridge: bridge, navigationBridge,
+    selectedPricingItemId, selectedCompanyId, selectedProjectId,
+    company: selectedCompany, project: selectedProject,
+    onSelectPricingItem: setSelectedPricingItemId,
+    onSelectCompany: selectCompany, onSelectProject: selectProject,
+    onAddCompany: addCompany, onAddProject: addProject, onAddSupplier: addSupplier,
+    onUpdateSetting: updateSetting, onLogout: handleLogout, onShowStatus: showStatus,
+    onSaveAnalysis: handleSaveAnalysis, onCreateRfq: handleCreateRfq,
+    onContactSupplier: handleContactSupplier, onSettingsAction: handleSettingsAction,
+    onOpenAuthScreen: openAuthScreen, sessionMeta: authSession,
+    onOpenAdSettings: handleOpenAdSettings, onNavigate: handleNavigate,
+    // Subscription & Admin props
+    accessStatus,
+    isAdmin,
+    isSuperAdmin,
+    onOpenSubscription: () => setShowSubscriptionPage(true),
+    onOpenAdminDashboard: () => setShowAdminDashboard(true),
   };
 
   const renderedPage = {
     companies: <CompaniesPage key={`comp-${pageResetVersion.companies}`} {...pageProps} />,
-    pricing: <PricingPage key={`pric-${pageResetVersion.pricing}`} {...pageProps} />,
+    pricing:   <PricingPage   key={`pric-${pageResetVersion.pricing}`}   {...pageProps} />,
     suppliers: <SuppliersPage key={`supp-${pageResetVersion.suppliers}`} {...pageProps} />,
-    settings: <SettingsPage key={`sett-${pageResetVersion.settings}`} {...pageProps} />,
+    settings:  <SettingsPage  key={`sett-${pageResetVersion.settings}`}  {...pageProps} />,
   }[activePage];
 
   const ExitModal = () => (
@@ -521,9 +597,9 @@ export default function App() {
     </Modal>
   );
 
-  // ── Simple RFQ contact modal ──────────────────────────────────────────────
   function RfqContactModal() {
     if (!rfqModal) return null;
+    const ar = settings.language !== "en";
     return (
       <div
         style={{ position: "fixed", inset: 0, zIndex: 600, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}
@@ -531,14 +607,14 @@ export default function App() {
       >
         <div
           style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "24px 24px 0 0", padding: "24px 20px calc(env(safe-area-inset-bottom) + 32px)", direction: "rtl", fontFamily: "'Cairo','Tajawal',sans-serif" }}
-          onClick={e => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
         >
           <div style={{ width: 40, height: 4, background: "#e2d8c4", borderRadius: 4, margin: "0 auto 20px" }} />
           <p style={{ fontSize: 11, fontWeight: 700, color: "#9a8a6a", letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>TASEERA</p>
-          <h2 style={{ fontSize: 20, fontWeight: 900, color: "#082555", margin: "0 0 6px" }}>{settings.language === "en" ? "Request for Quotation" : "طلب عرض سعر"}</h2>
+          <h2 style={{ fontSize: 20, fontWeight: 900, color: "#082555", margin: "0 0 6px" }}>{ar ? "طلب عرض سعر" : "Request for Quotation"}</h2>
           {rfqModal.itemName && <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px" }}>{rfqModal.itemName}</p>}
           <p style={{ fontSize: 14, color: "#374151", margin: "0 0 12px", lineHeight: 1.7 }}>
-            {settings.language === "en" ? "To communicate and send the quotation request, please contact us at the following email:" : "للتواصل وإرسال طلب العرض، يُرجى مراسلتنا على البريد الإلكتروني التالي:"}
+            {ar ? "للتواصل وإرسال طلب العرض، يُرجى مراسلتنا على البريد الإلكتروني التالي:" : "To communicate and send the quotation request, please contact us at:"}
           </p>
           <div style={{ background: "#f7f3ec", borderRadius: 16, padding: "14px 16px", textAlign: "center", border: "1px solid #e2d8c4", marginBottom: 20 }}>
             <p style={{ fontSize: 16, fontWeight: 900, color: "#082555", direction: "ltr", margin: 0 }}>walidghazal46@gmail.com</p>
@@ -547,8 +623,22 @@ export default function App() {
             onClick={() => setRfqModal(null)}
             style={{ width: "100%", background: "#082555", color: "#c9a84c", fontWeight: 800, fontSize: 15, border: "none", borderRadius: 16, padding: "14px 0", cursor: "pointer", fontFamily: "inherit" }}
           >
-            {settings.language === "en" ? "OK" : "حسنًا"}
+            {ar ? "حسنًا" : "OK"}
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Loading state ──
+  if (authLoading) {
+    return (
+      <div className="flex h-[100dvh] items-center justify-center bg-[linear-gradient(180deg,#f3f7ff,#fafcff)]">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-[#082555] border-t-transparent" />
+          <p className="text-sm font-semibold text-slate-400" style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}>
+            {settings.language === "en" ? "Loading…" : "جارٍ التحميل…"}
+          </p>
         </div>
       </div>
     );
@@ -558,24 +648,157 @@ export default function App() {
     return <MobilePrototypeDemo />;
   }
 
+  // ── Admin dashboard overlay ──
+  if (showAdminDashboard && isAdmin) {
+    return (
+      <>
+        <StatusToast status={status} />
+        <AdminDashboard
+          profile={profile}
+          isSuperAdmin={isSuperAdmin}
+          language={settings.language}
+        />
+      </>
+    );
+  }
+
+  // ── Subscription gate ──
+  if (needsSubscription && !isAdmin && showSubscriptionPage) {
+    return (
+      <>
+        <StatusToast status={status} />
+        <SubscriptionGate
+          status={accessStatus?.status}
+          language={settings.language}
+          profile={profile}
+          onPaymentSubmitted={handlePaymentSubmitted}
+        />
+      </>
+    );
+  }
+
+  // ── Pending payment message ──
+  if (isPendingPayment && !isAdmin) {
+    return (
+      <div
+        className="flex h-[100dvh] flex-col items-center justify-center bg-[linear-gradient(180deg,#f3f7ff,#fafcff)] px-6 text-center gap-4"
+        dir={settings.language === "ar" ? "rtl" : "ltr"}
+        style={{ fontFamily: "'Cairo','Tajawal',sans-serif", paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <div className="text-5xl">⏳</div>
+        <h2 className="text-xl font-black text-[#082555]">
+          {settings.language === "ar" ? "طلبك قيد المراجعة" : "Your Request is Under Review"}
+        </h2>
+        <p className="text-sm text-slate-600 max-w-sm leading-relaxed">
+          {settings.language === "ar"
+            ? "تم استلام طلب الدفع وسيتم تفعيل حسابك خلال 24 ساعة. شكراً لصبرك."
+            : "Your payment request has been received. Your account will be activated within 24 hours. Thank you for your patience."}
+        </p>
+        <button
+          onClick={handleLogout}
+          className="mt-4 rounded-2xl border border-slate-200 px-6 py-3 text-sm font-bold text-slate-600"
+        >
+          {settings.language === "ar" ? "تسجيل الخروج" : "Sign Out"}
+        </button>
+      </div>
+    );
+  }
+
+  // ── Login screen ──
+  if (shouldShowLoginScreen && !isFirebaseAuthenticated) {
+    return (
+      <>
+        <StatusToast status={status} />
+        <LoginScreen
+          onLogin={handleAuthEntry}
+          onGuest={handleAuthEntry}
+          language={settings.language}
+          theme={settings.theme}
+          initialMode={authScreenMode || "login"}
+          onChangeLanguage={(l) => setSettings((c) => ({ ...c, language: l }))}
+        />
+        {showExitPrompt && <ExitModal />}
+      </>
+    );
+  }
+
+  // ── Main app ──
+  const effectiveAuthMode = isFirebaseAuthenticated ? "authenticated" : (isGuest ? "guest" : authMode);
+
   return (
     <>
       <StatusToast status={status} />
       <InfoDialog dialog={dialog} onClose={closeDialog} />
       <RfqContactModal />
-      {shouldShowLogin ? (
-        <>
-          <LoginScreen onLogin={handleAuthEntry} onGuest={handleAuthEntry} language={settings.language} theme={settings.theme} initialMode={authScreenMode || "login"} onChangeLanguage={(l) => setSettings((c) => ({ ...c, language: l }))} />
-          {showExitPrompt && <ExitModal />}
-        </>
-      ) : (
-        <>
-          <AppShell activePage={activePage} onNavigate={handleNavigate} onBack={handleTopLevelBack} canGoBack={routeStack.length > 1 || activePage !== "companies"} scrollResetVersion={scrollResetVersion} selectedCompany={selectedCompany} selectedProject={selectedProject} authMode={authMode} navText={appText.nav} language={settings.language} theme={settings.theme}>
-            {renderedPage}
-          </AppShell>
-          {showExitPrompt && <ExitModal />}
-        </>
-      )}
+
+      <div className="flex flex-col h-[100dvh] overflow-hidden">
+        {/* Trial banner */}
+        {isFirebaseAuthenticated && accessStatus?.canAccess && (
+          <TrialBanner
+            accessStatus={accessStatus}
+            language={settings.language}
+            onUpgrade={() => setShowSubscriptionPage(true)}
+          />
+        )}
+
+        {/* Subscription page overlay (when triggered from settings) */}
+        {showSubscriptionPage && !needsSubscription && (
+          <div className="absolute inset-0 z-[100] overflow-y-auto">
+            <SubscriptionPage
+              language={settings.language}
+              subscriptionStatus={accessStatus?.status}
+              profile={profile}
+              onPaymentSubmitted={handlePaymentSubmitted}
+              onBack={() => setShowSubscriptionPage(false)}
+            />
+          </div>
+        )}
+
+        <AppShell
+          activePage={activePage}
+          onNavigate={handleNavigate}
+          onBack={handleTopLevelBack}
+          canGoBack={routeStack.length > 1 || activePage !== "companies"}
+          scrollResetVersion={scrollResetVersion}
+          selectedCompany={selectedCompany}
+          selectedProject={selectedProject}
+          authMode={effectiveAuthMode}
+          navText={appText.nav}
+          language={settings.language}
+          theme={settings.theme}
+        >
+          {/* Access gate — show subscription CTA inside app if trial expired */}
+          {needsSubscription && !showSubscriptionPage ? (
+            <div
+              className="flex flex-col items-center justify-center h-full px-6 text-center gap-4"
+              dir={settings.language === "ar" ? "rtl" : "ltr"}
+              style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}
+            >
+              <div className="text-5xl">🔒</div>
+              <h2 className="text-xl font-black text-[#082555]">
+                {settings.language === "ar"
+                  ? (accessStatus?.status === SUBSCRIPTION_STATUS.TRIAL_EXPIRED ? "انتهت فترة التجربة" : "انتهى الاشتراك")
+                  : (accessStatus?.status === SUBSCRIPTION_STATUS.TRIAL_EXPIRED ? "Trial Expired" : "Subscription Expired")}
+              </h2>
+              <p className="text-sm text-slate-600 max-w-sm leading-relaxed">
+                {settings.language === "ar"
+                  ? "اختر باقة للمتابعة والاستمتاع بجميع ميزات تسعيرة."
+                  : "Choose a plan to continue and enjoy all Taseera features."}
+              </p>
+              <button
+                onClick={() => setShowSubscriptionPage(true)}
+                className="rounded-2xl bg-[linear-gradient(135deg,#16335d,#082555)] px-8 py-4 text-sm font-black text-white shadow-lg"
+              >
+                {settings.language === "ar" ? "اختر باقتك" : "Choose Your Plan"}
+              </button>
+            </div>
+          ) : (
+            renderedPage
+          )}
+        </AppShell>
+      </div>
+
+      {showExitPrompt && <ExitModal />}
     </>
   );
 }
