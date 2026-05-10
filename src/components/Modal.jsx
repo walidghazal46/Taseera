@@ -38,7 +38,7 @@ export default function Modal({ title, children, onClose, closeLabel = "إغلا
         {/* Content */}
         <div
           className="max-h-[70vh] overflow-y-auto bg-[#faf6ef] px-4 py-4"
-          style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
         >
           {children}
         </div>

@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FolderIcon, SearchIcon, StarIcon, ChevronRightIcon } from "./icons";
 import useBackStack from "../hooks/useBackStack";
-import useAdminSession from "../hooks/useAdminSession";
-import { SUPER_ADMIN_EMAIL } from "../constants/admin";
-import { AD_SLOT_IDS, listenAdBanner, saveAdBanner } from "../services/adminService";
-import { DEFAULT_AD_BANNER } from "../services/subscriptionService";
 import AdSenseUnit from "./AdSenseUnit";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
@@ -419,15 +415,7 @@ export default function CompaniesPanel({
   navigationBridge, settings, sessionMeta, authMode, initialCountry,
 }) {
   const copy = getCompaniesCopy(settings?.language);
-  const { profile: adminProfile } = useAdminSession({
-    uid: sessionMeta?.uid,
-    email: settings?.userEmail,
-    displayName: settings?.userName,
-  });
-  const canManageAds = authMode !== "guest" && (
-    adminProfile?.canAccessAdmin === true ||
-    String(settings?.userEmail || "").toLowerCase() === SUPER_ADMIN_EMAIL
-  );
+  const canManageAds = false;
   const countryOptions = useMemo(() => ([
     { value: COUNTRY_VALUES.sa, label: copy.saudiArabia },
     { value: COUNTRY_VALUES.eg, label: copy.egypt },
@@ -444,7 +432,7 @@ export default function CompaniesPanel({
     name: "", location: "", stage: copy.pricingStage, budget: "",
   });
   const [directoryPage, setDirectoryPage] = useState(1);
-  const [companiesAdBanner, setCompaniesAdBanner] = useState(null);
+  const [companiesAdBanner] = useState(null);
   const nav = useBackStack({
     initialEntry: { section: "directory", detailCompanyId: null },
     registerBackHandler: navigationBridge?.registerBackHandler,
@@ -516,76 +504,17 @@ export default function CompaniesPanel({
     setCompanyForm((current) => ({ ...current, country: nextCountry }));
   }, [initialCountry, settings?.country]);
 
-  useEffect(() => {
-    const unsubscribe = listenAdBanner(
-      (data) => setCompaniesAdBanner(data),
-      AD_SLOT_IDS.companiesAfterPagination
-    );
-    return () => unsubscribe?.();
+  const handleToggleAdVisibility = useCallback(async (nextEnabled) => {
+    return null;
   }, []);
 
-  const handleToggleAdVisibility = useCallback(async (nextEnabled) => {
-    if (!canManageAds) return;
-    try {
-      await saveAdBanner(
-        adminProfile,
-        { ...(companiesAdBanner || DEFAULT_AD_BANNER), enabled: Boolean(nextEnabled) },
-        AD_SLOT_IDS.companiesAfterPagination
-      );
-    } catch {
-      window.alert("تعذر تحديث حالة الإعلان");
-    }
-  }, [adminProfile, canManageAds, companiesAdBanner]);
-
   const handleEditAd = useCallback(async () => {
-    if (!canManageAds) return;
-
-    const current = { ...(companiesAdBanner || DEFAULT_AD_BANNER) };
-    const title = window.prompt("عنوان الإعلان", current.title || "");
-    if (title === null) return;
-    const imageUrl = window.prompt("رابط صورة الإعلان", current.imageUrl || "");
-    if (imageUrl === null) return;
-    const targetUrl = window.prompt("رابط التحويل عند الضغط", current.targetUrl || "");
-    if (targetUrl === null) return;
-    const alt = window.prompt("نص بديل للصورة (اختياري)", current.alt || "");
-    if (alt === null) return;
-
-    try {
-      await saveAdBanner(
-        adminProfile,
-        {
-          ...current,
-          title: title.trim(),
-          imageUrl: imageUrl.trim(),
-          targetUrl: targetUrl.trim(),
-          alt: alt.trim(),
-        },
-        AD_SLOT_IDS.companiesAfterPagination
-      );
-    } catch {
-      window.alert("تعذر حفظ تعديل الإعلان");
-    }
-  }, [adminProfile, canManageAds, companiesAdBanner]);
+    return null;
+  }, []);
 
   const handleRemoveAd = useCallback(async () => {
-    if (!canManageAds) return;
-    try {
-      await saveAdBanner(
-        adminProfile,
-        {
-          ...DEFAULT_AD_BANNER,
-          enabled: false,
-          title: "",
-          imageUrl: "",
-          targetUrl: "",
-          alt: "",
-        },
-        AD_SLOT_IDS.companiesAfterPagination
-      );
-    } catch {
-      window.alert("تعذر إزالة الإعلان");
-    }
-  }, [adminProfile, canManageAds]);
+    return null;
+  }, []);
 
   const submitCompany = (e) => {
     e.preventDefault();

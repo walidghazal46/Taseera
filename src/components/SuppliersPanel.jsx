@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PhoneIcon, MailIcon, ShareIcon, SearchIcon, ChevronLeftIcon } from "./icons";
 import useBackStack from "../hooks/useBackStack";
-import useAdminSession from "../hooks/useAdminSession";
-import { SUPER_ADMIN_EMAIL } from "../constants/admin";
-import { AD_SLOT_IDS, listenAdBanner, saveAdBanner } from "../services/adminService";
-import { DEFAULT_AD_BANNER } from "../services/subscriptionService";
 import AdSenseUnit from "./AdSenseUnit";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
@@ -35,7 +31,7 @@ function getSuppliersCopy(language) {
         cityFilter: "City", allCities: "All Cities", specialtyFilter: "Specialty",
         chooseCity: "Choose city", chooseSpecialty: "Choose specialty",
         materials: "Materials", rating: "Rating", contact: "Contact", rfq: "Request Quote",
-        guestRfqHint: "RFQs available after sign-in.", previous: "Prev", next: "Next",
+        guestRfqHint: "RFQs are available to everyone.", previous: "Prev", next: "Next",
         page: "Page", noResults: "No matching results in this specialty.",
         addSupplierTitle: "Add New Supplier", supplierName: "Supplier Name",
         writeSupplierName: "Enter supplier name", category: "Category",
@@ -53,7 +49,7 @@ function getSuppliersCopy(language) {
         cityFilter: "المدينة", allCities: "كل المدن", specialtyFilter: "التخصص",
         chooseCity: "اختر المدينة", chooseSpecialty: "اختر التخصص",
         materials: "المواد", rating: "التقييم", contact: "تواصل", rfq: "طلب عرض سعر",
-        guestRfqHint: "طلب عروض الأسعار متاح بعد تسجيل الدخول.",
+        guestRfqHint: "طلب عروض الأسعار متاح للجميع.",
         previous: "السابق", next: "التالي", page: "صفحة",
         noResults: "لا توجد نتائج مطابقة داخل هذا التخصص.",
         addSupplierTitle: "إضافة مورد جديد", supplierName: "اسم المورد",
@@ -214,15 +210,7 @@ export default function SuppliersPanel({
 }) {
   const copy = getSuppliersCopy(settings?.language);
   const isEn = settings?.language === "en";
-  const { profile: adminProfile } = useAdminSession({
-    uid: sessionMeta?.uid,
-    email: settings?.userEmail,
-    displayName: settings?.userName,
-  });
-  const canManageAds = authMode !== "guest" && (
-    adminProfile?.canAccessAdmin === true ||
-    String(settings?.userEmail || "").toLowerCase() === SUPER_ADMIN_EMAIL
-  );
+  const canManageAds = false;
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
@@ -230,7 +218,7 @@ export default function SuppliersPanel({
   const [activeGroup, setActiveGroup] = useState(copy.all);
   const [activeCity, setActiveCity] = useState(copy.allCities);
   const [form, setForm] = useState({ name: "", category: "", location: "", phone: "", email: "", contactPerson: "", website: "" });
-  const [suppliersAdBanner, setSuppliersAdBanner] = useState(null);
+  const [suppliersAdBanner] = useState(null);
 
   const nav = useBackStack({
     initialEntry: { section: "directory" },
@@ -251,12 +239,6 @@ export default function SuppliersPanel({
     setForm({ name: "", category: "", location: "", phone: "", email: "", contactPerson: "", website: "" });
     nav.reset({ section: "directory" });
   };
-
-  const countryOptions = useMemo(() => ([
-    { value: COUNTRY_VALUES.sa, label: copy.saudiArabia },
-    { value: COUNTRY_VALUES.eg, label: copy.egypt },
-    { value: COUNTRY_VALUES.ae, label: copy.uae },
-  ]), [copy.egypt, copy.saudiArabia, copy.uae]);
 
   const countrySuppliers = useMemo(
     () => suppliers.filter((supplier) => normalizeCountry(supplier.country) === normalizeCountry(activeCountry)),
@@ -326,76 +308,17 @@ export default function SuppliersPanel({
     setActiveCountry(nextCountry);
   }, [initialCountry, settings?.country]);
 
-  useEffect(() => {
-    const unsubscribe = listenAdBanner(
-      (data) => setSuppliersAdBanner(data),
-      AD_SLOT_IDS.suppliersAfterPagination
-    );
-    return () => unsubscribe?.();
+  const handleToggleAdVisibility = useCallback(async (nextEnabled) => {
+    return null;
   }, []);
 
-  const handleToggleAdVisibility = useCallback(async (nextEnabled) => {
-    if (!canManageAds) return;
-    try {
-      await saveAdBanner(
-        adminProfile,
-        { ...(suppliersAdBanner || DEFAULT_AD_BANNER), enabled: Boolean(nextEnabled) },
-        AD_SLOT_IDS.suppliersAfterPagination
-      );
-    } catch {
-      window.alert(isEn ? "Unable to update ad visibility." : "تعذر تحديث حالة الإعلان");
-    }
-  }, [adminProfile, canManageAds, isEn, suppliersAdBanner]);
-
   const handleEditAd = useCallback(async () => {
-    if (!canManageAds) return;
-
-    const current = { ...(suppliersAdBanner || DEFAULT_AD_BANNER) };
-    const title = window.prompt(isEn ? "Ad title" : "عنوان الإعلان", current.title || "");
-    if (title === null) return;
-    const imageUrl = window.prompt(isEn ? "Ad image URL" : "رابط صورة الإعلان", current.imageUrl || "");
-    if (imageUrl === null) return;
-    const targetUrl = window.prompt(isEn ? "Target URL when clicked" : "رابط التحويل عند الضغط", current.targetUrl || "");
-    if (targetUrl === null) return;
-    const alt = window.prompt(isEn ? "Alt text for the image (optional)" : "نص بديل للصورة (اختياري)", current.alt || "");
-    if (alt === null) return;
-
-    try {
-      await saveAdBanner(
-        adminProfile,
-        {
-          ...current,
-          title: title.trim(),
-          imageUrl: imageUrl.trim(),
-          targetUrl: targetUrl.trim(),
-          alt: alt.trim(),
-        },
-        AD_SLOT_IDS.suppliersAfterPagination
-      );
-    } catch {
-      window.alert(isEn ? "Unable to save ad changes." : "تعذر حفظ تعديل الإعلان");
-    }
-  }, [adminProfile, canManageAds, isEn, suppliersAdBanner]);
+    return null;
+  }, []);
 
   const handleRemoveAd = useCallback(async () => {
-    if (!canManageAds) return;
-    try {
-      await saveAdBanner(
-        adminProfile,
-        {
-          ...DEFAULT_AD_BANNER,
-          enabled: false,
-          title: "",
-          imageUrl: "",
-          targetUrl: "",
-          alt: "",
-        },
-        AD_SLOT_IDS.suppliersAfterPagination
-      );
-    } catch {
-      window.alert(isEn ? "Unable to remove the ad." : "تعذر إزالة الإعلان");
-    }
-  }, [adminProfile, canManageAds, isEn]);
+    return null;
+  }, []);
 
   if (activeSection === "supplier-detail" && selectedSupplier) {
     return (
@@ -612,20 +535,11 @@ export default function SuppliersPanel({
                   </button>
                   <button type="button"
                     onClick={() => onCreateRfq?.({ supplier, source: "supplier-directory" })}
-                    disabled={authMode === "guest"}
-                    className={`flex-1 h-9 rounded-xl text-[11px] font-bold transition-all duration-150 ${
-                      authMode === "guest"
-                        ? "cursor-not-allowed bg-[#F7F3EC] text-[#C0B89A] border border-[#E2D8C4]"
-                        : "bg-gradient-to-r from-[#C9A84C] to-[#D4B85A] text-[#082555] shadow-sm hover:shadow-md hover:from-[#D4B85A] hover:to-[#E8C97A] active:scale-[0.98]"
-                    }`} style={{ fontFamily: AR }}>
+                    className="flex-1 h-9 rounded-xl bg-gradient-to-r from-[#C9A84C] to-[#D4B85A] text-[11px] font-bold text-[#082555] shadow-sm transition-all duration-150 hover:shadow-md hover:from-[#D4B85A] hover:to-[#E8C97A] active:scale-[0.98]"
+                    style={{ fontFamily: AR }}>
                     {copy.rfq}
                   </button>
                 </div>
-                {authMode === "guest" && (
-                  <p className="px-4 pb-2.5 text-[9px] font-bold text-amber-600/70" style={{ fontFamily: AR }}>
-                    ⚠ {copy.guestRfqHint}
-                  </p>
-                )}
               </div>
             ))}
           </div>

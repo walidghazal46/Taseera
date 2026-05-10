@@ -200,11 +200,7 @@ export default function LoginScreen({
       </div>
 
       <div
-        className="relative flex flex-1 flex-col overflow-hidden px-5"
-        style={{
-          paddingTop: "max(1rem, env(safe-area-inset-top))",
-          paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
-        }}
+        className="app-container relative flex flex-1 flex-col overflow-hidden px-5"
       >
         {/* ── Logo ── */}
         <div className="flex flex-col items-center pt-8 pb-5">

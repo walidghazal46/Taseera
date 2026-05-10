@@ -21,7 +21,7 @@ const taskSets = {
   pricing: [
     { title: "تسعير بند خرسانة", meta: "PDF + RFQ", tone: "from-[#0f2c56] to-[#1d4c8f]" },
     { title: "تسعير مبنى", meta: "سيناريوهين محفوظين", tone: "from-[#7c2d12] to-[#b45309]" },
-    { title: "QS Premium", meta: "وصول كامل", tone: "from-[#1d4ed8] to-[#1e3a8a]" },
+    { title: "وصول كامل", meta: "متاح للجميع", tone: "from-[#1d4ed8] to-[#1e3a8a]" },
   ],
   account: [
     { title: "الحساب الاحترافي", meta: "الحالة: نشط", tone: "from-[#14532d] to-[#166534]" },

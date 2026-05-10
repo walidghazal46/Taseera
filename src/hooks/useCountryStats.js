@@ -9,8 +9,6 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 
-export const ADMIN_EMAIL = "walidghazal46@gmail.com";
-
 // Map Arabic country name → Firestore doc ID
 const COUNTRY_TO_CODE = {
   السعودية: "SA",
@@ -62,7 +60,6 @@ export async function trackCountryVisit(country, section, authMode) {
 
 /**
  * Real-time listener for a country's stats. Returns null while loading.
- * Only meant to be used in the admin panel.
  */
 export function useCountryStats(countryCode) {
   const [stats, setStats] = useState(null);

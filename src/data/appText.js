@@ -23,11 +23,11 @@ export const APP_TEXT = {
       submitRegister: "إنشاء حساب والمتابعة",
       guest: "الدخول كضيف",
       registerHint:
-        "بإنشاء الحساب تحصل على كامل الصلاحيات: الحفظ، إدارة العروض، وطلب الأسعار.",
+        "يمكنك إنشاء حساب لمزامنة بياناتك، مع بقاء كل الأدوات متاحة للجميع.",
       loginHint:
         "تسجيل الدخول يفتح لك كل صلاحيات التطبيق وإدارة المشاريع بالكامل.",
       guestHint:
-        "وضع الضيف يسمح بالاستعراض فقط. لحفظ البيانات، طلب عروض الأسعار، وإدارة الحساب يجب تسجيل الدخول.",
+        "وضع الضيف يفتح لك كامل أدوات التسعير والشركات والموردين مباشرة.",
     },
     pages: {
       companies: {
@@ -80,15 +80,11 @@ export const APP_TEXT = {
       learnPricing: "التعرف على التسعير",
       registerAccount: "تسجيل حساب",
       guestHint:
-        "أنت داخل كتجربة ضيف. يمكنك التنقل والاطلاع على البنود والأسعار والموردين، لكن إدارة الحساب والحفظ وطلبات عروض السعر تحتاج إلى تسجيل فعلي.",
+        "أنت داخل كتجربة ضيف. يمكنك التنقل والاطلاع على البنود والأسعار والموردين واستخدام الأدوات بدون قيود.",
       logout: "تسجيل الخروج",
       languageTitle: "تغيير اللغة",
-      adminTitle: "لوحة الأدمن",
-      adminSubtitle: "صلاحيات كاملة على الشركات والتسعير والموردين",
-      adminPrimary: "أدمن رئيسي",
-      nominateAdmin: "ترشيح أدمن جديد",
-      futureAdmins: "أدمن لاحقون",
-      pendingAdminNote: "بدون صلاحيات حتى يتم تحديد القواعد لاحقًا.",
+      accessTitle: "وصول كامل",
+      accessSubtitle: "كل المستخدمين والضيوف لديهم نفس الوصول.",
       manageCompanies: "إدارة الشركات",
       managePricing: "إدارة التسعير",
       manageSuppliers: "إدارة الموردين",
@@ -140,11 +136,11 @@ export const APP_TEXT = {
       submitRegister: "Create Account",
       guest: "Continue as Guest",
       registerHint:
-        "Creating an account unlocks full permissions for saving, offer management, and RFQ workflows.",
+        "Create an account to sync your data while every tool remains open to everyone.",
       loginHint:
         "Logging in unlocks full application access and complete project management.",
       guestHint:
-        "Guest mode is view-only. Saving, RFQs, and account management require sign-in.",
+        "Guest mode opens the full pricing, companies, and suppliers experience immediately.",
     },
     pages: {
       companies: {
@@ -197,15 +193,11 @@ export const APP_TEXT = {
       learnPricing: "Learn pricing",
       registerAccount: "Create account",
       guestHint:
-        "You are browsing as a guest. You can review items, prices, and suppliers, but account actions, saving, and RFQs require sign-in.",
+        "You are browsing as a guest. You can review items, prices, suppliers, and use all tools without restrictions.",
       logout: "Log Out",
       languageTitle: "Language",
-      adminTitle: "Admin Panel",
-      adminSubtitle: "Full control over companies, pricing, and suppliers",
-      adminPrimary: "Primary admin",
-      nominateAdmin: "Nominate another admin",
-      futureAdmins: "Future admins",
-      pendingAdminNote: "No permissions yet until rules are defined.",
+      accessTitle: "Full access",
+      accessSubtitle: "All users and guests have the same access.",
       manageCompanies: "Manage companies",
       managePricing: "Manage pricing",
       manageSuppliers: "Manage suppliers",

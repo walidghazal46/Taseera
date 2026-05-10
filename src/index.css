@@ -27,10 +27,9 @@
 
 html {
   scroll-behavior: smooth;
-  height: 100%;
+  min-height: 100dvh;
   width: 100%;
   max-width: 100%;
-  overflow: hidden;
 }
 
 body {
@@ -42,21 +41,20 @@ body {
     radial-gradient(circle at bottom left, rgba(79, 148, 255, 0.12), transparent 28%),
     linear-gradient(180deg, #fbfcff 0%, #f4f7ff 48%, #f8fbff 100%);
   color: var(--color-text);
-  height: 100%;
+  min-height: 100dvh;
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
-  overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
-  height: 100%;
+  min-height: 100dvh;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 img,
@@ -81,6 +79,27 @@ button {
 
 input, select, textarea {
   font-family: 'Cairo', 'Tajawal', sans-serif;
+}
+
+/* Safe Area Support */
+.app-container {
+  min-height: 100dvh;
+  padding-top: calc(env(safe-area-inset-top) + 8px);
+  padding-bottom: calc(env(safe-area-inset-bottom) + 16px);
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.app-header-safe {
+  margin-top: max(18px, calc(env(safe-area-inset-top) + 14px));
+}
+
+.app-footer-safe {
+  margin-bottom: max(18px, calc(env(safe-area-inset-bottom) + 14px));
+}
+
+.app-content-safe {
+  padding-bottom: max(69px, calc(env(safe-area-inset-bottom) + 69px));
 }
 
 /* Smooth scroll for scrollable containers */

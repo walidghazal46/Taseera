@@ -294,10 +294,7 @@ const EFFECTS = `
 .cpicker-group:hover .cpicker-shine {
   animation: cPickerShine 1.4s cubic-bezier(0.19,1,0.22,1) forwards;
 }
-.cpicker-group:hover {
-  transform: translateY(-2px);
-}
-.cpicker-group { transition: transform 0.25s ease, box-shadow 0.25s ease; }
+.cpicker-group { transition: box-shadow 0.25s ease, border-color 0.25s ease; }
 .cpicker-icon-float { animation: cPickerFloat 4.5s ease-in-out infinite; }
 .cpicker-card-1 { animation: cPickerFadeIn 0.55s ease both 0.05s; }
 .cpicker-card-2 { animation: cPickerFadeIn 0.55s ease both 0.15s; }
@@ -319,6 +316,7 @@ export default function CountryPicker({
   section = "companies",
 }) {
   const isAr = language !== "en";
+  const pickerMinHeight = "min(805px, calc(100dvh - 118px))";
   const handleSelect = (country) => {
     try { trackCountryVisit(country.value, section, authMode).catch(() => {}); } catch {}
     onSelect(country.value);
@@ -326,17 +324,17 @@ export default function CountryPicker({
 
   return (
     <div
-      className="relative flex flex-col items-center justify-center gap-5 py-4 px-4 overflow-hidden"
-      style={{ minHeight: "calc(100vh - 160px)" }}
+      className="relative flex flex-1 flex-col items-center justify-center gap-2 overflow-visible px-4 py-1"
+      style={{ minHeight: pickerMinHeight }}
     >
       <style>{EFFECTS}</style>
 
 
       {/* ── Hero section ─────────────────────────────────────────── */}
-      <div className="relative flex flex-col items-center gap-5 text-center">
+      <div className="relative flex flex-col items-center gap-3 text-center">
 
         {/* Floating city icon – no box, blends with background */}
-        <div className="cpicker-icon-float relative" style={{ marginBottom: 4 }}>
+        <div className="cpicker-icon-float relative" style={{ marginBottom: 0 }}>
           {/* Soft ambient glow underneath */}
           <div
             aria-hidden="true"
@@ -362,9 +360,9 @@ export default function CountryPicker({
           <div
             style={{
               position: "relative",
-              width: 90, height: 90,
+              width: 70, height: 70,
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 64,
+              fontSize: 46,
               filter: "drop-shadow(0 8px 18px rgba(40,80,160,0.22)) drop-shadow(0 2px 6px rgba(0,0,0,0.10))",
             }}
           >
@@ -376,7 +374,7 @@ export default function CountryPicker({
         <div style={{ maxWidth: 310 }}>
           <h2
             style={{
-              fontFamily: AR, fontSize: 24, fontWeight: 900, lineHeight: 1.25,
+              fontFamily: AR, fontSize: 21, fontWeight: 900, lineHeight: 1.2,
               color: "#082555", letterSpacing: "-0.4px",
               margin: 0,
             }}
@@ -397,7 +395,7 @@ export default function CountryPicker({
       </div>
 
       {/* ── Country cards ─────────────────────────────────────────── */}
-      <div style={{ width: "100%", maxWidth: 420, display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ width: "100%", maxWidth: 720, display: "flex", flexDirection: "column", gap: 8 }}>
         {COUNTRIES.map((country, idx) => {
           const { Landmark } = country;
           return (
@@ -418,6 +416,7 @@ export default function CountryPicker({
                 cursor: "pointer",
                 padding: 0,
                 outline: "none",
+                minHeight: 80,
               }}
             >
               {/* Landmark watermark – fills left half of card */}
@@ -467,8 +466,8 @@ export default function CountryPicker({
                   display: "flex",
                   flexDirection: "row",
                   alignItems: "center",
-                  gap: 12,
-                  padding: "16px 18px",
+                  gap: 10,
+                  padding: "10px 14px",
                   direction: "rtl",
                 }}
               >

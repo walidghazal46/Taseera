@@ -4,16 +4,21 @@ import AdSenseUnit from "./AdSenseUnit";
 import CandyWorkspace from "./CandyWorkspace";
 import { SaveIcon, TagIcon, BuildingsIcon, PricingIcon, ChevronLeftIcon, ArrowRightIcon, ShareIcon, PrinterIcon, FileIcon } from "./icons";
 import { CSI_DIVISIONS, COUNTRIES, getDefaultResources, AREA_PRICING_BASE, CURRENCY_INFO } from "../data/csiData";
-import useAdminSession from "../hooks/useAdminSession";
-import { AD_SLOT_IDS, listenAdBanner, saveAdBanner } from "../services/adminService";
-import { SUPER_ADMIN_EMAIL } from "../constants/admin";
-import { DEFAULT_AD_BANNER, PLAN_DEFINITIONS } from "../services/subscriptionService";
-import SubscriptionPanel from "./SubscriptionPanel";
 import ScreenProtection from "./ScreenProtection";
-import { ensureToolAccess } from "../services/accessControlService";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
 const MONO = "'IBM Plex Mono',monospace";
+const AD_SLOT_IDS = {
+  analysisPreResult: "analysisPreResult",
+  analysisAfterActions: "analysisAfterActions",
+  analysisPostResult: "analysisPostResult",
+  areaFormAfterCard: "areaFormAfterCard",
+  areaResultsAfterNote: "areaResultsAfterNote",
+  areaSectionAfterAssumptions: "areaSectionAfterAssumptions",
+  csiAfterDiv28: "csiAfterDiv28",
+  selfPricingAfterActions: "selfPricingAfterActions",
+};
+const DEFAULT_AD_BANNER = { enabled: true, title: "", body: "", imageUrl: "", targetUrl: "", alt: "" };
 
 function s2ab(s) {
   const buf = new ArrayBuffer(s.length);
@@ -475,7 +480,7 @@ function GuestLoginModal({ open, onClose, onOpenAuthScreen, subtitle, language =
   );
 }
 
-function ModeSelection({ onSelect, areaLocked = false, areaMessage = "", onOpenSubscription, language = "ar" }) {
+function ModeSelection({ onSelect, areaLocked = false, areaMessage = "", onOpenFullAccess, language = "ar" }) {
   const isEn = language === "en";
   return (
     <div className="flex flex-col gap-4 py-2 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ fontFamily: AR }}>
@@ -1540,7 +1545,7 @@ function AreaSectionDetailView({
 
 // --- Main Pricing Workspace Component ---
 
-export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings, sessionMeta, onOpenSubscription, onOpenAuthScreen, onShowStatus, systemBridge }) {
+export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings, sessionMeta, onOpenAuthScreen, onShowStatus, systemBridge }) {
   // initialCountry comes from the CountryPicker on PricingPage; always override persisted value
   const isEn = settings?.language === "en";
   const [country, setCountry] = useState(initialCountry || "sa");
@@ -1563,18 +1568,13 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   const [selfPriceProfit, setSelfPriceProfit] = useState(15);
 
   const { msg: toastMsg, visible: toastVisible, show: showToast } = useToast();
-  const { profile: userProfile } = useAdminSession({
-    uid: sessionMeta?.uid,
-    email: settings?.userEmail,
-    displayName: settings?.userName,
-  });
-  const [analysisTopAdBanner, setAnalysisTopAdBanner] = useState(null);
-  const [analysisActionsAdBanner, setAnalysisActionsAdBanner] = useState(null);
-  const [analysisBottomAdBanner, setAnalysisBottomAdBanner] = useState(null);
-  const [areaFormAdBanner, setAreaFormAdBanner] = useState(null);
-  const [areaResultsAdBanner, setAreaResultsAdBanner] = useState(null);
-  const [areaSectionAdBanner, setAreaSectionAdBanner] = useState(null);
-  const [csiAfterDiv28AdBanner, setCsiAfterDiv28AdBanner] = useState(null);
+  const [analysisTopAdBanner] = useState(null);
+  const [analysisActionsAdBanner] = useState(null);
+  const [analysisBottomAdBanner] = useState(null);
+  const [areaFormAdBanner] = useState(null);
+  const [areaResultsAdBanner] = useState(null);
+  const [areaSectionAdBanner] = useState(null);
+  const [csiAfterDiv28AdBanner] = useState(null);
   const [adEditor, setAdEditor] = useState({
     open: false,
     slotId: AD_SLOT_IDS.analysisPreResult,
@@ -1588,31 +1588,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   const [factor, setFactor] = useState(() => Number(settings?.locationFactor) || 1.03);
   const [analysisBaseline, setAnalysisBaseline] = useState(null);
 
-  useEffect(() => {
-    const unsubscribeTop = listenAdBanner((data) => setAnalysisTopAdBanner(data), AD_SLOT_IDS.analysisPreResult);
-    const unsubscribeActions = listenAdBanner((data) => setAnalysisActionsAdBanner(data), AD_SLOT_IDS.analysisAfterActions);
-    const unsubscribeBottom = listenAdBanner((data) => setAnalysisBottomAdBanner(data), AD_SLOT_IDS.analysisPostResult);
-    const unsubscribeAreaForm = listenAdBanner((data) => setAreaFormAdBanner(data), AD_SLOT_IDS.areaFormAfterCard);
-    const unsubscribeAreaResults = listenAdBanner((data) => setAreaResultsAdBanner(data), AD_SLOT_IDS.areaResultsAfterNote);
-    const unsubscribeAreaSection = listenAdBanner((data) => setAreaSectionAdBanner(data), AD_SLOT_IDS.areaSectionAfterAssumptions);
-    const unsubscribeCsiDiv28 = listenAdBanner((data) => setCsiAfterDiv28AdBanner(data), AD_SLOT_IDS.csiAfterDiv28);
-    return () => {
-      unsubscribeTop?.();
-      unsubscribeActions?.();
-      unsubscribeBottom?.();
-      unsubscribeAreaForm?.();
-      unsubscribeAreaResults?.();
-      unsubscribeAreaSection?.();
-      unsubscribeCsiDiv28?.();
-    };
-  }, []);
-
   const isGuest = authMode === "guest";
-  const isAdminUnlocked = !isGuest && (
-    userProfile?.canAccessAdmin === true ||
-    String(settings?.userEmail || "").toLowerCase() === SUPER_ADMIN_EMAIL
-  );
-  const isSubscribed = isAdminUnlocked || userProfile?.subscriptionStatus === "active" || userProfile?.lifetime === true;
   const [exportPreview, setExportPreview] = useState(null);
 
   const openExportPreview = useCallback((payload) => {
@@ -1654,64 +1630,17 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   }, []);
 
   const handleSaveAdEditor = useCallback(async () => {
-    if (!userProfile) {
-      showToast("يلزم تسجيل الدخول قبل تعديل الإعلان");
-      return;
-    }
-
-    try {
-      setAdEditor((prev) => ({ ...prev, saving: true }));
-      await saveAdBanner(userProfile, adEditor.draft, adEditor.slotId);
-      showToast("تم حفظ الإعلان بنجاح");
-      setAdEditor((prev) => ({ ...prev, open: false, saving: false }));
-    } catch (error) {
-      setAdEditor((prev) => ({ ...prev, saving: false }));
-      showToast(error?.message || "تعذر حفظ الإعلان");
-    }
-  }, [adEditor.draft, adEditor.slotId, showToast, userProfile]);
+    setAdEditor((prev) => ({ ...prev, open: false, saving: false }));
+    showToast("تم تعطيل إدارة الإعلانات من التطبيق");
+  }, [showToast]);
 
   const handleToggleAdVisibility = useCallback(async (slotId, currentBanner, nextEnabled) => {
-    if (!userProfile) {
-      showToast("يلزم تسجيل الدخول قبل تعديل الإعلان");
-      return;
-    }
-
-    try {
-      await saveAdBanner(
-        userProfile,
-        { ...(currentBanner || DEFAULT_AD_BANNER), enabled: Boolean(nextEnabled) },
-        slotId || AD_SLOT_IDS.analysisPreResult
-      );
-      showToast(nextEnabled ? "تم إظهار الإعلان" : "تم إخفاء الإعلان");
-    } catch (error) {
-      showToast(error?.message || "تعذر تحديث حالة الإعلان");
-    }
-  }, [showToast, userProfile]);
+    showToast("تم تعطيل إدارة الإعلانات من التطبيق");
+  }, [showToast]);
 
   const handleRemoveAd = useCallback(async (slotId) => {
-    if (!userProfile) {
-      showToast("يلزم تسجيل الدخول قبل تعديل الإعلان");
-      return;
-    }
-
-    try {
-      await saveAdBanner(
-        userProfile,
-        {
-          ...DEFAULT_AD_BANNER,
-          enabled: false,
-          title: "",
-          imageUrl: "",
-          targetUrl: "",
-          alt: "",
-        },
-        slotId || AD_SLOT_IDS.analysisPreResult
-      );
-      showToast("تمت إزالة محتوى الإعلان");
-    } catch (error) {
-      showToast(error?.message || "تعذر إزالة الإعلان");
-    }
-  }, [showToast, userProfile]);
+    showToast("تم تعطيل إدارة الإعلانات من التطبيق");
+  }, [showToast]);
 
   const buildAnalysisSnapshot = useCallback((itemValue, resourcesValue, paramsValue) => ({
     selectedItem: itemValue ? { ...itemValue } : null,
@@ -2053,32 +1982,13 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     }
   }, [mode, country, areaParams, areaResults, effectiveAreaResults, selectedItem, resources, qty, overhead, profit, factor, showToast, openExportPreview]);
 
-  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
-
-  const openSubscriptionScreen = useCallback(() => {
-    setShowSubscriptionModal(true);
-  }, []);
+  const notifyFullAccess = useCallback(() => {
+    showToast(settings?.language === "en" ? "All pricing tools are already open." : "كل أدوات التسعير مفتوحة للجميع.");
+  }, [settings?.language, showToast]);
 
   const ensureUnifiedAccess = useCallback(async () => {
-    const access = await ensureToolAccess({
-      authMode,
-      sessionMeta,
-      userProfile,
-      language: settings?.language || "ar",
-    });
-
-    if (!access.allowed) {
-      if (access.message) {
-        showToast(access.message);
-      }
-      if (access.showPlans) {
-        openSubscriptionScreen();
-      }
-      return false;
-    }
-
     return true;
-  }, [authMode, openSubscriptionScreen, sessionMeta, settings?.language, showToast, userProfile]);
+  }, []);
 
   async function handleSelfPrice(item, div) {
     const allowed = await ensureUnifiedAccess();
@@ -2291,7 +2201,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
         {mode === "selection" && (
           <ModeSelection
             onSelect={handleModeChange}
-            onOpenSubscription={openSubscriptionScreen}
+            onOpenFullAccess={notifyFullAccess}
             language={settings?.language || "ar"}
           />
         )}
@@ -2333,7 +2243,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 onSelfPrice={handleSelfPrice}
                 itemLocked={false}
                 itemRemaining={null}
-                onOpenSubscription={openSubscriptionScreen}
+                onOpenFullAccess={notifyFullAccess}
                 afterDiv28AdBanner={csiAfterDiv28AdBanner}
                 isGuest={isGuest}
                 onOpenAuthScreen={onOpenAuthScreen}
@@ -2365,7 +2275,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 topAdBanner={analysisTopAdBanner}
                 actionsAdBanner={analysisActionsAdBanner}
                 bottomAdBanner={analysisBottomAdBanner}
-                canManageAds={isAdminUnlocked}
+                canManageAds={false}
                 onManageAds={handleOpenAdEditor}
                 onToggleAdVisibility={handleToggleAdVisibility}
                 onRemoveAd={handleRemoveAd}
@@ -2379,7 +2289,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 onSelfPrice={handleSelfPrice}
                 itemLocked={false}
                 itemRemaining={null}
-                onOpenSubscription={openSubscriptionScreen}
+                onOpenFullAccess={notifyFullAccess}
               />
             )}
           </div>
@@ -2390,7 +2300,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             country={country}
             onCalculate={handleCalculateArea}
             adBanner={areaFormAdBanner}
-            canManageAds={isAdminUnlocked}
+            canManageAds={false}
             onManageAds={handleOpenAdEditor}
             onToggleAdVisibility={handleToggleAdVisibility}
             onRemoveAd={handleRemoveAd}
@@ -2421,7 +2331,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             }}
             onOpenSection={handleOpenAreaSection}
             adBanner={areaResultsAdBanner}
-            canManageAds={isAdminUnlocked}
+            canManageAds={false}
             onManageAds={handleOpenAdEditor}
             onToggleAdVisibility={handleToggleAdVisibility}
             onRemoveAd={handleRemoveAd}
@@ -2494,7 +2404,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
               showToast(isEn ? "Discipline details saved successfully." : "تم حفظ تفاصيل التخصص بنجاح");
             }}
             adBanner={areaSectionAdBanner}
-            canManageAds={isAdminUnlocked}
+            canManageAds={false}
             onManageAds={handleOpenAdEditor}
             onExport={openExportPreview}
             onToggleAdVisibility={handleToggleAdVisibility}
@@ -2528,44 +2438,6 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
       {/* In-app export preview modal */}
       <ExportPreviewModal data={exportPreview} onClose={() => setExportPreview(null)} language={settings?.language || "ar"} />
 
-      {showSubscriptionModal && (
-        <div
-          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50"
-          style={{ backdropFilter: "blur(4px)" }}
-          onClick={() => setShowSubscriptionModal(false)}
-        >
-          <div
-            className="w-full max-w-lg rounded-t-3xl bg-[#F7F3EC] shadow-2xl"
-            style={{ maxHeight: "90vh", overflowY: "auto" }}
-            onClick={(e) => e.stopPropagation()}
-            dir={settings?.language === "en" ? "ltr" : "rtl"}
-          >
-            <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-3xl bg-gradient-to-r from-[#082555] to-[#0d3070] px-5 py-4">
-              <p className="text-[15px] font-bold text-white" style={{ fontFamily: AR }}>
-                {settings?.language === "en" ? "Subscription" : "الاشتراك"}
-              </p>
-              <button
-                type="button"
-                onClick={() => setShowSubscriptionModal(false)}
-                className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-white hover:bg-white/20"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="p-4">
-              <SubscriptionPanel
-                language={settings?.language || "ar"}
-                authMode={authMode}
-                sessionMeta={sessionMeta}
-                settings={settings}
-                isSubscribed={isSubscribed}
-                onOpenAuthScreen={onOpenAuthScreen}
-                onShowStatus={(msg, tone) => showToast(msg)}
-              />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -2579,13 +2451,8 @@ function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhea
   const sym = getCurrencySymbol(country);
   const fmt = (n) => Number(n).toLocaleString("en-US", { maximumFractionDigits: 0 });
 
-  const { profile: adminProfile } = useAdminSession({ uid: sessionMeta?.uid, email: settings?.userEmail, displayName: settings?.userName });
-  const canManageAds = authMode !== "guest" && (adminProfile?.canAccessAdmin === true || String(settings?.userEmail || "").toLowerCase() === SUPER_ADMIN_EMAIL);
-  const [selfPricingAd, setSelfPricingAd] = useState(null);
-  useEffect(() => {
-    const unsub = listenAdBanner((data) => setSelfPricingAd(data), AD_SLOT_IDS.selfPricingAfterActions);
-    return () => unsub?.();
-  }, []);
+  const canManageAds = false;
+  const [selfPricingAd] = useState(null);
 
   // حساب مجموع كل مجموعة
   const sumGroup = (grp) =>
@@ -2805,22 +2672,21 @@ function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhea
         <SelfPricingAdBanner
           adBanner={selfPricingAd}
           canManageAds={canManageAds}
-          adminProfile={adminProfile}
         />
       </div>
     </div>
   );
 }
 
-function SelfPricingAdBanner({ adBanner, canManageAds, adminProfile }) {
+function SelfPricingAdBanner({ adBanner, canManageAds }) {
   const hasContent = adBanner?.enabled && adBanner?.imageUrl;
   const handleToggle = async (nextEnabled) => {
-    await saveAdBanner(adminProfile, { ...(adBanner || DEFAULT_AD_BANNER), enabled: Boolean(nextEnabled) }, AD_SLOT_IDS.selfPricingAfterActions);
+    return null;
   };
   const handleRemove = async () => {
     const ok = window.confirm("هل تريد إزالة محتوى هذا الإعلان؟");
     if (!ok) return;
-    await saveAdBanner(adminProfile, { ...DEFAULT_AD_BANNER, enabled: false }, AD_SLOT_IDS.selfPricingAfterActions);
+    return null;
   };
   return (
     <div className="relative rounded-2xl border-2 border-[#E2D8C4] bg-white p-2.5 shadow-sm overflow-hidden">
@@ -2939,7 +2805,7 @@ function HistoryScreen({ savedAnalyses, onView }) {
   );
 }
 
-function CSIScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, itemRemaining = null, onOpenSubscription, afterDiv28AdBanner, isGuest = false, onOpenAuthScreen }) {
+function CSIScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, itemRemaining = null, onOpenFullAccess, afterDiv28AdBanner, isGuest = false, onOpenAuthScreen }) {
   const [search, setSearch] = useState("");
   const [openDiv, setOpenDiv] = useState(null);
   const [showGuestPrompt, setShowGuestPrompt] = useState(false);
@@ -2958,7 +2824,7 @@ function CSIScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, ite
   return (
     <div className="space-y-3">
 
-      {/* Free plan banner */}
+      {/* Access status banner */}
       {!itemLocked && Number.isFinite(itemRemaining) && (
         <div className="flex items-center gap-3 rounded-2xl border border-[#d4a843]/30 bg-[#fffbf0] px-4 py-3">
           <span className="text-lg">🎯</span>
@@ -2968,7 +2834,7 @@ function CSIScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, ite
         </div>
       )}
 
-      {/* Locked banner */}
+      {/* Legacy locked state fallback */}
       {itemLocked && (
         <div className="overflow-hidden rounded-2xl border border-[#E2D8C4] bg-white shadow-sm">
           <div className="bg-gradient-to-r from-[#082555] to-[#0d3070] px-4 py-3">
@@ -2979,7 +2845,7 @@ function CSIScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, ite
               اشترك للوصول الكامل لجميع البنود وتسعير المباني بدون حدود.
             </p>
             <button type="button"
-              onClick={isGuest ? () => setShowGuestPrompt(true) : onOpenSubscription}
+              onClick={isGuest ? () => setShowGuestPrompt(true) : onOpenFullAccess}
               className="mt-3 w-full rounded-xl bg-gradient-to-r from-[#C9A84C] to-[#E8C97A] py-2.5 text-[13px] font-bold text-[#082555] shadow-md transition-all hover:shadow-lg active:scale-[0.98]"
               style={{ fontFamily: AR }}>
               {isGuest ? "سجّل دخولك ثم اشترك ←" : "فتح صفحة الاشتراك ←"}
@@ -3084,13 +2950,13 @@ function CSIScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, ite
                           {item.unit}
                         </span>
                         <button type="button"
-                          onClick={itemLocked ? (isGuest ? () => setShowGuestPrompt(true) : () => onOpenSubscription?.()) : () => onSelfPrice(item, div)}
+                          onClick={itemLocked ? (isGuest ? () => setShowGuestPrompt(true) : () => onOpenFullAccess?.()) : () => onSelfPrice(item, div)}
                           className="flex-1 sm:flex-none min-h-[36px] rounded-xl border border-[#082555]/20 bg-white px-3 text-[11px] font-bold text-[#082555] shadow-sm transition-all duration-150 hover:border-[#082555] hover:bg-[#F5EDD8] hover:shadow-md active:scale-[0.96]"
                           style={{ fontFamily: AR }}>
                           {itemLocked ? "🔒 مقفول" : "💡 سعر بنفسك"}
                         </button>
                         <button type="button"
-                          onClick={itemLocked ? (isGuest ? () => setShowGuestPrompt(true) : () => onOpenSubscription?.()) : () => onSelectItem(item, div)}
+                          onClick={itemLocked ? (isGuest ? () => setShowGuestPrompt(true) : () => onOpenFullAccess?.()) : () => onSelectItem(item, div)}
                           className="flex-1 sm:flex-none min-h-[36px] rounded-xl bg-[#C9A84C] px-4 text-[12px] font-bold text-[#082555] shadow-sm transition-all duration-150 hover:bg-[#E8C97A] hover:shadow-md active:scale-[0.96]"
                           style={{ fontFamily: AR }}>
                           {itemLocked ? "🔒" : "اختر"}
@@ -4007,7 +3873,7 @@ function InlineAdEditorModal({ title, draft, saving = false, onChange, onSave, o
   );
 }
 
-function MarketScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, itemRemaining = null, onOpenSubscription }) {
+function MarketScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, itemRemaining = null, onOpenFullAccess }) {
   const c = country ? COUNTRIES[country] : COUNTRIES["sa"];
   const divs = CSI_DIVISIONS.filter((d) => c.rates[d.rateKey] > 0);
   return (
@@ -4019,7 +3885,7 @@ function MarketScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, 
           </p>
           <button
             type="button"
-            onClick={onOpenSubscription}
+            onClick={onOpenFullAccess}
             className="mt-3 w-full rounded-xl bg-[#082555] py-2.5 text-[12px] font-bold text-[#E8C97A]"
           >
             فتح صفحة الاشتراك
@@ -4046,7 +3912,7 @@ function MarketScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, 
                 className={`flex-1 min-w-0 ${itemLocked ? "cursor-not-allowed opacity-70" : "cursor-pointer"}`}
                 onClick={() => {
                   if (itemLocked) {
-                    onOpenSubscription?.();
+                    onOpenFullAccess?.();
                     return;
                   }
                   if (d.items[0]) onSelectItem(d.items[0], d);

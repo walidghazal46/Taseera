@@ -1,848 +1,237 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { getAppText } from "../data/appText";
-import useBackStack from "../hooks/useBackStack";
-import useAdminSession from "../hooks/useAdminSession";
 import taseeraLogo from "../assets/taseera-logo-light.png";
-import AdminDashboard from "./AdminDashboard";
-import SubscriptionPanel from "./SubscriptionPanel";
-import { requestAccountDeletion } from "../services/subscriptionService";
 
 const F = "'Cairo','Tajawal',sans-serif";
 
-/* ─── copy ───────────────────────────────────────────────────────────────── */
-function getSettingsCopy(language) {
-  return language === "en"
-    ? {
-        permissionEnabled: "Enabled", permissionDisabled: "Disabled",
-        permissionNotRequired: "Not required", permissionUnavailable: "Unavailable",
-        requestPermission: "Request", openSettings: "Open settings",
-        pricingEnvironment: "Current pricing environment", pricingActive: "Active",
-        profitSummary: "Profit", pricingCountryTitle: "Country & pricing settings",
-        country: "Country", city: "City", currency: "Currency",
-        locationFactor: "Location factor", pricingRatios: "Pricing ratios",
-        profitPercent: "Profit %", overheadPercent: "Overhead %", taxPercent: "Tax %",
-        dataState: "Activity", savedAnalyses: "Saved analyses", rfqs: "RFQ requests",
-        pricingTab: "Pricing", accountTab: "Account", subscriptionTab: "Subscription",
-        subscriptionTitle: "Full Access Subscription",
-        subscriptionHint: "Unlock all pricing items and unlimited building pricing.",
-        basePrice: "Price", paymentMethod: "Payment method",
-        paymentReference: "Transfer reference", paymentNote: "Additional note",
-        sendPaymentRequest: "Send payment request",
-        pendingReview: "Pending review", approved: "Approved", rejected: "Rejected",
-        orderId: "Order", amount: "Amount", createdOn: "Created",
-        loginRequired: "Please log in first to submit your payment request.",
-        loginToSubscribe: "Log in to continue subscription",
-        receiptFile: "Payment receipt", receiptRequired: "Receipt is required before sending your request.",
-        uploadReceipt: "Upload receipt", uploadProgress: "Uploading",
-        requestSubmitted: "Request submitted successfully",
-        requestStatusPendingMessage: "Your receipt was received. Admin team will review and activate your subscription after payment verification.",
-        myRequestsBoard: "My Requests", requestStatus: "Request status",
-        adminNote: "Admin note", viewReceipt: "View receipt",
-        serial: "Serial", noAdminNote: "No admin note",
-        invalidFile: "Only image/pdf files are allowed (max 8 MB).",
-      }
-    : {
-        permissionEnabled: "مفعلة", permissionDisabled: "غير مفعلة",
-        permissionNotRequired: "غير مطلوبة", permissionUnavailable: "غير متاحة",
-        requestPermission: "طلب الإذن", openSettings: "فتح الإعدادات",
-        pricingEnvironment: "بيئة التسعير الحالية", pricingActive: "نشطة",
-        profitSummary: "ربح", pricingCountryTitle: "إعدادات الدولة والتسعير",
-        country: "الدولة", city: "المدينة", currency: "العملة",
-        locationFactor: "عامل الموقع", pricingRatios: "نسب التسعير",
-        profitPercent: "الربح %", overheadPercent: "المصاريف %", taxPercent: "الضريبة %",
-        dataState: "النشاط", savedAnalyses: "تحليلات محفوظة", rfqs: "طلبات عروض سعر",
-        pricingTab: "التسعير", accountTab: "الحساب", subscriptionTab: "الاشتراك",
-        subscriptionTitle: "اشتراك الوصول الكامل",
-        subscriptionHint: "افتح كل البنود وتسعير المباني بدون حدود.",
-        basePrice: "السعر", paymentMethod: "طريقة الدفع",
-        paymentReference: "مرجع التحويل", paymentNote: "ملاحظة إضافية",
-        sendPaymentRequest: "إرسال طلب الدفع",
-        pendingReview: "قيد المراجعة", approved: "مقبول", rejected: "مرفوض",
-        orderId: "رقم الطلب", amount: "المبلغ", createdOn: "تاريخ الطلب",
-        loginRequired: "يرجى تسجيل الدخول أولاً لإرسال طلب الدفع.",
-        loginToSubscribe: "سجل الدخول للاشتراك",
-        receiptFile: "إيصال الدفع", receiptRequired: "لا يمكن إرسال الطلب بدون رفع إيصال الدفع.",
-        uploadReceipt: "رفع الإيصال", uploadProgress: "جاري الرفع",
-        requestSubmitted: "تم إرسال الطلب بنجاح",
-        requestStatusPendingMessage: "تم استلام إيصالك. ستقوم الإدارة بمراجعته وتفعيل الاشتراك بعد التأكد من الدفع.",
-        myRequestsBoard: "لوحة طلباتي", requestStatus: "حالة الطلب",
-        adminNote: "ملاحظة الأدمن", viewReceipt: "عرض الإيصال",
-        serial: "السيريال", noAdminNote: "لا توجد ملاحظة",
-        invalidFile: "مسموح فقط بصيغ الصور أو PDF وبحد أقصى 8 ميجابايت.",
-      };
-}
-
-/* ─── primitives ─────────────────────────────────────────────────────────── */
-
-function PremiumInput({ label, value, onChange, placeholder, type = "text", options, icon }) {
+function SettingsCard({ title, subtitle, icon, children, className = "" }) {
   return (
-    <label className="block group">
-      <span className="mb-1.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400" style={{ fontFamily: F }}>
-        {icon && <span>{icon}</span>}
-        {label}
-      </span>
-      {type === "select" ? (
-        <select value={value} onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[12px] font-semibold text-slate-800 outline-none transition-all duration-200 focus:border-[#d4a843] focus:bg-white focus:ring-2 focus:ring-[#d4a843]/20 hover:border-[#d4a843]/40"
-          style={{ fontFamily: F }}>
-          {(options || []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-      ) : (
-        <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-          className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[12px] font-semibold text-slate-800 outline-none transition-all duration-200 focus:border-[#d4a843] focus:bg-white focus:ring-2 focus:ring-[#d4a843]/20 hover:border-[#d4a843]/40 placeholder:font-normal placeholder:text-slate-300"
-          style={{ fontFamily: F }} />
-      )}
-    </label>
+    <section className={`min-w-0 overflow-hidden rounded-2xl border border-[#dbe5ff] bg-white/86 shadow-[0_14px_34px_rgba(94,124,214,0.12)] ${className}`}>
+      <div className="flex items-center gap-3 border-b border-[#edf2ff] bg-[linear-gradient(135deg,#f8fbff_0%,#eef7ff_55%,#f6fffd_100%)] px-4 py-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-xl shadow-sm">{icon}</span>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-[13px] font-black leading-tight text-[#102a56]" style={{ fontFamily: F }}>{title}</h3>
+          {subtitle ? <p className="mt-1 text-[10px] font-semibold leading-4 text-[#66789d]" style={{ fontFamily: F }}>{subtitle}</p> : null}
+        </div>
+      </div>
+      <div className="p-4">{children}</div>
+    </section>
   );
 }
 
-function GlassCard({ children, className = "" }) {
+function ActionButton({ children, onClick, tone = "blue", square = false }) {
+  const tones = {
+    blue: "border-[#bcd6ff] bg-[#eef6ff] text-[#174f9a] hover:bg-[#e2f0ff]",
+    mint: "border-[#bceee4] bg-[#effdfa] text-[#0f766e] hover:bg-[#dcfbf5]",
+    gold: "border-[#f0dca4] bg-[#fff8e5] text-[#8a6516] hover:bg-[#fff1c2]",
+    rose: "border-[#ffc5d0] bg-[#fff1f4] text-[#b42346] hover:bg-[#ffe4ea]",
+  };
   return (
-    <div className={`w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-100/80 bg-white shadow-[0_2px_20px_rgba(0,0,0,0.06)] transition-all duration-200 hover:shadow-[0_6px_28px_rgba(0,0,0,0.1)] hover:-translate-y-[1px] ${className}`}>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex items-center justify-center rounded-xl border text-center text-[12px] font-black leading-tight transition ${square ? "aspect-square min-h-0 px-2 py-2" : "min-h-[44px] px-3 py-2"} ${tones[tone] || tones.blue}`}
+      style={{ fontFamily: F }}
+    >
       {children}
-    </div>
-  );
-}
-
-function CardHeader({ icon, title, extra, accent }) {
-  return (
-    <div className={`flex min-w-0 items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 ${accent ? "bg-gradient-to-r from-[#071e40] to-[#0d2545]" : "bg-gradient-to-r from-slate-50 to-white"}`}>
-      <div className="flex min-w-0 flex-1 items-center gap-2.5">
-        <span className={`flex h-7 w-7 items-center justify-center rounded-xl text-sm shadow-sm ${accent ? "bg-white/10" : "bg-slate-100"}`}>{icon}</span>
-        <p className={`min-w-0 break-words text-[12px] font-bold ${accent ? "text-white" : "text-slate-700"}`} style={{ fontFamily: F }}>{title}</p>
-      </div>
-      <div className="shrink-0">{extra}</div>
-    </div>
-  );
-}
-
-function ActionRow({ title, subtitle, onClick, icon, danger }) {
-  return (
-    <button type="button" onClick={onClick}
-      className={`group flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-right transition-all duration-150 active:scale-[0.98] ${
-        danger
-          ? "border border-red-100 bg-red-50 hover:bg-red-100"
-          : "border border-slate-100 bg-white hover:border-[#d4a843]/30 hover:bg-amber-50/50 hover:shadow-sm"
-      }`}>
-      {icon && (
-        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-base shadow-sm transition-transform duration-150 group-hover:scale-105 ${
-          danger ? "bg-red-100" : "bg-slate-100 group-hover:bg-[#d4a843]/10"
-        }`}>{icon}</span>
-      )}
-      <div className="min-w-0 flex-1">
-        <p className={`text-[12px] font-bold leading-snug ${danger ? "text-red-600" : "text-slate-800"}`} style={{ fontFamily: F }}>{title}</p>
-        {subtitle && <p className="mt-0.5 text-[10px] text-slate-400 leading-relaxed" style={{ fontFamily: F }}>{subtitle}</p>}
-      </div>
-      {!danger && <span className="shrink-0 text-[#d4a843]/60 text-lg font-bold transition-all duration-150 group-hover:text-[#d4a843] group-hover:translate-x-0.5">›</span>}
     </button>
   );
 }
 
-/* ─── social logos ───────────────────────────────────────────────────────── */
-function WhatsAppLogo() {
-  return <svg viewBox="0 0 24 24" fill="currentColor" className="h-[18px] w-[18px]"><path d="M19.05 4.94A9.77 9.77 0 0 0 12.09 2C6.67 2 2.25 6.4 2.25 11.82c0 1.74.45 3.43 1.3 4.93L2 22l5.39-1.5a9.8 9.8 0 0 0 4.69 1.2h.01c5.42 0 9.84-4.41 9.84-9.83a9.76 9.76 0 0 0-2.88-6.93ZM12.09 20.02h-.01a8.14 8.14 0 0 1-4.14-1.13l-.3-.18-3.2.89.86-3.12-.2-.32a8.12 8.12 0 0 1-1.24-4.34c0-4.51 3.68-8.18 8.21-8.18 2.19 0 4.24.85 5.79 2.39a8.11 8.11 0 0 1 2.4 5.79c0 4.52-3.69 8.2-8.17 8.2Zm4.48-6.14c-.25-.13-1.46-.72-1.69-.8-.23-.08-.39-.13-.56.13-.16.25-.64.8-.78.97-.14.16-.28.18-.53.06-.25-.13-1.05-.39-2-.99a7.45 7.45 0 0 1-1.38-1.72c-.14-.25-.02-.39.11-.52.11-.11.25-.28.37-.42.13-.14.16-.25.25-.41.08-.17.04-.31-.02-.43-.06-.13-.56-1.34-.77-1.83-.2-.48-.4-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.87.85-.87 2.07s.89 2.4 1.01 2.56c.12.16 1.75 2.67 4.23 3.74.59.25 1.05.4 1.4.51.59.19 1.12.16 1.54.1.47-.07 1.46-.6 1.67-1.17.21-.58.21-1.07.15-1.17-.06-.1-.22-.16-.47-.29Z"/></svg>;
-}
-function LinkedInLogo() {
-  return <svg viewBox="0 0 24 24" fill="currentColor" className="h-[18px] w-[18px]"><path d="M6.94 8.5H3.56V20h3.38V8.5ZM5.25 3A1.97 1.97 0 0 0 3.3 4.97c0 1.08.87 1.97 1.93 1.97h.02a1.97 1.97 0 0 0 0-3.94ZM20.7 12.88c0-3.02-1.61-4.43-3.76-4.43-1.73 0-2.5.95-2.93 1.62V8.5h-3.38c.05 1.04 0 11.5 0 11.5H14v-6.42c0-.34.02-.68.12-.92.27-.68.88-1.38 1.9-1.38 1.34 0 1.87 1.03 1.87 2.53V20h3.38v-7.12Z"/></svg>;
-}
-function YouTubeLogo() {
-  return <svg viewBox="0 0 24 24" fill="currentColor" className="h-[18px] w-[18px]"><path d="M21.58 7.19a2.99 2.99 0 0 0-2.1-2.12C17.63 4.56 12 4.56 12 4.56s-5.63 0-7.48.51a2.99 2.99 0 0 0-2.1 2.12C1.9 9.06 1.9 12 1.9 12s0 2.94.52 4.81a2.99 2.99 0 0 0 2.1 2.12c1.85.51 7.48.51 7.48.51s5.63 0 7.48-.51a2.99 2.99 0 0 0 2.1-2.12c.52-1.87.52-4.81.52-4.81s0-2.94-.52-4.81ZM10.2 15.05V8.95L15.27 12l-5.07 3.05Z"/></svg>;
-}
-
-/* ─── HowToUse Modal ─────────────────────────────────────────────────────── */
-function HowToUseModal({ language, onClose }) {
+function PrivacyPolicyPage({ language, onBack }) {
   const isAr = language !== "en";
   const sections = isAr
     ? [
-        { icon: "🏢", title: "صفحة الشركات", color: "from-blue-500 to-blue-600", steps: ["اضغط على «الشركات» من شريط التنقل السفلي.", "اضغط «إضافة شركة» لإنشاء شركة جديدة بتفاصيلها.", "بعد اختيار الشركة يمكنك إضافة مشاريعها وتتبع حالتها."] },
-        { icon: "💰", title: "صفحة التسعير", color: "from-amber-500 to-amber-600", steps: ["اختر بنداً من قائمة البنود أو ابحث عنه مباشرةً.", "أدخل الكميات والموارد ليحسب التطبيق السعر تلقائياً.", "احفظ التحليل وربطه بمشروع لمراجعته لاحقاً."] },
-        { icon: "🔧", title: "صفحة الموردين", color: "from-emerald-500 to-emerald-600", steps: ["اختر الدولة من شاشة الاختيار عند الدخول للصفحة.", "تصفح الموردين أو ابحث بالاسم أو التخصص.", "اضغط على المورد لعرض تفاصيله والتواصل معه أو طلب عرض سعر."] },
-        { icon: "🌐", title: "الموقع الإلكتروني", color: "from-purple-500 to-purple-600", steps: ["يعمل الموقع بنفس واجهة التطبيق على أي متصفح.", "البيانات محفوظة محلياً في المتصفح ولا تُفقد عند إغلاق الصفحة.", "لتجربة كاملة مع الإشعارات والمكالمات استخدم تطبيق Android."] },
+        ["البيانات التي نحفظها", "يحفظ التطبيق بيانات الاستخدام الأساسية داخل الجهاز مثل الإعدادات، الدولة المختارة، الشركات، الموردين، التحليلات، وطلبات الأسعار التي تنشئها."],
+        ["طريقة الاستخدام", "تُستخدم البيانات لتشغيل وظائف التطبيق، تحسين تجربة التسعير، حفظ اختياراتك، وتسهيل الرجوع إلى التحليلات والمعلومات التي أدخلتها."],
+        ["الضيوف والمستخدمون", "يمكن للضيوف والمستخدمين استخدام التطبيق بالكامل. قد تختلف طريقة حفظ البيانات حسب حالة الدخول، لكنها لا تُستخدم لتقييد الوصول إلى الأدوات."],
+        ["مشاركة البيانات", "لا نبيع بياناتك ولا نشاركها مع أطراف خارجية لأغراض تسويقية. عند فتح واتساب أو لينكدإن أو يوتيوب أو البريد، تنتقل إلى خدمات خارجية تخضع لسياسات الخصوصية الخاصة بها."],
+        ["الصلاحيات", "قد يطلب التطبيق صلاحيات مرتبطة بالجهاز مثل الاتصال أو المشاركة أو فتح الروابط فقط عند استخدام ميزة تحتاج لذلك. يمكنك إدارة هذه الصلاحيات من إعدادات الجهاز."],
+        ["حماية البيانات", "نستخدم أقل قدر ممكن من البيانات لتشغيل التطبيق، ونوصي بعدم إدخال معلومات حساسة داخل حقول الملاحظات أو الطلبات إلا عند الحاجة."],
+        ["التواصل", "لأي سؤال متعلق بالخصوصية يمكنك التواصل عبر قنوات التواصل الموجودة داخل صفحة الإعدادات."],
       ]
     : [
-        { icon: "🏢", title: "Companies Page", color: "from-blue-500 to-blue-600", steps: ["Tap «Companies» in the bottom navigation bar.", "Tap «Add Company» to create a new company with its details.", "After selecting a company you can add projects and track their status."] },
-        { icon: "💰", title: "Pricing Page", color: "from-amber-500 to-amber-600", steps: ["Choose an item from the list or search for it directly.", "Enter quantities and resources; the app calculates the price automatically.", "Save the analysis and link it to a project for later review."] },
-        { icon: "🔧", title: "Suppliers Page", color: "from-emerald-500 to-emerald-600", steps: ["Select the country from the picker when entering the page.", "Browse suppliers or search by name or specialty.", "Tap a supplier to view details, contact them, or request a quote."] },
-        { icon: "🌐", title: "Website", color: "from-purple-500 to-purple-600", steps: ["The website uses the same interface as the app in any browser.", "Data is saved locally in the browser and persists between sessions.", "For full features like calls and notifications use the Android app."] },
+        ["Data We Store", "The app stores basic in-app data such as settings, selected country, companies, suppliers, analyses, and RFQ records you create."],
+        ["How Data Is Used", "Data is used to run app features, improve pricing workflows, save your choices, and make your analyses easy to revisit."],
+        ["Guests And Users", "Guests and signed-in users can use the full app. Storage may differ by session type, but data is not used to restrict tool access."],
+        ["Data Sharing", "We do not sell your data or share it with third parties for marketing. External links such as WhatsApp, LinkedIn, YouTube, or email follow their own privacy policies."],
+        ["Permissions", "The app may request device permissions only when a feature needs them, such as calling, sharing, or opening links. You can manage permissions from device settings."],
+        ["Data Protection", "We keep data use minimal and recommend avoiding sensitive information in notes or requests unless needed."],
+        ["Contact", "For privacy questions, use the contact channels available in Settings."],
       ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60"
-      onClick={onClose} style={{ backdropFilter: "blur(6px)" }}>
-      <div className="w-full max-w-2xl rounded-t-[28px] bg-[#F7F3EC] shadow-2xl"
-        style={{ maxHeight: "90vh", overflowY: "auto" }}
-        onClick={(e) => e.stopPropagation()} dir={isAr ? "rtl" : "ltr"}>
-
-        {/* Sticky header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-[28px] bg-gradient-to-r from-[#082555] to-[#0d3070] px-5 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-[#d4a843]/30 to-[#d4a843]/10 text-lg shadow-inner">📖</div>
-            <p className="text-[15px] font-bold text-white" style={{ fontFamily: F }}>
-              {isAr ? "كيفية الاستخدام" : "How to Use"}
-            </p>
-          </div>
-          <button type="button" onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-white/80 transition hover:bg-white/20 hover:text-white text-sm">✕</button>
-        </div>
-
-        {/* Intro */}
-        <div className="mx-4 mt-4 overflow-hidden rounded-2xl border border-[#d4a843]/25 bg-gradient-to-br from-[#fffbf0] via-[#fff8e6] to-[#fffbf0]">
-          <div className="px-4 py-3.5">
-            <p className="text-[12px] leading-6 text-slate-600" style={{ fontFamily: F }}>
-              {isAr
-                ? "تطبيق تسعيرة هو أداة احترافية لتسعير الأعمال الإنشائية ومتابعة الموردين وإدارة المشاريع."
-                : "Taseera is a professional tool for construction pricing, supplier management, and project tracking."}
-            </p>
-          </div>
-        </div>
-
-        {/* Sections */}
-        <div className="space-y-3 p-4">
-          {sections.map((section, si) => (
-            <div key={section.title} className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
-              <div className={`flex items-center gap-3 bg-gradient-to-r ${section.color} px-4 py-3`}>
-                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/20 text-base">{section.icon}</span>
-                <p className="text-[13px] font-bold text-white" style={{ fontFamily: F }}>{section.title}</p>
-              </div>
-              <div className="p-4 space-y-2.5">
-                {section.steps.map((step, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-800 text-[9px] font-bold text-white">{i + 1}</span>
-                    <p className="text-[11px] leading-5 text-slate-600" style={{ fontFamily: F }}>{step}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="p-4 pt-0">
-          <button type="button" onClick={onClose}
-            className="w-full rounded-2xl bg-gradient-to-r from-[#082555] to-[#0d3070] py-3.5 text-[13px] font-bold text-white shadow-lg transition-all hover:shadow-xl active:scale-[0.98]"
-            style={{ fontFamily: F }}>
-            {isAr ? "فهمت، شكراً" : "Got it, thanks"}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ─── Account Tab ─────────────────────────────────────────────────────────── */
-function AccountTab({
-  settings, authMode, onLogout, onUpdateSetting, onSettingsAction,
-  systemBridge, savedAnalyses, rfqRequests, onOpenAuthScreen, sessionMeta,
-  companies = [], suppliers = [], onShowStatus,
-}) {
-  const [showHowToUse, setShowHowToUse] = useState(false);
-  const [showSaved, setShowSaved] = useState(false);
-  const [showRfqs, setShowRfqs] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
-  const [deleteSent, setDeleteSent] = useState(false);
-  const text = getAppText(settings.language);
-  const copy = getSettingsCopy(settings.language);
-  const isAr = settings.language !== "en";
-  const isGuest = authMode === "guest";
-  const isSuperAdminEmail = settings.userEmail?.toLowerCase() === "walidghazal46@gmail.com";
-  const { profile: adminProfile, loading: adminLoading } = useAdminSession({
-    uid: sessionMeta?.uid, email: settings.userEmail, displayName: settings.userName,
-  });
-  const canAccessAdminPanel = !isGuest && (isSuperAdminEmail || adminLoading || adminProfile?.canAccessAdmin === true);
-
-  const initials = useMemo(() => {
-    if (isGuest) return null;
-    const name = settings.userName || "";
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    return (parts[0]?.[0] || "U").toUpperCase();
-  }, [isGuest, settings.userName]);
-
-  const guestItems = [
-    { id: "privacy", title: text.settings.privacy, subtitle: text.settings.privacyBody, icon: "🔒" },
-    { id: "support", title: text.settings.technicalSupport, subtitle: text.settings.supportValue, icon: "💬" },
-  ];
-  const authItems = [
-    { id: "privacy", title: text.settings.privacy, subtitle: text.settings.privacyBody, icon: "🔒" },
-    { id: "update",  title: text.settings.update,  subtitle: text.settings.updateStatus, icon: "⬆️" },
-    { id: "rate",    title: text.settings.rate,    subtitle: text.settings.rateBody,     icon: "⭐" },
-    { id: "support", title: text.settings.technicalSupport, subtitle: text.settings.supportValue, icon: "💬" },
-  ];
-
-  const socialLinks = [
-    { id: "whatsapp", label: "WhatsApp", Icon: WhatsAppLogo, iconBg: "bg-[#25D366]", cardBg: "bg-[#F0FBF4]", border: "border-[#B8EFD0]", url: "https://wa.me/201064463650" },
-    { id: "linkedin", label: "LinkedIn",  Icon: LinkedInLogo, iconBg: "bg-[#0A66C2]", cardBg: "bg-[#EEF5FF]", border: "border-[#B3D0F5]", url: "https://www.linkedin.com/in/walid-ghazal-pmi-pmp%C2%AE-85208678/" },
-    { id: "youtube",  label: "YouTube",   Icon: YouTubeLogo,  iconBg: "bg-[#FF0000]", cardBg: "bg-[#FFF0F0]", border: "border-[#FFCCCC]", url: "https://www.youtube.com/@WalidGhazal" },
-  ];
-
-  if (showRfqs) {
-    const isAr2 = settings.language !== "en";
-    return (
-      <div className="space-y-3">
-        <button
-          type="button"
-          onClick={() => setShowRfqs(false)}
-          className="flex items-center gap-2 rounded-xl border border-[#e2e8f0] bg-white px-3 py-2 text-[12px] font-bold text-[#082555] transition hover:bg-[#f8fafc]"
-          style={{ fontFamily: F }}
-        >
-          <span className="text-[14px]">›</span>
-          {isAr2 ? "طلبات عروض السعر" : "RFQ Requests"}
-        </button>
-
-        {rfqRequests.length === 0 ? (
-          <div className="py-16 text-center rounded-2xl border border-[#e2e8f0] bg-white">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-sky-50 text-3xl">📬</div>
-            <p className="text-[14px] font-bold text-[#082555]" style={{ fontFamily: F }}>
-              {isAr2 ? "لا يوجد طلبات بعد" : "No RFQ requests yet"}
-            </p>
-          </div>
-        ) : (
-          <div className="grid gap-3">
-            {rfqRequests.map((r) => {
-              const date = r.createdAt ? new Date(r.createdAt).toLocaleDateString(isAr2 ? "ar-SA" : "en-GB") : "";
-              return (
-                <div key={r.id} className="rounded-2xl border-2 border-sky-100 bg-white p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="rounded-lg bg-sky-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
-                      {r.rfqRef || "RFQ"}
-                    </span>
-                    <span className="text-[10px] text-slate-400">{date}</span>
-                  </div>
-                  <p className="text-[14px] font-bold text-[#082555] leading-snug" style={{ fontFamily: F }}>
-                    {r.itemName || (isAr2 ? "طلب عرض سعر عام" : "General RFQ")}
-                  </p>
-                  {r.itemId && (
-                    <p className="mt-0.5 text-[11px] text-slate-400" style={{ fontFamily: F }}>{r.itemId}</p>
-                  )}
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      r.status === "sent" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-                    }`}>
-                      {r.status === "sent" ? (isAr2 ? "تم الإرسال" : "Sent") : (isAr2 ? "مسودة" : "Draft")}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  if (showSaved) {
-    const isAr2 = settings.language !== "en";
-    return (
-      <div className="space-y-3">
-        <button
-          type="button"
-          onClick={() => setShowSaved(false)}
-          className="flex items-center gap-2 rounded-xl border border-[#e2e8f0] bg-white px-3 py-2 text-[12px] font-bold text-[#082555] transition hover:bg-[#f8fafc]"
-          style={{ fontFamily: F }}
-        >
-          <span className="text-[14px]">›</span>
-          {isAr2 ? "التحليلات المحفوظة" : "Saved Analyses"}
-        </button>
-
-        {savedAnalyses.length === 0 ? (
-          <div className="py-16 text-center rounded-2xl border border-[#e2e8f0] bg-white">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50 text-3xl">📋</div>
-            <p className="text-[14px] font-bold text-[#082555]" style={{ fontFamily: F }}>
-              {isAr2 ? "لا يوجد تحليلات محفوظة بعد" : "No saved analyses yet"}
-            </p>
-            <p className="mt-1 text-[12px] text-slate-500" style={{ fontFamily: F }}>
-              {isAr2 ? "احفظ تحليلاتك من صفحة التسعير" : "Save analyses from the pricing page"}
-            </p>
-          </div>
-        ) : (
-          <div className="grid gap-3">
-            {savedAnalyses.map((item) => {
-              const total = item.projectTotal ?? item.results?.finalTotal ?? item.results?.total ?? 0;
-              const unit = item.finalUnitPrice ?? item.results?.unitPrice ?? 0;
-              const date = item.createdAt ? new Date(item.createdAt).toLocaleDateString(isAr2 ? "ar-SA" : "en-GB") : "";
-              return (
-                <div key={item.id} className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`rounded-lg px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                      item.mode === "area" ? "bg-[#082555] text-[#C9A84C]" : "bg-[#C9A84C] text-[#082555]"
-                    }`}>
-                      {item.mode === "area" ? "BUILDING" : item.itemNum || "ITEM"}
-                    </span>
-                    <span className="text-[10px] text-slate-400">{date}</span>
-                  </div>
-                  <p className="text-[14px] font-bold text-[#082555] leading-snug" style={{ fontFamily: F }}>{item.itemName}</p>
-                  {(item.companyName || item.projectName) && (
-                    <p className="mt-0.5 text-[11px] text-slate-400" style={{ fontFamily: F }}>
-                      {item.projectName}{item.projectName && item.companyName ? " · " : ""}{item.companyName}
-                    </p>
-                  )}
-                  <div className="mt-3 flex items-center justify-between border-t border-[#F7F3EC] pt-2.5">
-                    <div className="text-right">
-                      <p className="text-[8px] font-bold uppercase text-slate-400">Total</p>
-                      <p className="text-[15px] font-black text-[#082555]">{Number(total).toLocaleString()}</p>
-                    </div>
-                    <div className="text-left">
-                      <p className="text-[8px] font-bold uppercase text-slate-400">Unit Price</p>
-                      <p className="text-[15px] font-black text-[#C9A84C]">{Number(unit).toLocaleString()}</p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-
-      {/* ── Hero Profile Card ── */}
-      <div className="relative w-full min-w-0 max-w-full overflow-hidden rounded-[30px] border border-[#d7e4ff] bg-[#fafcff] shadow-[0_20px_60px_rgba(107,132,210,0.16)]">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(88,232,231,0.08),transparent_28%),radial-gradient(circle_at_top_right,rgba(72,191,235,0.10),transparent_24%)]" />
-        <div className="pointer-events-none absolute left-6 top-7 grid grid-cols-5 gap-3 opacity-35">
-          {Array.from({ length: 15 }).map((_, i) => (
-            <span key={i} className="h-1.5 w-1.5 rounded-full bg-[#bfd0f7]" />
-          ))}
-        </div>
-
-        <div className="relative p-5 sm:p-7">
-          <div className="flex flex-row-reverse items-start justify-between gap-4">
-            <div className="relative shrink-0">
-              <div className="flex h-24 w-24 items-center justify-center rounded-[28px] bg-[linear-gradient(135deg,#2f6bff_0%,#3f57d8_100%)] text-[32px] font-black text-white shadow-[0_16px_30px_rgba(47,107,255,0.22)]">
-                {isGuest ? "👤" : initials}
-              </div>
-              {!isGuest && (
-                <span className="absolute -bottom-1 -left-1 flex h-7 w-7 items-center justify-center rounded-full bg-[#34d399] ring-4 ring-white">
-                  <span className="h-3 w-3 rounded-full bg-white" />
-                </span>
-              )}
-            </div>
-
-            <div className="min-w-0 flex-1 pt-1 text-right">
-              <p className="text-[24px] font-black leading-tight text-[#174a9f] sm:text-[30px]" style={{ fontFamily: F }}>
-                {isGuest ? text.settings.guest : settings.userName}
-              </p>
-              <p className="mt-2 truncate text-[14px] font-semibold text-[#7d91c0] sm:text-[18px]" style={{ fontFamily: F }}>
-                {isGuest ? text.settings.browseMode : settings.userEmail}
-              </p>
-              {!isGuest && (
-                <div className="mt-4 inline-flex items-center gap-3 rounded-full border border-[#b9f0db] bg-white px-4 py-2 shadow-sm">
-                  <span className="h-3 w-3 rounded-full bg-[#34d399]" />
-                  <span className="text-[13px] font-black text-[#0fa968]" style={{ fontFamily: F }}>{isAr ? "متصل" : "Active"}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {!isGuest && (
-            <div className="mt-6 grid grid-cols-2 gap-3 md:gap-4">
-              <button
-                type="button"
-                onClick={() => setShowRfqs(true)}
-                className="relative overflow-hidden rounded-[22px] border-2 border-[#cfe0ff] bg-white px-3 py-4 text-right shadow-[0_10px_24px_rgba(135,165,235,0.12)] transition hover:shadow-[0_14px_30px_rgba(135,165,235,0.18)] active:scale-[0.98] sm:px-5 sm:py-6"
-              >
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[24px] leading-none text-[#2f6bff] sm:left-4 sm:text-[32px]">‹</span>
-                <div className="flex flex-col-reverse items-center justify-between gap-3 sm:flex-row">
-                  <div className="flex-1 text-center">
-                    <p className="text-[40px] font-black leading-none text-[#174a9f] sm:text-[50px]">{rfqRequests.length}</p>
-                    <p className="mt-2 text-[14px] font-black leading-snug text-[#174a9f] sm:mt-3 sm:text-[20px]" style={{ fontFamily: F }}>{copy.rfqs}</p>
-                  </div>
-                  <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-[#edf3ff] text-[36px] text-[#2f6bff] shadow-inner sm:h-28 sm:w-28 sm:text-[48px]">🛒</div>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowSaved(true)}
-                className="relative overflow-hidden rounded-[22px] border-2 border-[#c8f0df] bg-[#fbfffc] px-3 py-4 text-right shadow-[0_10px_24px_rgba(117,215,170,0.12)] transition hover:shadow-[0_14px_30px_rgba(117,215,170,0.18)] active:scale-[0.98] sm:px-5 sm:py-6"
-              >
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[24px] leading-none text-[#16a34a] sm:left-4 sm:text-[32px]">‹</span>
-                <div className="flex flex-col-reverse items-center justify-between gap-3 sm:flex-row">
-                  <div className="flex-1 text-center">
-                    <p className="text-[40px] font-black leading-none text-[#0f9b5f] sm:text-[50px]">{savedAnalyses.length}</p>
-                    <p className="mt-2 text-[14px] font-black leading-snug text-[#0f9b5f] sm:mt-3 sm:text-[20px]" style={{ fontFamily: F }}>{copy.savedAnalyses}</p>
-                  </div>
-                  <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-[#eafbf3] text-[36px] text-[#18a865] shadow-inner sm:h-28 sm:w-28 sm:text-[48px]">📋</div>
-                </div>
-              </button>
-            </div>
-          )}
-
-          <div className="mt-5 overflow-hidden rounded-[24px] border-2 border-[#d9e6ff] bg-white px-5 py-5 shadow-[0_10px_24px_rgba(135,165,235,0.08)]">
-            <div className="flex items-center justify-end gap-2 text-right">
-              <span className="text-[18px] text-[#6c63ff]">🕘</span>
-              <p className="text-[18px] font-black text-[#355aa0]" style={{ fontFamily: F }}>{text.settings.sessionStatus}</p>
-            </div>
-            <p className="mt-4 text-right text-[22px] font-black leading-tight text-[#174a9f] sm:text-[28px]" style={{ fontFamily: F }}>
-              {isGuest ? text.settings.guestSession : `${text.settings.signedInAs} ${settings.userName}`}
-            </p>
-            {!isGuest && sessionMeta?.lastLoginAt && (
-              <p className="mt-4 text-right text-[14px] font-semibold text-[#7388b7] sm:text-[18px]" style={{ fontFamily: F }}>
-                {text.settings.signedInAt}: {sessionMeta.lastLoginAt}
-              </p>
-            )}
-          </div>
-
-          <div className="mt-6 flex flex-wrap gap-3">
-            {isGuest ? (
-              <>
-                <button type="button" onClick={() => onOpenAuthScreen?.("login")}
-                  className="flex-1 rounded-xl bg-gradient-to-r from-[#d4a843] to-[#e8c97a] py-2.5 text-[12px] font-bold text-[#082555] shadow-[0_4px_14px_rgba(212,168,67,0.4)] transition-all hover:shadow-[0_4px_20px_rgba(212,168,67,0.55)] active:scale-[0.97]"
-                  style={{ fontFamily: F }}>{text.settings.loginNow}</button>
-                <button type="button" onClick={() => onOpenAuthScreen?.("register")}
-                  className="flex-1 rounded-xl border border-[#d7e4ff] bg-white/84 py-2.5 text-[12px] font-bold text-[#476192] transition hover:bg-white active:scale-[0.97]"
-                  style={{ fontFamily: F }}>{text.settings.createAccountNow}</button>
-              </>
-            ) : (
-              <div className="grid w-full grid-cols-3 gap-2">
-                <button type="button" onClick={() => onOpenAuthScreen?.("login")}
-                  className="flex min-h-[56px] items-center justify-center rounded-2xl border border-[#5b8cff] bg-[linear-gradient(135deg,#2f6bff_0%,#3f57d8_100%)] px-3 py-3 text-center text-[14px] font-black text-white shadow-[0_12px_24px_rgba(47,107,255,0.2)] transition hover:brightness-105 active:scale-[0.97]"
-                  style={{ fontFamily: F }}>
-                  <span>{text.settings.switchAccount}</span>
-                </button>
-                <button type="button" onClick={onLogout}
-                  className="flex min-h-[56px] items-center justify-center rounded-2xl border border-[#8e6dff] bg-[linear-gradient(135deg,#8b5cf6_0%,#6d4cff_100%)] px-3 py-3 text-center text-[14px] font-black text-white shadow-[0_12px_24px_rgba(139,92,246,0.2)] transition hover:brightness-105 active:scale-[0.97]"
-                  style={{ fontFamily: F }}>
-                  <span>{text.settings.logout}</span>
-                </button>
-                {deleteSent ? (
-                  <div className="flex items-center justify-center rounded-xl border border-amber-200 bg-amber-50 px-1 py-2.5 text-center text-[10px] font-bold text-amber-700" style={{ fontFamily: F }}>
-                    {isAr ? "طلب حذف معلق" : "Deletion pending"}
-                  </div>
-                ) : (
-                  <button type="button" onClick={() => setShowDeleteConfirm(true)}
-                    className="flex min-h-[56px] items-center justify-center rounded-2xl border border-[#ff8ca0] bg-[linear-gradient(135deg,#ff4d6d_0%,#ea4a72_100%)] px-3 py-3 text-center text-[14px] font-black text-white shadow-[0_12px_24px_rgba(255,77,109,0.18)] transition hover:brightness-105 active:scale-[0.97]"
-                    style={{ fontFamily: F }}>
-                    <span>{isAr ? "حذف الحساب" : "Delete Account"}</span>
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Delete Account Confirmation Modal ── */}
-      {showDeleteConfirm && (
-        <div
-          className="fixed inset-0 z-[400] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-          onClick={() => !deleteSubmitting && setShowDeleteConfirm(false)}
-        >
-          <div
-            className="w-full max-w-sm rounded-3xl border border-red-600/40 bg-[#1a0808] shadow-[0_0_80px_rgba(220,38,38,0.25),0_0_30px_rgba(220,38,38,0.12)] p-6"
-            onClick={(e) => e.stopPropagation()}
-            style={{ fontFamily: F, direction: isAr ? "rtl" : "ltr" }}
-          >
-            <div className="text-center mb-5">
-              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-600/15 text-4xl shadow-[0_0_30px_rgba(220,38,38,0.35)]">
-                🗑
-              </div>
-              <p className="text-[18px] font-extrabold text-white">
-                {isAr ? "حذف الحساب" : "Delete Account"}
-              </p>
-              <p className="mt-2 text-[12px] text-white/60 leading-relaxed">
-                {isAr
-                  ? "هل تريد إرسال طلب حذف حسابك؟ سيراجع الأدمن طلبك ويتواصل معك قبل تنفيذ الحذف."
-                  : "Do you want to request account deletion? Admin will review and contact you before proceeding."}
-              </p>
-              <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/8 px-3 py-2 text-[11px] text-red-300/80 leading-relaxed">
-                ⚠️ {isAr ? "لا يمكن التراجع عن هذا الإجراء بعد موافقة الأدمن" : "This action cannot be undone after admin approval"}
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                disabled={deleteSubmitting}
-                onClick={async () => {
-                  if (!sessionMeta?.uid) return;
-                  setDeleteSubmitting(true);
-                  try {
-                    await requestAccountDeletion(sessionMeta.uid, {
-                      displayName: settings.userName || "",
-                      email: settings.userEmail || "",
-                    });
-                    setDeleteSent(true);
-                    setShowDeleteConfirm(false);
-                    onShowStatus?.(
-                      isAr ? "تم إرسال طلب الحذف — سيتم مراجعته قريباً" : "Deletion request sent",
-                      "success"
-                    );
-                  } catch (e) {
-                    onShowStatus?.(e.message || "Error", "warning");
-                  } finally {
-                    setDeleteSubmitting(false);
-                  }
-                }}
-                className="flex-1 rounded-2xl bg-red-600 py-3 text-[13px] font-bold text-white hover:bg-red-700 transition disabled:opacity-60 shadow-[0_0_20px_rgba(220,38,38,0.3)]"
-              >
-                {deleteSubmitting ? "⏳..." : (isAr ? "نعم، أرسل الطلب" : "Yes, request")}
-              </button>
-              <button
-                type="button"
-                disabled={deleteSubmitting}
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 rounded-2xl border border-white/15 bg-white/8 py-3 text-[13px] font-bold text-white/70 hover:bg-white/15 transition"
-              >
-                {isAr ? "إلغاء" : "Cancel"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Language Toggle ── */}
-      <GlassCard>
-        <CardHeader icon="🌐" title={text.settings.languageSwitch} accent />
-        <div className="p-3">
-          <div className="flex gap-1.5 rounded-xl bg-slate-100 p-1.5">
-            {[{ lang: "ar", label: isAr ? "العربية" : "Arabic", flag: "🇸🇦" }, { lang: "en", label: "English", flag: "🇬🇧" }].map(({ lang, label, flag }) => {
-              const active = settings.language === lang;
-              return (
-                <button key={lang} type="button" onClick={() => onUpdateSetting("language", lang)}
-                  className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-[12px] font-bold transition-all duration-200 ${
-                    active
-                      ? "bg-gradient-to-r from-[#082555] to-[#0d3070] text-white shadow-[0_4px_12px_rgba(8,37,85,0.3)]"
-                      : "text-slate-500 hover:text-slate-700"
-                  }`} style={{ fontFamily: F }}>
-                  <span className="text-base">{flag}</span>
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </GlassCard>
-
-      {/* ── Contact Social ── */}
-      <GlassCard>
-        <CardHeader icon="💬"
-          title={isAr ? "تواصل معنا" : "Contact Us"}
-          accent
-          extra={<span className="text-[9px] font-bold text-white/40 uppercase tracking-wide">{isAr ? "اختر المنصة" : "Choose platform"}</span>}
-        />
-        <div className="grid grid-cols-3 gap-2 p-3">
-          {socialLinks.map(({ id, label, Icon, iconBg, cardBg, border, url }) => (
-            <button key={id} type="button" onClick={() => systemBridge.openExternalUrl(url)}
-              className={`group flex flex-col items-center gap-2 rounded-2xl border ${border} ${cardBg} py-3.5 transition-all duration-150 hover:shadow-md active:scale-[0.97]`}>
-              <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${iconBg} text-white shadow-md transition-transform duration-150 group-hover:scale-105`}>
-                <Icon />
-              </div>
-              <span className="text-[10px] font-bold text-slate-700">{label}</span>
-            </button>
-          ))}
-        </div>
-      </GlassCard>
-
-      {/* ── How to Use ── */}
-      <button type="button" onClick={() => setShowHowToUse(true)}
-        className="group relative w-full overflow-hidden rounded-2xl shadow-[0_4px_16px_rgba(8,37,85,0.14)] transition-all duration-200 hover:shadow-[0_8px_28px_rgba(8,37,85,0.22)] hover:-translate-y-px active:scale-[0.98]">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,#c799f7_0%,#48bfeb_52%,#58e8e7_100%)]" />
-        <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: "radial-gradient(ellipse at 20% 50%, rgba(212,168,67,0.12), transparent 60%)" }} />
-        <div className="pointer-events-none absolute top-0 left-0 h-full w-1 rounded-l-2xl bg-gradient-to-b from-[#d4a843] to-[#d4a843]/20" />
-
-        <div className="relative flex items-center gap-3.5 px-4 py-4">
-          <div className="relative shrink-0">
-            <div className="absolute inset-0 rounded-2xl bg-[#d4a843]/20 blur-md scale-110" />
-            <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-[#d4a843]/15 text-2xl ring-1 ring-[#d4a843]/25">📖</div>
-          </div>
-          <div className="min-w-0 flex-1 text-right" dir={isAr ? "rtl" : "ltr"}>
-            <p className="text-[13px] font-bold text-white" style={{ fontFamily: F }}>
-              {isAr ? "كيفية الاستخدام" : "How to Use"}
-            </p>
-            <p className="mt-0.5 text-[10px] text-white/40" style={{ fontFamily: F }}>
-              {isAr ? "دليل سريع للتطبيق والموقع" : "Quick guide for the app & website"}
-            </p>
-          </div>
-          <span className="shrink-0 flex h-7 w-7 items-center justify-center rounded-xl bg-white/8 text-white/60 font-bold text-lg transition-all duration-150 group-hover:bg-[#d4a843]/20 group-hover:text-[#d4a843]">›</span>
-        </div>
+    <div className="grid gap-3 pb-4" dir={isAr ? "rtl" : "ltr"}>
+      <button
+        type="button"
+        onClick={onBack}
+        className="w-fit rounded-xl border border-[#cfe0ff] bg-white/85 px-4 py-2 text-[12px] font-black text-[#1554b7] shadow-sm"
+        style={{ fontFamily: F }}
+      >
+        {isAr ? "رجوع" : "Back"}
       </button>
-
-      {showHowToUse && <HowToUseModal language={settings.language} onClose={() => setShowHowToUse(false)} />}
-
-      {/* ── Quick Actions ── */}
-      <GlassCard>
-        <CardHeader icon="⚡" title={isAr ? "إجراءات سريعة" : "Quick Actions"} accent />
-        <div className="p-2 space-y-1">
-          {(isGuest ? guestItems : authItems).map((item) => (
-            <ActionRow key={item.id} title={item.title} subtitle={item.subtitle} icon={item.icon}
-              onClick={() => onSettingsAction?.(item.id)} />
+      <section className="overflow-hidden rounded-3xl border border-[#dbe5ff] bg-white/90 shadow-[0_18px_46px_rgba(94,124,214,0.14)]">
+        <div className="bg-[linear-gradient(135deg,#eef7ff_0%,#effdfa_100%)] px-5 py-5">
+          <p className="text-[11px] font-black uppercase tracking-widest text-[#36a8c7]" style={{ fontFamily: F }}>Taseera</p>
+          <h2 className="mt-1 text-[22px] font-black text-[#102a56]" style={{ fontFamily: F }}>
+            {isAr ? "سياسة الخصوصية" : "Privacy Policy"}
+          </h2>
+          <p className="mt-2 text-[12px] font-semibold leading-6 text-[#66789d]" style={{ fontFamily: F }}>
+            {isAr ? "آخر تحديث: مايو 2026" : "Last updated: May 2026"}
+          </p>
+        </div>
+        <div className="grid gap-3 p-4">
+          {sections.map(([title, body]) => (
+            <article key={title} className="rounded-2xl border border-[#edf2ff] bg-[#fbfdff] px-4 py-3">
+              <h3 className="text-[13px] font-black text-[#102a56]" style={{ fontFamily: F }}>{title}</h3>
+              <p className="mt-2 text-[12px] font-semibold leading-6 text-[#566784]" style={{ fontFamily: F }}>{body}</p>
+            </article>
           ))}
         </div>
-      </GlassCard>
-
-      {/* ── Admin Panel ── */}
-      {canAccessAdminPanel && (
-        <GlassCard>
-          <CardHeader icon="🛡️" title={text.settings.adminTitle} accent
-            extra={<span className="rounded-full bg-red-500/20 border border-red-400/30 px-2.5 py-0.5 text-[9px] font-bold text-red-300 uppercase tracking-wide">Admin</span>} />
-          <div className="w-full max-w-full overflow-x-hidden p-4">
-            {adminLoading ? (
-              <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#d4a843] border-t-transparent" />
-                <p className="text-[11px] font-bold text-slate-500">
-                  {isAr ? "جاري تحميل ملف الأدمن..." : "Loading admin profile..."}
-                </p>
-              </div>
-            ) : adminProfile?.canAccessAdmin === true ? (
-              <AdminDashboard
-                language={settings.language}
-                adminProfile={adminProfile}
-                onToast={(message, tone = "info") => onShowStatus?.(message, tone)}
-                initialTab={settings?.adminDashboardTab || "dashboard"}
-              />
-            ) : (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-center">
-                <p className="text-[12px] font-bold text-amber-700">
-                  {isAr
-                    ? "ملف الأدمن لم يكتمل تحميله أو أن جلسة تسجيل الدخول غير متزامنة على هذا الجهاز."
-                    : "The admin profile is not fully loaded yet, or the sign-in session is not synced on this device."}
-                </p>
-                <p className="mt-2 text-[11px] text-amber-600">
-                  {isAr
-                    ? "أعد تسجيل الدخول أو افتح التطبيق من جديد بعد المزامنة."
-                    : "Please sign in again or reopen the app after syncing."}
-                </p>
-              </div>
-            )}
-          </div>
-        </GlassCard>
-      )}
-
-      {/* ── App Info Footer ── */}
-      <div className="relative overflow-hidden rounded-[28px] border border-[#c9d4f7] bg-[#dce1fc]/88 shadow-[0_20px_60px_rgba(128,156,235,0.18)] backdrop-blur-xl">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(199,153,247,0.14)_0%,rgba(220,225,252,0.7)_48%,rgba(74,213,231,0.18)_100%)]" />
-        <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 50% 0%, rgba(88,232,231,0.16), transparent 60%)" }} />
-        <div className="pointer-events-none absolute inset-0 opacity-[0.05]"
-          style={{ backgroundImage: "repeating-linear-gradient(0deg,rgba(72,191,235,0.18) 0,rgba(72,191,235,0.18) 1px,transparent 1px,transparent 20px),repeating-linear-gradient(90deg,rgba(72,191,235,0.18) 0,rgba(72,191,235,0.18) 1px,transparent 1px,transparent 20px)" }} />
-
-        <div className="relative px-4 py-5 text-center">
-          <div className="mx-auto mb-3 relative w-fit">
-            <div className="absolute inset-2 rounded-[22px] bg-[linear-gradient(135deg,rgba(109,98,255,0.22)_0%,rgba(73,223,226,0.2)_100%)] blur-[18px] scale-125" />
-            <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl p-0">
-              <img
-                src={taseeraLogo}
-                alt="Taseera app icon"
-                className="h-full w-full rounded-2xl object-contain shadow-[0_0_26px_rgba(106,127,224,0.22)]"
-              />
-            </div>
-          </div>
-          <p className="bg-[linear-gradient(90deg,#9f6ae6_0%,#48bfeb_56%,#4ad5e7_100%)] bg-clip-text text-[15px] font-black text-transparent" style={{ fontFamily: F }}>{settings.appName}</p>
-          <p className="mt-0.5 text-[10px] text-[#8c9cc7] font-bold uppercase tracking-widest" style={{ fontFamily: F }}>
-            {text.settings.version} {settings.appVersion}
-          </p>
-          <div className="my-3 h-px bg-gradient-to-r from-transparent via-[#c7d7fb] to-transparent" />
-          <p className="text-[9px] leading-relaxed text-[#7185b7]" style={{ fontFamily: F }}>
-            {text.settings.disclaimer}
-          </p>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }
-
-/* ─── Main SettingsPanel ─────────────────────────────────────────────────── */
-const TABS = [
-  { id: "account",      icon: "👤", labelKey: "accountTab" },
-  { id: "subscription", icon: "💎", labelKey: "subscriptionTab" },
-];
 
 export default function SettingsPanel({
-  settings, authMode, onLogout, onUpdateSetting, onSettingsAction,
-  systemBridge, savedAnalyses, rfqRequests, navigationBridge,
-  onOpenAuthScreen, sessionMeta, companies, suppliers, onShowStatus, onNavigate,
+  settings,
+  authMode,
+  onLogout,
+  onUpdateSetting,
+  onSettingsAction,
+  systemBridge,
+  savedAnalyses = [],
+  rfqRequests = [],
+  onOpenAuthScreen,
+  sessionMeta,
+  companies = [],
+  suppliers = [],
 }) {
-  const copy = getSettingsCopy(settings.language);
-  const isGuest = authMode === "guest";
-  const isSuperAdminEmail = settings.userEmail?.toLowerCase() === "walidghazal46@gmail.com";
-  const { profile: adminProfile, loading: adminLoading } = useAdminSession({
-    uid: sessionMeta?.uid, email: settings.userEmail, displayName: settings.userName,
-  });
-  const isSubscribed = !isGuest && (
-    isSuperAdminEmail ||
-    adminProfile?.canAccessAdmin === true ||
-    adminProfile?.subscriptionStatus === "active" ||
-    adminProfile?.lifetime === true
-  );
-  const initialSection = settings?.settingsPanelSection || "account";
-  const nav = useBackStack({
-    initialEntry: { section: initialSection },
-    registerBackHandler: navigationBridge?.registerBackHandler,
-    pushHistoryEntry: navigationBridge?.pushHistoryEntry,
-    onEntryChange: navigationBridge?.onEntryChange,
-  });
-  const activeView = nav.currentEntry.section;
+  const text = getAppText(settings.language);
+  const isAr = settings.language !== "en";
+  const [showGuide, setShowGuide] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
-  useEffect(() => {
-    const preferred = settings?.settingsPanelSection || "account";
-    if (preferred !== activeView) nav.reset({ section: preferred });
-  }, [activeView, nav, settings?.settingsPanelSection]);
+  const stats = useMemo(() => ([
+    { label: isAr ? "الشركات" : "Companies", value: companies.length },
+    { label: isAr ? "الموردين" : "Suppliers", value: suppliers.length },
+    { label: isAr ? "التحليلات" : "Analyses", value: savedAnalyses.length },
+    { label: isAr ? "طلبات السعر" : "RFQs", value: rfqRequests.length },
+  ]), [companies.length, isAr, rfqRequests.length, savedAnalyses.length, suppliers.length]);
+
+  const displayName = authMode === "guest"
+    ? text.settings.guest
+    : settings.userName || sessionMeta?.userName || (isAr ? "مستخدم" : "User");
+
+  if (showPrivacy) {
+    return <PrivacyPolicyPage language={settings.language} onBack={() => setShowPrivacy(false)} />;
+  }
 
   return (
-    <div className="space-y-3">
-
-      {/* ── Premium Tab Switcher ── */}
-      <div className="relative overflow-hidden rounded-[22px] shadow-[0_8px_32px_rgba(8,37,85,0.28)]">
-        {/* Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#071e40] via-[#0d2545] to-[#162e52]" />
-        <div className="pointer-events-none absolute inset-0 opacity-[0.04]"
-          style={{ backgroundImage: "repeating-linear-gradient(0deg,#fff 0,#fff 1px,transparent 1px,transparent 20px),repeating-linear-gradient(90deg,#fff 0,#fff 1px,transparent 1px,transparent 20px)" }} />
-        <div className="pointer-events-none absolute top-0 right-0 h-16 w-32 bg-[#d4a843]/8 blur-2xl" />
-
-        <div className="relative flex gap-1.5 p-2">
-          {TABS.map((tab) => {
-            const active = activeView === tab.id;
-            return (
-              <button key={tab.id} type="button"
-                onClick={() => {
-                  onUpdateSetting?.("settingsPanelSection", tab.id);
-                  nav.navigate({ section: tab.id });
-                }}
-                className={`relative flex flex-1 flex-col items-center gap-1 rounded-[14px] py-3 px-1 text-center transition-all duration-200 ${
-                  active
-                    ? "bg-[#2a3870] shadow-[0_6px_18px_rgba(42,56,112,0.34)]"
-                    : "hover:bg-white/12 active:bg-white/18"
-                }`}
-                style={{ fontFamily: F }}
-              >
-                <span className={`text-[18px] leading-none text-white transition-all duration-200 ${active ? "scale-110 drop-shadow-sm" : "opacity-100"}`}>
-                  {tab.icon}
-                </span>
-                <span className="text-[10px] font-bold leading-none text-white">
-                  {copy[tab.labelKey]}
-                </span>
-                {active && (
-                  <span className="absolute bottom-1.5 left-1/2 h-1 w-4 -translate-x-1/2 rounded-full bg-[#58e8e7]" />
-                )}
-              </button>
-            );
-          })}
+    <div className="grid gap-4 pb-4" dir={isAr ? "rtl" : "ltr"}>
+      <section className="overflow-hidden rounded-[28px] border border-[#d6e5ff] bg-[linear-gradient(135deg,#ffffff_0%,#f1f7ff_46%,#edfffb_100%)] shadow-[0_22px_60px_rgba(85,121,214,0.16)]">
+        <div className="flex items-center gap-4 px-5 py-5">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white p-1 shadow-[0_12px_30px_rgba(90,128,222,0.18)]">
+            <img src={taseeraLogo} alt="Taseera" className="h-full w-full object-contain" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-black uppercase tracking-widest text-[#36a8c7]" style={{ fontFamily: F }}>
+              {isAr ? "وصول كامل للجميع" : "Full access for everyone"}
+            </p>
+            <h2 className="mt-1 break-words text-[20px] font-black leading-tight text-[#102a56]" style={{ fontFamily: F }}>
+              {displayName}
+            </h2>
+            <p className="mt-1 text-[12px] font-semibold leading-5 text-[#66789d]" style={{ fontFamily: F }}>
+              {isAr ? "كل الأدوات والبيانات متاحة للجميع بشكل مباشر." : "All tools and data are available to everyone immediately."}
+            </p>
+          </div>
         </div>
+      </section>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <SettingsCard icon="🌐" title={text.settings.languageSwitch} subtitle={isAr ? "اختر لغة الواجهة" : "Choose interface language"}>
+          <div className="grid grid-cols-2 gap-2 rounded-2xl bg-[#eef5ff] p-1.5">
+            {[{ lang: "ar", label: "العربية" }, { lang: "en", label: "English" }].map((item) => {
+              const active = settings.language === item.lang;
+              return (
+                <button key={item.lang} type="button" onClick={() => onUpdateSetting("language", item.lang)}
+                  className={`rounded-xl px-3 py-3 text-[12px] font-black transition ${active ? "bg-white text-[#1554b7] shadow-sm" : "text-[#6b7da1] hover:bg-white/70"}`}
+                  style={{ fontFamily: F }}>
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </SettingsCard>
+
+        <SettingsCard icon="📊" title={isAr ? "نشاط التطبيق" : "App Activity"} subtitle={isAr ? "ملخص سريع للبيانات الحالية" : "Quick summary of current data"}>
+          <div className="grid grid-cols-2 gap-2">
+            {stats.map((item) => (
+              <div key={item.label} className="rounded-xl bg-[linear-gradient(135deg,#f5f9ff_0%,#effcf9_100%)] px-3 py-3 text-center">
+                <p className="text-[18px] font-black text-[#1554b7]" style={{ fontFamily: F }}>{item.value}</p>
+                <p className="text-[10px] font-bold text-[#6b7da1]" style={{ fontFamily: F }}>{item.label}</p>
+              </div>
+            ))}
+          </div>
+        </SettingsCard>
+
+        <SettingsCard icon="⚡" title={isAr ? "إجراءات سريعة" : "Quick Actions"} subtitle={isAr ? "روابط وخدمات مساعدة" : "Helpful app links and services"}>
+          <div className="grid grid-cols-2 gap-2">
+            <ActionButton onClick={() => setShowPrivacy(true)}>{text.settings.privacy}</ActionButton>
+            <ActionButton tone="mint" onClick={() => systemBridge?.openEmail?.("walidghazal46@gmail.com", isAr ? "تواصل من تطبيق تسعيرة" : "Contact from Taseera", "")}>
+              {text.settings.contact}
+              <span className="mt-1 block text-[9px] font-bold opacity-70">walidghazal46@gmail.com</span>
+            </ActionButton>
+            <ActionButton tone="gold" onClick={() => setShowGuide(true)}>{isAr ? "كيفية الاستخدام" : "How to use"}</ActionButton>
+            <ActionButton tone="blue" onClick={() => onSettingsAction?.("update")}>{text.settings.update}</ActionButton>
+          </div>
+        </SettingsCard>
+
+        <SettingsCard icon="💬" title={isAr ? "تواصل معنا" : "Contact Us"} subtitle={isAr ? "اختر قناة التواصل المناسبة" : "Choose a contact channel"} className="sm:col-span-2">
+          <div className="grid grid-cols-3 gap-2">
+            <ActionButton square tone="mint" onClick={() => systemBridge?.openExternalUrl?.("https://wa.me/201064463650")}>WhatsApp</ActionButton>
+            <ActionButton square tone="blue" onClick={() => systemBridge?.openExternalUrl?.("https://www.linkedin.com/in/walid-ghazal-pmi-pmp%C2%AE-85208678/")}>LinkedIn</ActionButton>
+            <ActionButton square tone="rose" onClick={() => systemBridge?.openExternalUrl?.("https://www.youtube.com/@WalidGhazal")}>YouTube</ActionButton>
+          </div>
+        </SettingsCard>
+
+        <SettingsCard icon="👤" title={text.settings.sessionStatus} subtitle={authMode === "guest" ? text.settings.guestSessionBody : `${text.settings.signedInAs} ${displayName}`} className="sm:col-span-2">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <ActionButton onClick={() => onOpenAuthScreen?.("login")}>{authMode === "guest" ? text.settings.loginNow : text.settings.switchAccount}</ActionButton>
+            <ActionButton tone="gold" onClick={() => onSettingsAction?.("rate")}>{text.settings.rate}</ActionButton>
+            {authMode !== "guest" ? <ActionButton tone="rose" onClick={onLogout}>{text.settings.logout}</ActionButton> : null}
+          </div>
+        </SettingsCard>
       </div>
 
-      {/* ── Tab Content ── */}
-      {activeView === "subscription" ? (
-        <SubscriptionPanel
-          language={settings?.language || "ar"}
-          authMode={authMode}
-          sessionMeta={sessionMeta}
-          settings={settings}
-          isSubscribed={isSubscribed}
-          onOpenAuthScreen={onOpenAuthScreen}
-          onShowStatus={onShowStatus}
-          onGoToPricing={() => onNavigate?.("pricing")}
-        />
-      ) : (
-        <AccountTab
-          settings={settings} authMode={authMode} onLogout={onLogout}
-          onUpdateSetting={onUpdateSetting} onSettingsAction={onSettingsAction}
-          systemBridge={systemBridge} savedAnalyses={savedAnalyses}
-          rfqRequests={rfqRequests} onOpenAuthScreen={onOpenAuthScreen}
-          sessionMeta={sessionMeta} companies={companies} suppliers={suppliers}
-          onShowStatus={onShowStatus}
-        />
-      )}
+      <footer className="rounded-2xl border border-[#dbe5ff] bg-white/80 px-4 py-4 text-center shadow-sm">
+        <img src={taseeraLogo} alt="Taseera" className="mx-auto h-12 w-auto object-contain" />
+        <p className="mt-2 text-[13px] font-black text-[#102a56]" style={{ fontFamily: F }}>{settings.appName}</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#7a8ba9]" style={{ fontFamily: F }}>{text.settings.version} {settings.appVersion}</p>
+        <p className="mx-auto mt-2 max-w-md text-[10px] leading-5 text-[#66789d]" style={{ fontFamily: F }}>{text.settings.disclaimer}</p>
+      </footer>
+
+      {showGuide ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 backdrop-blur-sm" onClick={() => setShowGuide(false)}>
+          <div className="w-full max-w-lg rounded-t-3xl bg-white p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <h3 className="text-[16px] font-black text-[#102a56]" style={{ fontFamily: F }}>{isAr ? "كيفية الاستخدام" : "How to use"}</h3>
+            <div className="mt-3 grid gap-2">
+              {[
+                isAr ? "اختر الدولة من بطاقات ثابتة ثم افتح كامل محتوى الصفحة." : "Select a country card, then access the full page content.",
+                isAr ? "استخدم التسعير لتحليل البنود أو تسعير مساحة المبنى بدون حدود." : "Use pricing to analyze items or building areas without limits.",
+                isAr ? "افتح الموردين والشركات وبيانات التواصل مباشرة للجميع." : "Open supplier and company contact data directly for everyone.",
+              ].map((line, index) => (
+                <p key={line} className="rounded-xl bg-[#f4f8ff] px-3 py-2 text-[12px] font-semibold leading-5 text-[#44536f]" style={{ fontFamily: F }}>
+                  {index + 1}. {line}
+                </p>
+              ))}
+            </div>
+            <button type="button" onClick={() => setShowGuide(false)} className="mt-4 w-full rounded-xl bg-[#1554b7] py-3 text-[13px] font-black text-white" style={{ fontFamily: F }}>
+              {isAr ? "تم" : "Done"}
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

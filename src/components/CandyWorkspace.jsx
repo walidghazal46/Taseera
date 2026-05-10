@@ -582,9 +582,6 @@ function AnalysisView({ item, division, country, onBack, onCreateRfq }) {
   const boqAmt    = finalRate * qty;
 
   const setA = (field, val) => setAssum(a => ({ ...a, [field]: val }));
-  const reportFileBase = `${(item.num || "item").replace(/[^\w\u0600-\u06FF-]+/g, "_")}_${(item.ar || "analysis").replace(/[^\w\u0600-\u06FF-]+/g, "_")}`;
-
-
   const handleExportPdf = useCallback(() => {
     // Show in-app export preview modal (no external browser opened)
     setExportModal({
@@ -1066,7 +1063,6 @@ function ItemsView({ division, country, onSelectItem, onBack }) {
 
 // ─── DIVISIONS VIEW ────────────────────────────────────────────────────────────
 function DivisionsView({ country, onSelectDivision }) {
-  const cur = CUR[country] || "ر.س";
   const mkt = MARKET_RATES[country] || {};
 
   return (

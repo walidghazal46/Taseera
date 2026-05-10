@@ -101,10 +101,10 @@ function getSystemText(language = "ar") {
         projectAdded: (name) => `Added project ${name}.`,
         supplierAdded: (name) => `Added supplier ${name}.`,
         supplierInitial: "S",
-        loginRequiredToSave: "Sign-in is required to save the analysis.",
+        loginRequiredToSave: "Analysis saved locally.",
         chooseCompanyBeforeSave: "Choose a company and project before saving.",
         analysisSaved: "The analysis was saved and linked to the current project.",
-        loginRequiredForRfq: "Sign-in is required to create an RFQ.",
+        loginRequiredForRfq: "RFQ access is open.",
         genericRequest: "General request",
         market: "Market",
         supplyService: "Supply service",
@@ -140,10 +140,10 @@ function getSystemText(language = "ar") {
         projectAdded: (name) => `تمت إضافة المشروع ${name}.`,
         supplierAdded: (name) => `تمت إضافة المورد ${name}.`,
         supplierInitial: "م",
-        loginRequiredToSave: "يجب تسجيل الدخول لحفظ التحليل.",
+        loginRequiredToSave: "تم حفظ التحليل محلياً.",
         chooseCompanyBeforeSave: "اختر شركة ومشروعًا قبل الحفظ.",
         analysisSaved: "تم حفظ التحليل وربطه بالمشروع الحالي.",
-        loginRequiredForRfq: "تسجيل الدخول مطلوب لإنشاء طلب عرض سعر.",
+        loginRequiredForRfq: "طلب عرض السعر متاح للجميع.",
         genericRequest: "طلب عام",
         market: "السوق",
         supplyService: "خدمة توريد",
@@ -182,7 +182,7 @@ function StatusToast({ status }) {
     info: "border-slate-200 bg-white text-slate-800",
   }[status.tone || "info"];
   return (
-    <div className="fixed inset-x-0 top-4 z-[60] flex justify-center px-4">
+    <div className="fixed inset-x-0 z-[60] flex justify-center px-4" style={{ top: "calc(env(safe-area-inset-top) + 16px)" }}>
       <div className={`w-full max-w-md rounded-[16px] border px-4 py-3 text-sm shadow-xl ${toneClass}`}>
         {status.message}
       </div>
@@ -458,17 +458,17 @@ export default function App() {
   const updateSetting = (f, v) => setSettings((c) => ({ ...c, [f]: ["overheadPercent", "profitPercent", "taxPercent", "locationFactor"].includes(f) ? parseNumericInput(v) : v }));
 
   const handleSaveAnalysis = useCallback(({ item, resources, results, params, mode }) => {
-    if (authMode === "guest") { showStatus(systemText.loginRequiredToSave, "warning"); return; }
-    if (!selectedCompany || !selectedProject) { showStatus(systemText.chooseCompanyBeforeSave, "warning"); return; }
-    const nextA = { id: createId("analysis"), createdAt: new Date().toISOString(), companyId: selectedCompany.id, companyName: selectedCompany.name, projectId: selectedProject.id, projectName: selectedProject.name, mode, itemName: item.ar, itemNum: item.num, resources, results, params, finalUnitPrice: results.unitPrice || results.finalTotal / (params.qty || 1), projectTotal: results.total || results.finalTotal };
+    const targetCompany = selectedCompany || mergedCompanies[0] || null;
+    const targetProject = selectedProject || targetCompany?.projects?.[0] || null;
+    if (!targetCompany || !targetProject) { showStatus(systemText.chooseCompanyBeforeSave, "warning"); return; }
+    const nextA = { id: createId("analysis"), createdAt: new Date().toISOString(), companyId: targetCompany.id, companyName: targetCompany.name, projectId: targetProject.id, projectName: targetProject.name, mode, itemName: item.ar, itemNum: item.num, resources, results, params, finalUnitPrice: results.unitPrice || results.finalTotal / (params.qty || 1), projectTotal: results.total || results.finalTotal };
     setSavedAnalyses((c) => [nextA, ...c].slice(0, 50));
     showStatus(systemText.analysisSaved, "success");
-  }, [authMode, selectedCompany, selectedProject, setSavedAnalyses, systemText, showStatus]);
+  }, [mergedCompanies, selectedCompany, selectedProject, setSavedAnalyses, systemText, showStatus]);
 
   const handleCreateRfq = useCallback(({ item, supplier, source }) => {
-    if (authMode === "guest") { showStatus(systemText.loginRequiredForRfq, "warning"); return; }
     setRfqModal({ itemName: item?.ar || supplier?.name || "طلب عرض سعر" });
-  }, [authMode, setRfqModal, showStatus, systemText.loginRequiredForRfq]);
+  }, [setRfqModal]);
 
   const handleContactSupplier = useCallback(async (s, channel = "phone") => {
     if (channel === "phone" && s.phone) { bridge.openDialer(s.phone); showStatus(systemText.callOpened(s.name), "info"); }
@@ -483,18 +483,11 @@ export default function App() {
     else if (id === "rate") bridge.rateApp();
   }, [bridge, openDialog, savedAnalyses.length, settings.appName, settings.appVersion, settings.language, systemText]);
 
-  const handleOpenSubscription = useCallback(() => {
-    setActivePage("settings");
-    setSettings((current) => ({ ...current, settingsPanelSection: "subscription" }));
-    setRouteStack([createRoute(authMode, "settings")]);
-  }, [authMode, setActivePage, setRouteStack, setSettings]);
-
   const handleOpenAdSettings = useCallback(() => {
     setActivePage("settings");
     setSettings((current) => ({
       ...current,
       settingsPanelSection: "account",
-      adminDashboardTab: "settings",
     }));
     setRouteStack([createRoute(authMode, "settings")]);
   }, [authMode, setActivePage, setRouteStack, setSettings]);
@@ -505,7 +498,6 @@ export default function App() {
     authMode, companies: mergedCompanies, suppliers: mergedSuppliers, settings: settingsWithVersion, pricingCatalog, importedPricingSource, savedAnalyses, rfqRequests, systemBridge: bridge, navigationBridge,
     selectedPricingItemId, selectedCompanyId, selectedProjectId, company: selectedCompany, project: selectedProject,
     onSelectPricingItem: setSelectedPricingItemId, onSelectCompany: selectCompany, onSelectProject: selectProject, onAddCompany: addCompany, onAddProject: addProject, onAddSupplier: addSupplier, onUpdateSetting: updateSetting, onLogout: handleLogout, onShowStatus: showStatus, onSaveAnalysis: handleSaveAnalysis, onCreateRfq: handleCreateRfq, onContactSupplier: handleContactSupplier, onSettingsAction: handleSettingsAction, onOpenAuthScreen: openAuthScreen, sessionMeta: authSession,
-    onOpenSubscription: handleOpenSubscription,
     onOpenAdSettings: handleOpenAdSettings,
     onNavigate: handleNavigate,
   };
@@ -538,7 +530,7 @@ export default function App() {
         onClick={() => setRfqModal(null)}
       >
         <div
-          style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "24px 24px 0 0", padding: "24px 20px 32px", direction: "rtl", fontFamily: "'Cairo','Tajawal',sans-serif" }}
+          style={{ width: "100%", maxWidth: 480, background: "#fff", borderRadius: "24px 24px 0 0", padding: "24px 20px calc(env(safe-area-inset-bottom) + 32px)", direction: "rtl", fontFamily: "'Cairo','Tajawal',sans-serif" }}
           onClick={e => e.stopPropagation()}
         >
           <div style={{ width: 40, height: 4, background: "#e2d8c4", borderRadius: 4, margin: "0 auto 20px" }} />

@@ -91,19 +91,18 @@ export default function AppShell({
     >
       {/* Top Brand Bar */}
       <div
-        className="relative z-20 mx-3 mt-3 flex shrink-0 items-center justify-between rounded-[30px] border border-white/70 bg-white/72 px-3 pb-3 shadow-[0_18px_50px_rgba(104,128,223,0.16)] backdrop-blur-xl sm:mx-5 sm:px-5 sm:py-4"
-        style={{ paddingTop: "max(1.5rem, calc(env(safe-area-inset-top) + 1rem))" }}
+        className="app-header-safe relative z-20 mx-3 flex min-h-[44px] shrink-0 items-center justify-between rounded-[18px] border border-white/70 bg-white/72 px-3 py-0 shadow-[0_8px_24px_rgba(104,128,223,0.1)] backdrop-blur-xl sm:mx-5 sm:px-5"
       >
-        <div className="flex min-w-0 items-center gap-2.5 sm:gap-3.5">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <button
             type="button"
             onClick={onBack}
-            className={`flex h-10 w-10 items-center justify-center rounded-2xl border border-[#d7dfff] bg-white/85 text-[#6c78ad] transition-all ${
+            className={`flex h-7 w-7 items-center justify-center rounded-xl border border-[#d7dfff] bg-white/85 text-[#6c78ad] transition-all ${
               canGoBack ? "opacity-100 hover:border-[#88c9ff] hover:text-[#3a7fff]" : "opacity-65 hover:opacity-90"
             }`}
             aria-label={language === "en" ? "Go back" : "رجوع"}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-5 w-5">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-3.5 w-3.5">
               <path d={isRtl ? "m9 6 6 6-6 6" : "m15 6-6 6 6 6"} strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
@@ -111,7 +110,7 @@ export default function AppShell({
             <img
               src={taseeraLogo}
               alt="Taseera"
-              className="h-9 w-auto max-w-[140px] rounded-2xl object-contain sm:h-10 sm:max-w-[160px]"
+              className="h-6 w-auto max-w-[82px] rounded-xl object-contain sm:h-7 sm:max-w-[96px]"
             />
           </div>
           <div className="hidden min-[430px]:block">
@@ -125,9 +124,9 @@ export default function AppShell({
         </div>
 
         {/* Active page indicator */}
-        <div className="hidden items-center gap-2 rounded-full border border-[#dfe6ff] bg-white/85 px-3 py-1.5 min-[380px]:flex">
-          <span className="h-2 w-2 rounded-full bg-[linear-gradient(135deg,#6e66ff_0%,#36dddf_100%)] animate-pulse" />
-          <span className="bg-[linear-gradient(90deg,#665fff_0%,#2990ff_52%,#39dddf_100%)] bg-clip-text text-[10px] font-bold uppercase tracking-widest text-transparent" style={{ fontFamily: AR }}>
+        <div className="hidden h-7 items-center gap-1.5 rounded-full border border-[#dfe6ff] bg-white/85 px-2.5 py-0 min-[380px]:flex">
+          <span className="h-1.5 w-1.5 rounded-full bg-[linear-gradient(135deg,#6e66ff_0%,#36dddf_100%)] animate-pulse" />
+          <span className="bg-[linear-gradient(90deg,#665fff_0%,#2990ff_52%,#39dddf_100%)] bg-clip-text text-[9px] font-bold uppercase tracking-widest text-transparent" style={{ fontFamily: AR }}>
             {localizedItems.find(i => i.id === activePage)?.label}
           </span>
         </div>
@@ -138,20 +137,19 @@ export default function AppShell({
         ref={mainRef}
         className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden bg-transparent"
       >
-        <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-4">
+        <div className="app-content-safe mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 py-4">
           {children}
         </div>
       </main>
 
       {/* Bottom Navigation */}
       <nav
-        className="mx-3 mb-3 shrink-0 rounded-[30px] border border-white/70 bg-white/78 backdrop-blur-xl sm:mx-5"
+        className="app-footer-safe mx-3 shrink-0 rounded-[24px] border border-white/70 bg-white/78 backdrop-blur-xl sm:mx-5"
         style={{
-          paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
-          boxShadow: "0 -16px 50px rgba(104,128,223,0.15)",
+          boxShadow: "0 -12px 40px rgba(104,128,223,0.12)",
         }}
       >
-        <div className="mx-auto flex w-full max-w-2xl items-center justify-around px-2 py-2">
+        <div className="mx-auto flex w-full max-w-2xl items-center justify-around px-2 py-0.5">
           {localizedItems.map((item) => {
             const isActive = item.id === activePage;
             const config = tabConfig[item.id] || tabConfig.pricing;
@@ -162,11 +160,11 @@ export default function AppShell({
                 key={item.id}
                 type="button"
                 onClick={() => onNavigate(item.id)}
-                className={`relative group flex min-w-0 flex-1 flex-col items-center justify-center transition-all duration-300 py-1.5`}
+                className="relative group flex min-h-[58px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 transition-all duration-300"
               >
                 {/* Active Highlight Panel */}
                 <div
-                  className={`absolute inset-x-1.5 inset-y-0 rounded-2xl border transition-all duration-300 ${
+                  className={`absolute inset-x-1.5 inset-y-1 rounded-2xl border transition-all duration-300 ${
                     isActive
                       ? `${config.activeBorder} ${config.activeGlow} scale-100 opacity-100`
                       : "border-transparent scale-95 opacity-0"
@@ -176,19 +174,19 @@ export default function AppShell({
 
                 {/* Icon */}
                 <span
-                  className={`relative flex h-8 w-8 items-center justify-center transition-all duration-300 ${
+                  className={`relative flex h-6 w-6 items-center justify-center transition-all duration-300 ${
                     isActive ? config.activeText : "text-[#95a0c6] group-hover:text-[#5d6fb6]"
                   }`}
                 >
-                  <Icon className="h-[22px] w-[22px]" />
+                  <Icon className="h-[19px] w-[19px]" />
                 </span>
 
                 {/* Label */}
                 <span
-                  className={`relative mt-1 text-center font-bold tracking-wide transition-all duration-300 ${
+                  className={`relative text-center font-bold tracking-wide transition-all duration-300 ${
                     isActive ? config.activeText : "text-[#95a0c6] group-hover:text-[#5d6fb6]"
                   }`}
-                  style={{ fontFamily: AR, fontSize: isActive ? "10.5px" : "10px" }}
+                  style={{ fontFamily: AR, fontSize: isActive ? "9.5px" : "9px" }}
                 >
                   {item.label}
                 </span>

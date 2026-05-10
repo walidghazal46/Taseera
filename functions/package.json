@@ -7,7 +7,6 @@
     "shell": "firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
-    "sync:missing-users": "node scripts/sync-missing-auth-users.js",
     "logs": "firebase functions:log"
   },
   "engines": {
@@ -15,13 +14,11 @@
   },
   "main": "index.js",
   "dependencies": {
-    "firebase-admin": "^13.6.0",
     "firebase-functions": "^7.0.0"
   },
   "devDependencies": {
     "eslint": "^8.15.0",
-    "eslint-config-google": "^0.14.0",
-    "firebase-functions-test": "^3.4.1"
+    "eslint-config-google": "^0.14.0"
   },
   "private": true
 }
