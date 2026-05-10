@@ -149,10 +149,10 @@ function NI({ value, onChange }) {
       onChange={e => onChange(parseFloat(e.target.value) || 0)}
       style={{
         fontFamily: MONO, fontSize: 12, width: "100%",
-        background: "rgba(255,255,255,0.65)",
-        border: "1px solid rgba(8,37,85,0.14)",
-        borderRadius: 5, padding: "3px 5px",
-        textAlign: "left", color: "#0d2545", outline: "none",
+        background: "#fff",
+        border: "1.5px solid #e2e8f0",
+        borderRadius: 8, padding: "5px 4px",
+        textAlign: "center", color: "#0d2545", outline: "none",
       }}
     />
   );
@@ -167,131 +167,116 @@ function ResTable({ rows, onChange, accent, cur, unit }) {
   const total = calcRows(rows);
 
   return (
-    <div>
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, fontFamily: AR }}>
-          <thead>
-            <tr>
-              {["الوصف", `الوحدة`, `الكمية/${unit}`, `سعر الوحدة`, `المبلغ (${cur})`, ""].map((h, i) => (
-                <th key={i} style={{
-                  padding: "5px 6px", background: `${accent}10`,
-                  color: accent, fontWeight: 700, textAlign: i === 0 ? "right" : "center",
-                  borderBottom: `1.5px solid ${accent}20`, whiteSpace: "nowrap", fontSize: 11,
-                }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, ri) => (
-              <tr key={r.id} style={{ background: ri % 2 ? `${accent}04` : "transparent" }}>
-                <td style={{ padding: "4px 6px", borderBottom: `1px solid ${accent}10` }}>
-                  <input
-                    value={r.resource}
-                    onChange={e => update(r.id, "resource", e.target.value)}
-                    style={{
-                      fontFamily: AR, fontSize: 12, width: "100%", minWidth: 130,
-                      background: "transparent", border: "none", outline: "none", color: "#0d2545",
-                    }}
-                  />
-                </td>
-                <td style={{ padding: "4px 6px", borderBottom: `1px solid ${accent}10`, textAlign: "center" }}>
-                  <input
-                    value={r.unit}
-                    onChange={e => update(r.id, "unit", e.target.value)}
-                    style={{
-                      fontFamily: AR, fontSize: 11, width: 55, textAlign: "center",
-                      background: "transparent", border: "none", outline: "none", color: "#6b7280",
-                    }}
-                  />
-                </td>
-                <td style={{ padding: "4px 6px", borderBottom: `1px solid ${accent}10`, width: 75 }}>
-                  <NI value={r.qty} onChange={v => update(r.id, "qty", v)} />
-                </td>
-                <td style={{ padding: "4px 6px", borderBottom: `1px solid ${accent}10`, width: 90 }}>
-                  <NI value={r.rate} onChange={v => update(r.id, "rate", v)} />
-                </td>
-                <td style={{ padding: "4px 6px", borderBottom: `1px solid ${accent}10`, textAlign: "center" }}>
-                  <div
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      minWidth: 88,
-                      padding: "6px 10px",
-                      borderRadius: 10,
-                      border: `1px solid ${accent}40`,
-                      background: `${accent}10`,
-                      boxShadow: "0 1px 3px rgba(15,23,42,0.06)",
-                      fontFamily: MONO,
-                      fontWeight: 800,
-                      color: accent,
-                    }}
-                  >
-                    {fmt(r.qty * r.rate)}
-                  </div>
-                </td>
-                <td style={{ padding: "4px 2px", borderBottom: `1px solid ${accent}10`, textAlign: "center" }}>
-                  <button
-                    onClick={() => delRow(r.id)}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: 28,
-                      height: 28,
-                      borderRadius: 8,
-                      border: "1px solid #fecaca",
-                      background: "#fff5f5",
-                      color: "#dc2626",
-                      cursor: "pointer",
-                      fontSize: 15,
-                      fontWeight: 800,
-                      lineHeight: 1,
-                    }}
-                  >
-                    ×
-                  </button>
-                </td>
-              </tr>
+    <div style={{ fontFamily: AR }}>
+      <div style={{ overflowX: "auto", margin: "0 -4px", padding: "0 4px" }}>
+        <div style={{ minWidth: 530 }}>
+          {/* Header Row */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(150px, 1.9fr) 55px 65px 75px 95px 32px",
+            gap: "6px",
+            background: `${accent}12`,
+            borderRadius: "10px",
+            padding: "8px 12px",
+            marginBottom: "8px",
+            alignItems: "center"
+          }}>
+            {["الوصف", "وحدة", "كمية", "سعر", "مبلغ", ""].map((h, i) => (
+              <span key={i} style={{
+                fontSize: 10,
+                fontWeight: 800,
+                color: accent,
+                textAlign: i === 0 ? "right" : "center",
+                whiteSpace: "nowrap"
+              }}>{h}</span>
             ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colSpan={4} style={{ padding: "6px 6px 2px", textAlign: "right", fontWeight: 700, color: accent, fontSize: 11 }}>
-                الإجمالي
-              </td>
-              <td style={{ padding: "6px 6px 2px", textAlign: "center" }}>
-                <div
+          </div>
+
+          {/* Body Rows */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            {rows.map((r) => (
+              <div key={r.id} style={{
+                display: "grid",
+                gridTemplateColumns: "minmax(150px, 1.9fr) 55px 65px 75px 95px 32px",
+                gap: "6px",
+                background: "#fff",
+                border: "1.5px solid #f1f5f9",
+                borderRadius: "12px",
+                padding: "6px 10px",
+                alignItems: "center",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
+              }}>
+                <input
+                  value={r.resource}
+                  onChange={e => update(r.id, "resource", e.target.value)}
                   style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    minWidth: 104,
-                    padding: "6px 12px",
-                    borderRadius: 10,
-                    border: `1px solid ${accent}40`,
-                    background: `${accent}10`,
-                    boxShadow: "0 1px 3px rgba(15,23,42,0.06)",
-                    fontFamily: MONO,
-                    fontWeight: 800,
-                    color: accent,
-                    fontSize: 13,
+                    fontFamily: AR, fontSize: 11, width: "100%",
+                    background: "transparent", border: "none", outline: "none", color: "#0d2545",
+                    fontWeight: 700
                   }}
-                >
-                  {fmt(total, cur)}
+                />
+                <input
+                  value={r.unit}
+                  onChange={e => update(r.id, "unit", e.target.value)}
+                  style={{
+                    fontFamily: AR, fontSize: 10, width: "100%", textAlign: "center",
+                    background: "transparent", border: "none", outline: "none", color: "#64748b",
+                  }}
+                />
+                <NI value={r.qty} onChange={v => update(r.id, "qty", v)} />
+                <NI value={r.rate} onChange={v => update(r.id, "rate", v)} />
+                <div style={{
+                  textAlign: "center",
+                  fontFamily: MONO,
+                  fontWeight: 900,
+                  color: accent,
+                  fontSize: 11,
+                  background: `${accent}08`,
+                  borderRadius: "8px",
+                  padding: "6px 2px",
+                  border: `1.2px solid ${accent}15`
+                }}>
+                  {fmt(r.qty * r.rate)}
                 </div>
-              </td>
-              <td />
-            </tr>
-          </tfoot>
-        </table>
+                <button
+                  onClick={() => delRow(r.id)}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    width: 28, height: 28, borderRadius: "8px",
+                    border: "none", background: "#fee2e2", color: "#ef4444",
+                    cursor: "pointer", fontSize: 16, fontWeight: "bold"
+                  }}
+                >×</button>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-      <button onClick={addRow}
-        style={{
-          marginTop: 6, background: `${accent}10`, border: `1px dashed ${accent}40`,
-          color: accent, borderRadius: 7, padding: "4px 12px", fontSize: 11,
-          cursor: "pointer", fontFamily: AR,
-        }}>+ إضافة صف</button>
+
+      {/* Footer Area */}
+      <div style={{
+        marginTop: 14,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        borderTop: "1.5px solid #f1f5f9",
+        paddingTop: 12
+      }}>
+        <button onClick={addRow} style={{
+          background: `${accent}10`, border: `1.5px solid ${accent}30`,
+          color: accent, borderRadius: 10, padding: "8px 18px", fontSize: 11,
+          cursor: "pointer", fontFamily: AR, fontWeight: 800,
+        }}>+ إضافة صف جديد</button>
+
+        <div style={{ textAlign: "left", display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 11, fontWeight: 800, color: "#64748b", fontFamily: AR }}>إجمالي البند:</span>
+          <span style={{
+            fontFamily: MONO, fontSize: 14, fontWeight: 900, color: accent,
+            background: `${accent}10`, padding: "6px 12px", borderRadius: "10px",
+            border: `1px solid ${accent}25`
+          }}>{fmt(total, cur)}</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -300,21 +285,21 @@ function ResTable({ rows, onChange, accent, cur, unit }) {
 function Section({ title, icon, accent, extra, children, defaultOpen = true }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div style={{ borderRadius: 14, border: `1.5px solid ${accent}22`, background: "#fff", overflow: "hidden", marginBottom: 10 }}>
+    <div style={{ borderRadius: 18, border: `1.5px solid ${accent}18`, background: "#fff", overflow: "hidden", marginBottom: 12, boxShadow: "0 4px 15px rgba(0,0,0,0.03)" }}>
       <button type="button" onClick={() => setOpen(o => !o)} style={{
         width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "10px 14px", background: `${accent}0a`, border: "none", cursor: "pointer",
+        padding: "12px 16px", background: `${accent}0a`, border: "none", cursor: "pointer",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 16 }}>{icon}</span>
-          <span style={{ fontFamily: AR, fontSize: 13, fontWeight: 700, color: accent }}>{title}</span>
-        </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {extra && <span style={{ fontFamily: MONO, fontSize: 12, fontWeight: 700, color: accent }}>{extra}</span>}
-          <span style={{ color: accent, fontSize: 10, opacity: 0.5 }}>{open ? "▲" : "▼"}</span>
+          <span style={{ fontSize: 18 }}>{icon}</span>
+          <span style={{ fontFamily: AR, fontSize: 14, fontWeight: 800, color: accent }}>{title}</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {extra && <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 900, color: accent }}>{extra}</span>}
+          <span style={{ color: accent, fontSize: 10, opacity: 0.6 }}>{open ? "▲" : "▼"}</span>
         </div>
       </button>
-      {open && <div style={{ padding: "10px 14px" }}>{children}</div>}
+      {open && <div style={{ padding: "14px" }}>{children}</div>}
     </div>
   );
 }
@@ -323,50 +308,15 @@ function Section({ title, icon, accent, extra, children, defaultOpen = true }) {
 function CandyExportModal({ data, onClose }) {
   const contentRef = useRef(null);
   const frameRef = useRef(null);
-  const closeLockRef = useRef(false);
-  const pushedRef = useRef(false);
+  const isClosing = useRef(false);
 
-  const finishClose = useCallback(() => {
-    if (closeLockRef.current) return;
-    closeLockRef.current = true;
-    onClose?.();
-    window.setTimeout(() => {
-      closeLockRef.current = false;
-    }, 120);
-  }, [closeLockRef, onClose]);
-
-  const handleClose = useCallback((event) => {
-    event?.preventDefault?.();
-    event?.stopPropagation?.();
-    if (closeLockRef.current) return;
-    if (pushedRef.current) {
-      window.history.back();
-      return;
-    }
-    finishClose();
-  }, [closeLockRef, finishClose, pushedRef]);
-
-  useEffect(() => {
-    if (!data) return undefined;
-    pushedRef.current = true;
-    window.history.pushState({ candyExportModal: true }, "");
-    const handlePopState = () => {
-      if (!pushedRef.current) return;
-      pushedRef.current = false;
-      finishClose();
-    };
-    window.addEventListener("popstate", handlePopState);
-    return () => {
-      pushedRef.current = false;
-      window.removeEventListener("popstate", handlePopState);
-    };
-  }, [data, finishClose]);
-
+  // Auto-scale content to fit one screen
   useEffect(() => {
     const el = contentRef.current;
     const frame = frameRef.current;
     if (!el || !frame || !data) return undefined;
     const scale = () => {
+      if (!el || !frame) return;
       el.style.transform = "";
       el.style.transformOrigin = "";
       frame.style.height = "";
@@ -389,6 +339,16 @@ function CandyExportModal({ data, onClose }) {
   }, [data]);
 
   if (!data) return null;
+
+  const handleCloseClick = (e) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    if (isClosing.current) return;
+    isClosing.current = true;
+    onClose?.();
+    setTimeout(() => { isClosing.current = false; }, 300);
+  };
+
   const { item, division, cur, qty, finalRate, boqAmt, mats, labs, plts, assum, transpAmt, now } = data;
 
   const fmtCompact = (n) => Number(n || 0).toLocaleString("en-US", { maximumFractionDigits: 0 });
@@ -443,7 +403,7 @@ function CandyExportModal({ data, onClose }) {
       >
         <button
           type="button"
-          onClick={handleClose}
+          onClick={handleCloseClick}
           className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-white text-[13px] font-bold active:opacity-70"
           aria-label="إغلاق المعاينة"
         >
@@ -466,7 +426,7 @@ function CandyExportModal({ data, onClose }) {
           )}
           <button
             type="button"
-            onClick={handleClose}
+            onClick={handleCloseClick}
             className="flex items-center gap-1 rounded-full bg-[#d4a843] px-3 py-1.5 text-[#082555] active:opacity-70 transition-colors"
             aria-label="الرجوع للصفحة السابقة"
           >
@@ -489,7 +449,7 @@ function CandyExportModal({ data, onClose }) {
             <div className="bg-white rounded-xl p-2.5 text-right border border-[#E2D8C4]">
               <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">سعر الوحدة النهائي</p>
               <p className="mt-0.5 text-[20px] font-black text-[#082555] leading-none">{fmtCompact(finalRate)}</p>
-              <p className="text-[9px] text-[#d4a843] font-bold mt-0.5">{cur} / {item.unit}</p>
+              <p className="text-[9px] font-bold mt-0.5 text-[#c9a84c]">{cur} / {item.unit}</p>
             </div>
             <div className="bg-white rounded-xl p-2.5 text-right border border-[#E2D8C4]">
               <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest">إجمالي العرض</p>
@@ -679,8 +639,7 @@ function AnalysisView({ item, division, country, onBack, onCreateRfq }) {
 
       {/* ── Assumptions ── */}
       <Section title="الافتراضات — Assumptions" icon="📋" accent="#6366f1" defaultOpen={true}>
-        <div style={{ overflowX: "auto", paddingBottom: 4 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(118px, 1fr))", gap: 8, minWidth: 370 }}>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {[
             { label: "هالك %",        field: "waste",     suffix: "%" },
             { label: "نقل / وحدة",    field: "transport", suffix: cur },
@@ -690,25 +649,24 @@ function AnalysisView({ item, division, country, onBack, onCreateRfq }) {
             { label: "ربح %",         field: "profit",    suffix: "%" },
           ].map(({ label, field, suffix }) => (
             <div key={field} style={{
-              background: "#f5f3ff", borderRadius: 9, padding: "7px 9px",
+              background: "#f5f3ff", borderRadius: 9, padding: "6px 8px",
               border: "1px solid #e0e7ff",
             }}>
-              <p style={{ fontSize: 10, color: "#6366f1", margin: "0 0 3px", fontWeight: 600, whiteSpace: "nowrap" }}>{label}</p>
-              <div style={{ display: "flex", alignItems: "center", gap: 3, minWidth: 0 }}>
+              <p style={{ fontSize: 10, color: "#6366f1", margin: "0 0 3px", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{label}</p>
+              <div style={{ display: "flex", alignItems: "center", gap: 2, minWidth: 0 }}>
                 <input
                   type="number" min={0} step="any" value={assum[field]}
                   onChange={e => setA(field, parseFloat(e.target.value) || 0)}
                   style={{
-                    fontFamily: MONO, fontSize: 12, flex: 1, minWidth: 0,
-                    background: "rgba(255,255,255,0.7)", border: "1px solid #c7d2fe",
-                    borderRadius: 5, padding: "2px 5px", textAlign: "left", outline: "none",
+                    fontFamily: MONO, fontSize: 11, flex: 1, minWidth: 0,
+                    background: "rgba(255,255,255,0.8)", border: "1px solid #c7d2fe",
+                    borderRadius: 5, padding: "2px 4px", textAlign: "left", outline: "none",
                   }}
                 />
-                <span style={{ fontSize: 10, color: "#818cf8", whiteSpace: "nowrap", flexShrink: 0 }}>{suffix}</span>
+                <span style={{ fontSize: 9, color: "#818cf8", whiteSpace: "nowrap", flexShrink: 0 }}>{suffix}</span>
               </div>
             </div>
           ))}
-          </div>
         </div>
       </Section>
 
@@ -720,18 +678,27 @@ function AnalysisView({ item, division, country, onBack, onCreateRfq }) {
       >
         <ResTable rows={mats} onChange={setMats} accent="#059669" cur={cur} unit={item.unit} />
         {assum.waste > 0 && (
-          <p style={{ fontSize: 11, color: "#6b7280", marginTop: 6 }}>
-            هالك ({assum.waste}%) = {fmt(wasteAmt, cur)} &nbsp;│&nbsp; إجمالي المواد + هالك = {fmt(matTotal + wasteAmt, cur)}
-          </p>
+          <div style={{
+            marginTop: 10, padding: "8px 12px", background: "#f0fdf4",
+            border: "1px solid #bbf7d0", borderRadius: 10, fontSize: 11, color: "#166534", fontWeight: 600
+          }}>
+            هالك المادة ({assum.waste}%) = {fmt(wasteAmt, cur)} &nbsp;│&nbsp; إجمالي المواد شامل الهالك = {fmt(matTotal + wasteAmt, cur)}
+          </div>
         )}
       </Section>
 
       {/* ── Labour ── */}
       <Section title="2. العمالة — Labour" icon="👷" accent="#d97706" extra={fmt(labTotal, cur)}>
         <ResTable rows={labs} onChange={setLabs} accent="#d97706" cur={cur} unit={item.unit} />
-        <p style={{ fontSize: 11, color: "#6b7280", marginTop: 6 }}>
-          💡 الكمية = نسبة يومية لكل وحدة (مثلاً: 0.35 يومية × {item.unit} = نجار ينفذ ~{(1/0.35).toFixed(1)} {item.unit}/يوم)
-        </p>
+        <div style={{
+          marginTop: 12, padding: "10px 14px", background: "#fffbeb",
+          border: "1px solid #fef3c7", borderRadius: 12, display: "flex", gap: 10, alignItems: "flex-start"
+        }}>
+          <span style={{ fontSize: 16 }}>💡</span>
+          <p style={{ margin: 0, fontSize: 11, color: "#92400e", lineHeight: 1.6, fontWeight: 600 }}>
+            الكمية تمثل نسبة "يومية العمل" لكل وحدة واحدة من البند. (مثلاً: 0.35 تعني أن العامل ينفذ حوالي {(1/0.35).toFixed(1)} {item.unit} في اليوم الواحد).
+          </p>
+        </div>
       </Section>
 
       {/* ── Plant ── */}

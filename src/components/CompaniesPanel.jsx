@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
 import { FolderIcon, SearchIcon, StarIcon, ChevronRightIcon } from "./icons";
 import useBackStack from "../hooks/useBackStack";
 import AdSenseUnit from "./AdSenseUnit";
@@ -140,7 +140,7 @@ function StatBadge({ label, value, index = 0 }) {
 function CompanyCard({ company, selected, onSelect, onShowDetails, copy }) {
   return (
     <div
-      className={`overflow-hidden rounded-2xl border-2 transition-all duration-300 ${
+      className={`w-full min-w-0 overflow-hidden rounded-2xl border-2 transition-all duration-300 ${
         selected
           ? "border-[#C9A84C] bg-[#F5EDD8] shadow-md"
           : "border-[#E2D8C4] bg-white shadow-sm hover:shadow-md"
@@ -413,6 +413,7 @@ export default function CompaniesPanel({
   companies, company, selectedCompanyId, selectedProjectId,
   onSelectCompany, onSelectProject, onAddCompany, onAddProject,
   navigationBridge, settings, sessionMeta, authMode, initialCountry,
+  isActive,
 }) {
   const copy = getCompaniesCopy(settings?.language);
   const canManageAds = false;
@@ -435,7 +436,7 @@ export default function CompaniesPanel({
   const [companiesAdBanner] = useState(null);
   const nav = useBackStack({
     initialEntry: { section: "directory", detailCompanyId: null },
-    registerBackHandler: navigationBridge?.registerBackHandler,
+    registerBackHandler: (handler) => isActive ? navigationBridge?.registerBackHandler?.(handler) : null,
     pushHistoryEntry: navigationBridge?.pushHistoryEntry,
     onEntryChange: navigationBridge?.onEntryChange,
   });
@@ -473,6 +474,10 @@ export default function CompaniesPanel({
     { id: "projects", label: copy.projects },
     { id: "create", label: copy.add },
   ];
+
+  useEffect(() => {
+    navigationBridge?.onEntryChange?.();
+  }, [activeSection, detailCompanyId, navigationBridge]);
 
   useEffect(() => {
     if (directoryPage > totalPages) setDirectoryPage(totalPages);
@@ -532,7 +537,7 @@ export default function CompaniesPanel({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="w-full min-w-0 space-y-4 overflow-x-hidden">
       {/* Nav tabs */}
       {activeSection !== "details" ? (
         <div className="space-y-2.5">

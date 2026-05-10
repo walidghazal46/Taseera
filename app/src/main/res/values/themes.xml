@@ -20,10 +20,10 @@
         <item name="colorSecondaryVariant">@color/taseera_gold</item>
         <item name="colorOnSecondary">@color/taseera_navy_dark</item>
         <!-- Status bar color. -->
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-        <item name="android:navigationBarColor">@color/taseera_navy_dark</item>
-        <item name="android:windowBackground">@color/taseera_navy_dark</item>
-        <item name="android:windowSplashScreenBackground">@color/taseera_navy_dark</item>
+        <item name="android:statusBarColor">@color/taseera_splash_light</item>
+        <item name="android:navigationBarColor">@color/taseera_splash_light</item>
+        <item name="android:windowBackground">@color/taseera_splash_light</item>
+        <item name="android:windowSplashScreenBackground">@color/taseera_splash_light</item>
         <!-- Customize your theme here. -->
     </style>
 </resources>

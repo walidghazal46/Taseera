@@ -95,34 +95,95 @@ input, select, textarea {
 }
 
 .app-footer-safe {
-  margin-bottom: max(18px, calc(env(safe-area-inset-bottom) + 14px));
+  margin-bottom: max(5px, calc(env(safe-area-inset-bottom) + 4px));
 }
 
 .app-content-safe {
   box-sizing: border-box;
-  width: 100%;
   overflow-x: hidden;
+  /* fallback padding - always applied */
+  padding-left: 12px;
+  padding-right: 12px;
   padding-bottom: max(69px, calc(env(safe-area-inset-bottom) + 69px));
-  /* Horizontal safe area with 20px minimum fallback */
-  padding-left: 20px;
-  padding-right: 20px;
 }
 
+/* override with safe-area-aware value when supported */
 @supports (padding-left: env(safe-area-inset-left)) {
   .app-content-safe {
-    padding-left: max(20px, env(safe-area-inset-left));
-    padding-right: max(20px, env(safe-area-inset-right));
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
   }
 }
 
-/* Smooth scroll for scrollable containers */
-.overflow-y-auto {
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+@media (min-width: 640px) {
+  .app-content-safe {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+  @supports (padding-left: env(safe-area-inset-left)) {
+    .app-content-safe {
+      padding-left: max(20px, env(safe-area-inset-left));
+      padding-right: max(20px, env(safe-area-inset-right));
+    }
+  }
 }
 
-.overflow-y-auto::-webkit-scrollbar {
-  display: none;
+/* Mobile: enforce full-width layout aligned with header */
+@media (max-width: 639px) {
+  /* All direct children of content area fill 100% width */
+  .app-content-safe > * {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  /* All elements: enforce box model and prevent overflow */
+  .app-content-safe * {
+    box-sizing: border-box;
+    max-width: 100%;
+  }
+
+  /* Block-level card containers: prevent horizontal overflow */
+  .app-content-safe > div > [class*="overflow-hidden"][class*="rounded"],
+  .app-content-safe > div > div > [class*="overflow-hidden"][class*="rounded"],
+  .app-content-safe > div > div > div > [class*="overflow-hidden"][class*="rounded"] {
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* Ensure grid children don't create horizontal overflow */
+  .app-content-safe .grid > * {
+    min-width: 0;
+  }
+}
+
+
+/* Stats cells in activity card - fixed height 38px */
+.app-content-safe .grid .grid .grid section.min-w-0:nth-child(2) div.p-4 > div > div {
+  height: 38px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Smooth scroll for scrollable containers — hide scrollbar on all WebViews */
+.overflow-y-auto,
+main {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.overflow-y-auto::-webkit-scrollbar,
+main::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+  background: transparent !important;
 }
 
 /* Subtle button press animation */

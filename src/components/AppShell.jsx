@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
 import {
   BuildingsIcon,
   PricingIcon,
@@ -47,7 +47,7 @@ const tabConfig = {
   },
 };
 
-export default function AppShell({
+const AppShell = forwardRef(function AppShell({
   activePage,
   onNavigate,
   onBack,
@@ -57,7 +57,7 @@ export default function AppShell({
   navText,
   language = "ar",
   theme = "dark",
-}) {
+}, ref) {
   const isRtl = language !== "en";
   const mainRef = useRef(null);
 
@@ -66,23 +66,37 @@ export default function AppShell({
     label: navText?.[item.id] || (language === "en" ? item.labelEn : item.label),
   }));
 
-  const scrollMainToTop = () => {
+  const scrollMainToTop = useCallback(() => {
     const el = mainRef.current;
     if (!el) return;
-    if (typeof el.scrollTo === "function") {
-      el.scrollTo({ top: 0, behavior: "auto" });
-      return;
-    }
-    el.scrollTop = 0;
-  };
 
+    const resetAction = () => {
+      if (!el) return;
+      el.scrollTop = 0;
+      if (typeof el.scrollTo === "function") {
+        el.scrollTo({ top: 0, behavior: "auto" });
+      }
+      // Also reset root elements just in case
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+    };
+
+    // Chain of resets to catch various browser/webview rendering phases
+    resetAction();
+    window.requestAnimationFrame(resetAction);
+    setTimeout(resetAction, 10);
+    setTimeout(resetAction, 50);
+    setTimeout(resetAction, 150);
+  }, []);
+
+  useImperativeHandle(ref, () => ({ scrollToTop: scrollMainToTop }));
+
+  // Use useEffect instead of useLayoutEffect for scroll,
+  // as we want to ensure the new content is painted/reflowed.
   useEffect(() => {
     scrollMainToTop();
-  }, [activePage]);
-
-  useEffect(() => {
-    scrollMainToTop();
-  }, [scrollResetVersion]);
+  }, [activePage, scrollResetVersion, scrollMainToTop]);
 
   return (
     <div
@@ -136,8 +150,9 @@ export default function AppShell({
       <main
         ref={mainRef}
         className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden bg-transparent"
+        style={{ overflowAnchor: "none" }}
       >
-        <div className="app-content-safe mx-auto flex w-[90%] sm:w-full max-w-2xl flex-1 flex-col py-4">
+        <div className="app-content-safe mx-auto flex w-full max-w-[806px] flex-1 flex-col py-4">
           {children}
         </div>
       </main>
@@ -160,7 +175,7 @@ export default function AppShell({
                 key={item.id}
                 type="button"
                 onClick={() => onNavigate(item.id)}
-                className="relative group flex min-h-[58px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 transition-all duration-300"
+                className="relative group flex min-h-[70px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 transition-all duration-300"
               >
                 {/* Active Highlight Panel */}
                 <div
@@ -174,11 +189,11 @@ export default function AppShell({
 
                 {/* Icon */}
                 <span
-                  className={`relative flex h-6 w-6 items-center justify-center transition-all duration-300 ${
+                  className={`relative flex h-[30px] w-[30px] items-center justify-center transition-all duration-300 ${
                     isActive ? config.activeText : "text-[#95a0c6] group-hover:text-[#5d6fb6]"
                   }`}
                 >
-                  <Icon className="h-[19px] w-[19px]" />
+                  <Icon className="h-[24px] w-[24px]" />
                 </span>
 
                 {/* Label */}
@@ -186,7 +201,7 @@ export default function AppShell({
                   className={`relative text-center font-bold tracking-wide transition-all duration-300 ${
                     isActive ? config.activeText : "text-[#95a0c6] group-hover:text-[#5d6fb6]"
                   }`}
-                  style={{ fontFamily: AR, fontSize: isActive ? "9.5px" : "9px" }}
+                  style={{ fontFamily: AR, fontSize: isActive ? "12px" : "11px" }}
                 >
                   {item.label}
                 </span>
@@ -204,4 +219,6 @@ export default function AppShell({
       </nav>
     </div>
   );
-}
+});
+
+export default AppShell;

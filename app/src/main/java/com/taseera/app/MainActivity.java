@@ -168,11 +168,7 @@ public class MainActivity extends AppCompatActivity {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
-                if (webView.canGoBack()) {
-                    webView.goBack();
-                    return;
-                }
-                // Let React handle the back press (shows custom exit dialog)
+                // Let React handle the back press directly to ensure state consistency
                 webView.evaluateJavascript(
                     "window.dispatchEvent(new PopStateEvent('popstate', {state: {source: 'android-back'}}))",
                     null

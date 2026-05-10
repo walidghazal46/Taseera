@@ -316,7 +316,7 @@ export default function CountryPicker({
   section = "companies",
 }) {
   const isAr = language !== "en";
-  const pickerMinHeight = "min(805px, calc(100dvh - 118px))";
+  const pickerMinHeight = "min(604px, calc(75dvh - 89px))";
   const handleSelect = (country) => {
     try { trackCountryVisit(country.value, section, authMode).catch(() => {}); } catch {}
     onSelect(country.value);
@@ -324,7 +324,7 @@ export default function CountryPicker({
 
   return (
     <div
-      className="relative flex flex-1 flex-col items-center justify-center gap-2 overflow-visible px-4 py-1"
+      className="relative flex flex-none flex-col items-center justify-center gap-2 overflow-visible px-0 py-1"
       style={{ minHeight: pickerMinHeight }}
     >
       <style>{EFFECTS}</style>

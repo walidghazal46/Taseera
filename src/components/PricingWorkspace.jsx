@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from 'xlsx';
 import AdSenseUnit from "./AdSenseUnit";
 import CandyWorkspace from "./CandyWorkspace";
-import { SaveIcon, TagIcon, BuildingsIcon, PricingIcon, ChevronLeftIcon, ArrowRightIcon, ShareIcon, PrinterIcon, FileIcon } from "./icons";
+import { SaveIcon, TagIcon, BuildingsIcon, PricingIcon, ArrowRightIcon, ShareIcon, PrinterIcon, FileIcon } from "./icons";
 import { CSI_DIVISIONS, COUNTRIES, getDefaultResources, AREA_PRICING_BASE, CURRENCY_INFO } from "../data/csiData";
 import ScreenProtection from "./ScreenProtection";
 
@@ -483,37 +483,33 @@ function GuestLoginModal({ open, onClose, onOpenAuthScreen, subtitle, language =
 function ModeSelection({ onSelect, areaLocked = false, areaMessage = "", onOpenFullAccess, language = "ar" }) {
   const isEn = language === "en";
   return (
-    <div className="flex flex-col gap-4 py-2 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ fontFamily: AR }}>
+    <div className="flex flex-col gap-2.5 py-1 animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ fontFamily: AR }}>
 
       {/* Header */}
       <div className="px-1">
-        <h2 className="text-[18px] font-bold text-[#0d2545]" style={{ fontFamily: AR }}>{isEn ? "Welcome to the Pricing Engine" : "مرحباً بك في محرك التسعير"}</h2>
-        <p className="mt-0.5 text-[13px] text-slate-500" style={{ fontFamily: AR }}>{isEn ? "Choose the pricing method that fits your need." : "اختر طريقة التسعير المناسبة لاحتياجك"}</p>
+        <h2 className="text-[15px] font-bold text-[#0d2545]" style={{ fontFamily: AR }}>{isEn ? "Welcome to the Pricing Engine" : "مرحباً بك في محرك التسعير"}</h2>
+        <p className="mt-0.5 text-[11px] text-slate-500" style={{ fontFamily: AR }}>{isEn ? "Choose the pricing method that fits your need." : "اختر طريقة التسعير المناسبة لاحتياجك"}</p>
       </div>
 
       {/* ── Card 1: دليل بنود الأعمال (navy) ── */}
       <button
         onClick={() => onSelect("items")}
-        className="group relative overflow-hidden rounded-[22px] active:scale-[0.98] transition-transform duration-150"
-        style={{ background: "linear-gradient(130deg,#0d2545 0%,#162e52 60%,#1a3870 100%)", minHeight: 120 }}
+        className="group relative overflow-hidden rounded-[18px] active:scale-[0.98] transition-transform duration-150"
+        style={{ background: "linear-gradient(130deg,#0d2545 0%,#162e52 60%,#1a3870 100%)", minHeight: 74 }}
       >
         <BlueprintBg />
-        <div className="relative flex items-center gap-4 px-5 py-6">
-          {/* Arrow circle */}
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20 transition-all group-hover:bg-[#d4a843]/20 group-hover:ring-[#d4a843]/50">
-            <ChevronLeftIcon className="h-5 w-5 text-white/60 group-hover:text-[#d4a843] transition-colors" />
-          </div>
+        <div className="relative flex items-center gap-3 px-4 py-3.5">
           {/* Text */}
           <div className="flex-1 text-right">
-            <h3 className="text-[18px] font-bold text-white leading-tight">{isEn ? "Work Items Directory" : "دليل بنود الأعمال"}</h3>
-            <p className="mt-1.5 text-[15px] leading-relaxed text-white">
+            <h3 className="text-[13px] font-bold text-white leading-tight">{isEn ? "Work Items Directory" : "دليل بنود الأعمال"}</h3>
+            <p className="mt-0.5 text-[11px] leading-snug text-white/90">
               {isEn ? "Detailed analysis for each item (materials, labour, equipment) based on CSI MasterFormat codes." : "تحليل مفصل لكل بند (مواد، عمالة، معدات) بناءً على أكواد CSI MasterFormat."}<br/>{isEn ? "Ideal for contractors and engineers." : "مثالي للمقاولين والمهندسين."}
             </p>
           </div>
           {/* Icon box */}
-          <div className="flex h-[62px] w-[62px] shrink-0 items-center justify-center rounded-2xl ring-1 ring-[#d4a843]/40"
+          <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg ring-1 ring-[#d4a843]/40"
             style={{ background: "linear-gradient(145deg,#1e3d72,#0d2545)", boxShadow: "inset 0 1px 0 rgba(212,168,67,0.2), 0 4px 16px rgba(0,0,0,0.3)" }}>
-            <PricingIcon className="h-8 w-8 text-[#d4a843]" />
+            <PricingIcon className="h-4 w-4 text-[#d4a843]" />
           </div>
         </div>
       </button>
@@ -521,27 +517,22 @@ function ModeSelection({ onSelect, areaLocked = false, areaMessage = "", onOpenF
       {/* ── Card 2: تسعير مبني (gold) ── */}
       <button
         onClick={() => onSelect("area")}
-        className="group relative overflow-hidden rounded-[22px] active:scale-[0.98] transition-transform duration-150"
-        style={{ background: "linear-gradient(130deg,#c8941a 0%,#d4a843 45%,#e8c060 100%)", minHeight: 120 }}
+        className="group relative overflow-hidden rounded-[18px] active:scale-[0.98] transition-transform duration-150"
+        style={{ background: "linear-gradient(130deg,#c8941a 0%,#d4a843 45%,#e8c060 100%)", minHeight: 74 }}
       >
         <BuildingBg />
-        <div className="relative flex items-center gap-4 px-5 py-6">
-          {/* Arrow circle */}
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full ring-1 ring-[#0d2545]/20 transition-all group-hover:ring-[#0d2545]/40"
-            style={{ background: "rgba(13,37,69,0.15)" }}>
-            <ChevronLeftIcon className="h-5 w-5 text-[#0d2545]/70 group-hover:text-[#0d2545] transition-colors" />
-          </div>
+        <div className="relative flex items-center gap-3 px-4 py-3.5">
           {/* Text */}
           <div className="flex-1 text-right">
-            <h3 className="text-[20px] font-black text-[#0d2545] leading-tight">{isEn ? "Building Pricing" : "تسعير مبني"}</h3>
-            <p className="mt-1.5 text-[15px] leading-relaxed text-white">
+            <h3 className="text-[13px] font-black text-white leading-tight">{isEn ? "Building Pricing" : "تسعير مبني"}</h3>
+            <p className="mt-0.5 text-[11px] leading-snug text-white/90">
               {isEn ? "A quick cost estimate for a full building based on area, number of floors," : "حساب تقديري سريع لتكلفة بناء كامل بناءً على المساحة، عدد الأدوار،"}<br/>{isEn ? "and finish level. Ideal for owners and investors." : "ومستوى التشطيب. مثالي للملاك والمستثمرين."}
             </p>
           </div>
           {/* Icon box */}
-          <div className="flex h-[62px] w-[62px] shrink-0 items-center justify-center rounded-2xl ring-1 ring-[#0d2545]/20"
+          <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg ring-1 ring-[#0d2545]/20"
             style={{ background: "linear-gradient(145deg,#b8821a,#8a5e10)", boxShadow: "inset 0 1px 0 rgba(255,220,100,0.3), 0 4px 16px rgba(0,0,0,0.2)" }}>
-            <BuildingsIcon className="h-8 w-8 text-[#f5d060]" />
+            <BuildingsIcon className="h-4 w-4 text-[#f5d060]" />
           </div>
         </div>
       </button>
@@ -549,36 +540,27 @@ function ModeSelection({ onSelect, areaLocked = false, areaMessage = "", onOpenF
       {/* ── Card 3: تسعير تفصيلي للبنود (purple) ── */}
       <button
         onClick={() => onSelect("candy")}
-        className="group relative overflow-hidden rounded-[22px] active:scale-[0.98] transition-transform duration-150"
-        style={{ background: "linear-gradient(130deg,#3730a3 0%,#4f46e5 55%,#6d28d9 100%)", minHeight: 120 }}
+        className="group relative overflow-hidden rounded-[18px] active:scale-[0.98] transition-transform duration-150"
+        style={{ background: "linear-gradient(130deg,#3730a3 0%,#4f46e5 55%,#6d28d9 100%)", minHeight: 74 }}
       >
         <IsometricBg />
-        <div className="relative flex items-center gap-4 px-5 py-6">
-          {/* Arrow circle */}
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full ring-1 ring-[#6366f1]/25 transition-all group-hover:bg-[#6366f1]/10 group-hover:ring-[#6366f1]/50"
-            style={{ background: "rgba(99,102,241,0.08)" }}>
-            <ChevronLeftIcon className="h-5 w-5 text-[#6366f1]/50 group-hover:text-[#6366f1] transition-colors" />
-          </div>
-          {/* Text — same structure as cards 1 & 2 so title aligns identically */}
+        <div className="relative flex items-center gap-3 px-4 py-3.5">
+          {/* Text */}
           <div className="flex-1 text-right">
-            <h3 className="text-[18px] font-black text-white leading-tight">{isEn ? "Detailed Item Pricing" : "تسعير تفصيلي للبنود"}</h3>
-            <span className="inline-flex mt-1 rounded-full px-2.5 py-0.5 text-[9px] font-bold text-white"
-              style={{ background: "#4f46e5", fontFamily: "'IBM Plex Mono',monospace", letterSpacing: "0.05em" }}>
-              RESOURCE-BASED
-            </span>
-            <p className="mt-1 text-[15px] leading-relaxed text-white">
+            <h3 className="text-[13px] font-black text-white leading-tight">{isEn ? "Detailed Item Pricing" : "تسعير تفصيلي للبنود"}</h3>
+            <p className="mt-0.5 text-[11px] leading-snug text-white/90">
               {isEn ? "Build the unit rate from resources — materials + labour + equipment + overhead + profit." : "بناء سعر الوحدة من الموارد — مواد + عمالة + معدات + أعباء + ربح."}<br/>{isEn ? "Advanced First Principle method for quantity surveying analysis." : "أسلوب First Principle المتقدم لتحليل المقايسات."}
             </p>
           </div>
           {/* Icon box */}
-          <div className="flex h-[62px] w-[62px] shrink-0 items-center justify-center rounded-2xl text-[28px] ring-1 ring-[#6366f1]/30"
+          <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-lg text-[16px] ring-1 ring-[#6366f1]/30"
             style={{ background: "linear-gradient(145deg,#4f46e5,#7c3aed)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 16px rgba(79,70,229,0.35)" }}>
             🧮
           </div>
         </div>
       </button>
 
-      <p className="text-center text-[11px] text-slate-400 mt-1" style={{ fontFamily: AR }}>
+      <p className="text-center text-[9px] text-slate-400 mt-0.5" style={{ fontFamily: AR }}>
         {isEn ? "All calculations are indicative and based on current market averages in the selected country." : "جميع الحسابات تقديرية وتعتمد على متوسطات السوق الحالية في الدولة المختارة."}
       </p>
     </div>
@@ -829,7 +811,7 @@ function CostDistributionGraphic({ sections, total, currency }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className={`grid gap-3 ${sections.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
         {sections.map((section) => (
           <div key={section.id} className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] p-3">
             <div className="mb-2 flex items-center justify-between gap-3">
@@ -877,13 +859,13 @@ function SectionDetailGraphic({ draft, totalArea, overallShare, currency }) {
         </div>
       </div>
 
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {[
           { label: "إجمالي التخصص", value: `${fmtNum(draft.sectionTotal)} ${currency}` },
           { label: "متوسط / م²", value: `${fmtNum(draft.unitPrice)} ${currency}` },
-          { label: "المساحة المرجعية", value: `${fmtNum(totalArea)} م²` },
+          { label: "المساحة المرجعية", value: `${fmtNum(totalArea)} م²`, full: true },
         ].map((card) => (
-          <div key={card.label} className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-3 py-3 text-center">
+          <div key={card.label} className={`rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] px-3 py-3 text-center ${card.full ? "col-span-2 sm:col-span-1" : ""}`}>
             <div className="mb-1 text-[10px] font-bold text-[#9A8A6A] uppercase">{card.label}</div>
             <div className="text-[14px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>{card.value}</div>
           </div>
@@ -1046,7 +1028,7 @@ function AreaScenarioCompare({ scenarios, currentScenario, suggestedScenario, cu
                 </div>
               </div>
 
-              <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="mb-3 grid grid-cols-2 gap-3">
                 <div className="rounded-xl border border-white/60 bg-white px-3 py-3">
                   <div className="text-[9px] font-bold text-[#9A8A6A] uppercase">Total</div>
                   <div className="mt-1 text-[16px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>
@@ -1073,7 +1055,7 @@ function AreaScenarioCompare({ scenarios, currentScenario, suggestedScenario, cu
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-2 text-center sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-2 text-center">
                 {[
                   { label: "المسطح", value: `${fmtNum(scenario.totalArea)} م²` },
                   { label: "الأدوار", value: fmtNum(scenario.floors) },
@@ -1112,7 +1094,7 @@ function AreaPricingForm({ country, onCalculate, adBanner, canManageAds = false,
       />
 
       <div className="rounded-3xl bg-white border-2 border-[#E2D8C4] p-6 shadow-sm">
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="mb-6 grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-[12px] font-bold text-[#082555] pr-1" style={{ fontFamily: AR }}>مساحة الدور (م²)</label>
             <input type="number" value={area} onChange={(e) => setArea(e.target.value)}
@@ -1129,12 +1111,12 @@ function AreaPricingForm({ country, onCalculate, adBanner, canManageAds = false,
 
         <div className="space-y-3 mb-6">
           <label className="text-[12px] font-bold text-[#082555] pr-1" style={{ fontFamily: AR }}>نوع المبنى</label>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-2">
             {BUILDING_TYPES.map(t => (
               <button key={t.id} onClick={() => setType(t.id)}
-                className={`flex items-center gap-3 p-3 rounded-2xl border-2 transition-all ${type === t.id ? "border-[#C9A84C] bg-[#F5EDD8] font-bold" : "border-[#E2D8C4] bg-white text-[#9A8A6A]"}`}>
-                <span className="text-xl">{t.icon}</span>
-                <span className="text-[13px]" style={{ fontFamily: AR }}>{t.ar}</span>
+                className={`flex items-center gap-2 p-3 rounded-2xl border-2 transition-all ${type === t.id ? "border-[#C9A84C] bg-[#F5EDD8] font-bold" : "border-[#E2D8C4] bg-white text-[#9A8A6A]"}`}>
+                <span className="text-lg">{t.icon}</span>
+                <span className="text-[12px] text-right" style={{ fontFamily: AR }}>{t.ar}</span>
               </button>
             ))}
           </div>
@@ -1142,18 +1124,12 @@ function AreaPricingForm({ country, onCalculate, adBanner, canManageAds = false,
 
         <div className="space-y-3 mb-6">
           <label className="text-[12px] font-bold text-[#082555] pr-1" style={{ fontFamily: AR }}>نطاق الأعمال</label>
-          <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {SCOPES.map((s) => (
               <button key={s.id} onClick={() => setScope(s.id)}
-                className={`flex items-center gap-4 rounded-2xl border-2 p-4 text-right transition-all ${scope === s.id ? "border-[#C9A84C] bg-[#F5EDD8] font-bold" : "border-[#E2D8C4] bg-white text-[#9A8A6A]"}`}>
-                <span className="text-2xl">{s.icon}</span>
-                <div className="flex-1">
-                  <div className="text-[14px] text-[#082555]" style={{ fontFamily: AR }}>{s.ar}</div>
-                  <div className="mt-0.5 text-[10px] text-[#9A8A6A]">{s.desc}</div>
-                </div>
-                <div className={`flex h-5 w-5 items-center justify-center rounded-full border-2 text-[10px] ${scope === s.id ? "border-[#C9A84C] bg-[#C9A84C] text-[#082555]" : "border-[#E2D8C4]"}`}>
-                  {scope === s.id ? "✓" : ""}
-                </div>
+                className={`flex items-center gap-2 rounded-2xl border-2 p-3 text-right transition-all ${scope === s.id ? "border-[#C9A84C] bg-[#F5EDD8] font-bold" : "border-[#E2D8C4] bg-white text-[#9A8A6A]"}`}>
+                <span className="text-lg shrink-0">{s.icon}</span>
+                <span className="text-[11px] leading-snug text-[#082555]" style={{ fontFamily: AR }}>{s.ar}</span>
               </button>
             ))}
           </div>
@@ -1161,17 +1137,14 @@ function AreaPricingForm({ country, onCalculate, adBanner, canManageAds = false,
 
         <div className="space-y-3 mb-6">
           <label className="text-[12px] font-bold text-[#082555] pr-1" style={{ fontFamily: AR }}>مستوى التشطيب</label>
-          <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-2 gap-2">
             {FINISH_LEVELS.map((f) => (
               <button key={f.id} onClick={() => setFinish(f.id)}
-                className={`flex items-center gap-4 rounded-2xl border-2 p-4 text-right transition-all ${finish === f.id ? "border-[#C9A84C] bg-[#F5EDD8] font-bold" : "border-[#E2D8C4] bg-white text-[#9A8A6A]"}`}>
-                <span className="text-2xl">{f.icon}</span>
-                <div className="flex-1">
-                  <div className="text-[14px] text-[#082555]" style={{ fontFamily: AR }}>{f.ar}</div>
-                  <div className="mt-0.5 text-[10px] text-[#9A8A6A]">{f.desc}</div>
-                </div>
-                <div className={`flex h-5 w-5 items-center justify-center rounded-full border-2 text-[10px] ${finish === f.id ? "border-[#C9A84C] bg-[#C9A84C] text-[#082555]" : "border-[#E2D8C4]"}`}>
-                  {finish === f.id ? "✓" : ""}
+                className={`flex items-center gap-2 rounded-2xl border-2 p-3 text-right transition-all ${finish === f.id ? "border-[#C9A84C] bg-[#F5EDD8] font-bold" : "border-[#E2D8C4] bg-white text-[#9A8A6A]"}`}>
+                <span className="text-lg shrink-0">{f.icon}</span>
+                <div className="flex-1 text-right">
+                  <div className="text-[12px] font-bold text-[#082555]" style={{ fontFamily: AR }}>{f.ar}</div>
+                  <div className="text-[9px] text-[#9A8A6A]" style={{ fontFamily: AR }}>{f.desc}</div>
                 </div>
               </button>
             ))}
@@ -1202,7 +1175,7 @@ function AreaResultsView({ country, params, results, onBack, onExport, onSave, o
   const typeLabel = BUILDING_TYPES.find(t => t.id === params.type)?.ar;
 
   const sections = [
-    { id: 'structural', label: 'الأعمال الإنشاءية', icon: '🏗️', color: '#C9A84C', pct: results.dist.structural },
+    { id: 'structural', label: 'الأعمال الإنشائية', icon: '🏗️', color: '#C9A84C', pct: results.dist.structural },
     { id: 'architectural', label: 'الأعمال المعمارية', icon: '🧱', color: '#5A4E38', pct: results.dist.architectural },
     { id: 'electrical', label: 'الأعمال الكهربائية', icon: '⚡', color: '#E07B2A', pct: results.dist.electrical },
     { id: 'mechanical', label: 'الأعمال الميكانيكية', icon: '🔧', color: '#6FCF97', pct: results.dist.mechanical },
@@ -1214,31 +1187,26 @@ function AreaResultsView({ country, params, results, onBack, onExport, onSave, o
          <button onClick={onBack} className="flex items-center gap-2 text-[14px] font-bold text-[#9A8A6A] hover:text-[#082555]">
            <ArrowRightIcon className="h-4 w-4" /> تعديل البيانات
          </button>
-         <div className="flex gap-2">
-            <button onClick={onExport} className="h-10 w-10 flex items-center justify-center rounded-xl bg-white border-2 border-[#E2D8C4] text-[#082555] hover:border-[#C9A84C] transition-colors"><PrinterIcon className="h-5 w-5" /></button>
-            <button className="h-10 w-10 flex items-center justify-center rounded-xl bg-white border-2 border-[#E2D8C4] text-[#082555] hover:border-[#C9A84C] transition-colors"><ShareIcon className="h-5 w-5" /></button>
-            <button onClick={onSave} className="h-10 w-10 flex items-center justify-center rounded-xl bg-[#082555] text-[#C9A84C] shadow-lg active:scale-95 transition-transform"><SaveIcon className="h-5 w-5" /></button>
-         </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-[32px] bg-[#082555] p-8 shadow-2xl border border-[#C9A84C]/20 text-center">
+      <div className="relative overflow-hidden rounded-[32px] bg-[#082555] p-5 shadow-2xl border border-[#C9A84C]/20 text-center">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(201,168,76,0.15),transparent)] pointer-events-none" />
 
-        <div className="text-[11px] font-bold text-[#9A8A6A] uppercase tracking-[0.3em] mb-4">Total Estimated Cost</div>
-        <div className="flex items-center justify-center gap-3 mb-2">
-           <span className="text-[42px] font-bold text-[#E8C97A] leading-none" style={{ fontFamily: MONO }}>{fmtNum(results.total)}</span>
-           <span className="text-[18px] font-bold text-[#9A8A6A]">{c.currency}</span>
+        <div className="text-[10px] font-bold text-[#9A8A6A] uppercase tracking-[0.2em] mb-2">Total Estimated Cost</div>
+        <div className="flex items-center justify-center gap-2 mb-1">
+           <span className="text-[34px] font-bold text-[#E8C97A] leading-none" style={{ fontFamily: MONO }}>{fmtNum(results.total)}</span>
+           <span className="text-[15px] font-bold text-[#9A8A6A]">{c.currency}</span>
         </div>
-        <div className="text-[14px] font-bold text-[#C9A84C]/80" style={{ fontFamily: AR }}>تكلفة تقديرية للمبنى بالكامل</div>
+        <div className="text-[13px] font-bold text-[#C9A84C]/80" style={{ fontFamily: AR }}>تكلفة تقديرية للمبنى بالكامل</div>
 
-        <div className="mt-8 grid grid-cols-1 gap-4 border-t border-white/10 pt-8 sm:grid-cols-2 sm:gap-6">
+        <div className="mt-5 grid grid-cols-2 gap-3 border-t border-white/10 pt-5">
            <div>
-             <div className="text-[10px] text-[#9A8A6A] font-bold uppercase tracking-wider mb-1">Price Per m²</div>
-             <div className="text-[20px] font-bold text-white" style={{ fontFamily: MONO }}>{fmtNum(results.unitPrice)} <span className="text-[12px] text-[#9A8A6A]">{c.currency}</span></div>
+             <div className="text-[9px] text-[#9A8A6A] font-bold uppercase tracking-wider mb-1">Price Per m²</div>
+             <div className="text-[16px] font-bold text-white" style={{ fontFamily: MONO }}>{fmtNum(results.unitPrice)} <span className="text-[10px] text-[#9A8A6A]">{c.currency}</span></div>
            </div>
            <div>
-             <div className="text-[10px] text-[#9A8A6A] font-bold uppercase tracking-wider mb-1">Total Area</div>
-             <div className="text-[20px] font-bold text-white" style={{ fontFamily: MONO }}>{params.area * params.floors} <span className="text-[12px] text-[#9A8A6A]">m²</span></div>
+             <div className="text-[9px] text-[#9A8A6A] font-bold uppercase tracking-wider mb-1">Total Area</div>
+             <div className="text-[16px] font-bold text-white" style={{ fontFamily: MONO }}>{params.area * params.floors} <span className="text-[10px] text-[#9A8A6A]">m²</span></div>
            </div>
         </div>
       </div>
@@ -1253,7 +1221,7 @@ function AreaResultsView({ country, params, results, onBack, onExport, onSave, o
         <h3 className="text-[16px] font-bold text-[#082555] mb-6 flex items-center gap-2" style={{ fontFamily: AR }}>
           <div className="h-2 w-2 rounded-full bg-[#C9A84C]" /> ملخص المشروع
         </h3>
-        <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-2">
           {[
             { label: 'المساحة الكلية', val: `${params.area * params.floors} م²` },
             { label: 'عدد الأدوار', val: params.floors },
@@ -1400,29 +1368,29 @@ function AreaSectionDetailView({
         </button>
       </div>
 
-      <div className="relative overflow-hidden rounded-[32px] p-8 text-white shadow-2xl" style={{ backgroundColor: "#082555" }}>
+      <div className="relative overflow-hidden rounded-[32px] p-5 text-white shadow-2xl" style={{ backgroundColor: "#082555" }}>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(201,168,76,0.14),transparent)] pointer-events-none" />
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="text-[13px] font-bold uppercase tracking-[0.25em] text-[#9A8A6A] mb-3">Scope Detail</div>
-            <h2 className="text-[24px] font-bold mb-2" style={{ fontFamily: AR }}>{draft.title}</h2>
-            <p className="max-w-[560px] text-[13px] font-medium text-white/75 leading-7" style={{ fontFamily: AR }}>{draft.intro}</p>
+            <div className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#9A8A6A] mb-1.5">Scope Detail</div>
+            <h2 className="text-[22px] font-bold mb-1" style={{ fontFamily: AR }}>{draft.title}</h2>
+            <p className="max-w-[560px] text-[12px] font-medium text-white/75 leading-snug" style={{ fontFamily: AR }}>{draft.intro}</p>
           </div>
-          <div className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-white/10 text-[30px]">
+          <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-white/10 text-[26px]">
             {draft.icon}
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-2.5">
           {[
             { label: "إجمالي التخصص", value: `${fmtNum(draft.sectionTotal)} ${c.currency}` },
             { label: "سعر المتر", value: `${fmtNum(draft.unitPrice)} ${c.currency}` },
             { label: "حصة التخصص", value: `${overallShare.toFixed(1)}%` },
             { label: "المساحة الكلية", value: `${fmtNum(totalArea)} م²` },
           ].map((card) => (
-            <div key={card.label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-              <div className="text-[10px] font-bold uppercase tracking-widest text-[#9A8A6A] mb-2">{card.label}</div>
-              <div className="text-[18px] font-bold text-white" style={{ fontFamily: MONO }}>{card.value}</div>
+            <div key={card.label} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+              <div className="text-[9px] font-bold uppercase tracking-widest text-[#9A8A6A] mb-1">{card.label}</div>
+              <div className="text-[16px] font-bold text-white" style={{ fontFamily: MONO }}>{card.value}</div>
             </div>
           ))}
         </div>
@@ -1435,56 +1403,56 @@ function AreaSectionDetailView({
         currency={c.currency}
       />
 
-      <div className="rounded-3xl border-2 border-[#E2D8C4] bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="text-[17px] font-bold text-[#082555]" style={{ fontFamily: AR }}>البنود التقريبية القابلة للتعديل</h3>
-          <div className="text-[12px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>التعديلات تنعكس فورًا على إجمالي هذا التخصص فقط</div>
+      <div className="px-1">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-[15px] font-bold text-[#082555]" style={{ fontFamily: AR }}>البنود التقريبية القابلة للتعديل</h3>
+          <div className="text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>التعديلات تنعكس فوراً على إجمالي هذا التخصص</div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {draft.items.map((item, index) => (
-            <div key={item.id} className="rounded-2xl border border-[#E2D8C4] bg-[#FCFBF8] p-4">
-              <div className="flex items-start justify-between gap-4 mb-4">
+            <div key={item.id} className="rounded-2xl border-2 border-[#E2D8C4] bg-white p-3.5 shadow-sm">
+              <div className="flex items-start justify-between gap-4 mb-3">
                 <div>
-                  <div className="text-[15px] font-bold text-[#082555]" style={{ fontFamily: AR }}>{index + 1}. {item.label}</div>
-                  <div className="mt-1 text-[11px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>{item.basis}</div>
+                  <div className="text-[14px] font-bold text-[#082555]" style={{ fontFamily: AR }}>{index + 1}. {item.label}</div>
+                  <div className="mt-0.5 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>{item.basis}</div>
                 </div>
-                <div className="rounded-xl bg-[#F5EDD8] px-3 py-2 text-[12px] font-bold" style={{ color: draft.color }}>
+                <div className="rounded-xl bg-[#F5EDD8] px-2.5 py-1.5 text-[11px] font-bold" style={{ color: draft.color }}>
                   {(item.share * 100).toFixed(0)}%
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                 <div>
-                  <div className="mb-2 text-[11px] font-bold text-[#9A8A6A]">الكمية التقريبية</div>
+                  <div className="mb-1 text-[10px] font-bold text-[#9A8A6A]">الكمية التقريبية</div>
                   <input
                     type="number"
                     value={item.qty}
                     step="0.01"
                     onChange={(e) => onUpdateItem(item.id, "qty", e.target.value)}
-                    className="min-h-[48px] w-full rounded-xl border-2 border-[#E2D8C4] bg-white px-3 text-center font-bold text-[#082555] outline-none focus:border-[#C9A84C]"
+                    className="min-h-[40px] w-full rounded-xl border-2 border-[#E2D8C4] bg-[#F7F3EC] px-2 text-center font-bold text-[#082555] outline-none focus:border-[#C9A84C] focus:bg-white transition-all"
                     style={{ fontFamily: MONO }}
                   />
-                  <div className="mt-1 text-[10px] font-bold text-[#C9A84C]">{item.unit}</div>
+                  <div className="mt-1 text-[9px] font-bold text-[#C9A84C]">{item.unit}</div>
                 </div>
                 <div>
-                  <div className="mb-2 text-[11px] font-bold text-[#9A8A6A]">سعر الوحدة</div>
+                  <div className="mb-1 text-[10px] font-bold text-[#9A8A6A]">سعر الوحدة</div>
                   <input
                     type="number"
                     value={item.rate}
                     step="0.01"
                     onChange={(e) => onUpdateItem(item.id, "rate", e.target.value)}
-                    className="min-h-[48px] w-full rounded-xl border-2 border-[#E2D8C4] bg-white px-3 text-center font-bold text-[#082555] outline-none focus:border-[#C9A84C]"
+                    className="min-h-[40px] w-full rounded-xl border-2 border-[#E2D8C4] bg-[#F7F3EC] px-2 text-center font-bold text-[#082555] outline-none focus:border-[#C9A84C] focus:bg-white transition-all"
                     style={{ fontFamily: MONO }}
                   />
-                  <div className="mt-1 text-[10px] font-bold text-[#C9A84C]">{c.currency} / {item.unit}</div>
+                  <div className="mt-1 text-[9px] font-bold text-[#C9A84C]">{c.currency} / {item.unit}</div>
                 </div>
-                <div>
-                  <div className="mb-2 text-[11px] font-bold text-[#9A8A6A]">إجمالي البند</div>
-                  <div className="flex min-h-[48px] items-center justify-center rounded-xl border-2 border-[#E2D8C4] bg-[#F7F3EC] px-3 text-[18px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>
+                <div className="col-span-2 sm:col-span-1">
+                  <div className="mb-1 text-[10px] font-bold text-[#9A8A6A]">إجمالي البند</div>
+                  <div className="flex min-h-[40px] items-center justify-center rounded-xl border-2 border-[#E2D8C4] bg-[#FCFBF8] px-2 text-[16px] font-bold text-[#082555]" style={{ fontFamily: MONO }}>
                     {fmtNum(item.total)}
                   </div>
-                  <div className="mt-1 text-[10px] font-bold text-[#C9A84C]">{c.currency}</div>
+                  <div className="mt-1 text-[9px] font-bold text-[#C9A84C]">{c.currency}</div>
                 </div>
               </div>
             </div>
@@ -1493,10 +1461,10 @@ function AreaSectionDetailView({
       </div>
 
       <div className="rounded-2xl border-2 border-[#C9A84C]/30 bg-[#F5EDD8] p-5">
-        <h4 className="mb-3 text-[14px] font-bold text-[#082555]" style={{ fontFamily: AR }}>افتراضات هندسية مستخدمة</h4>
+        <h4 className="mb-3 text-[12px] font-bold text-[#082555]" style={{ fontFamily: AR }}>افتراضات هندسية مستخدمة</h4>
         <div className="space-y-2">
           {draft.assumptions.map((line) => (
-            <div key={line} className="text-[12px] font-bold text-[#5A4E38] leading-7" style={{ fontFamily: AR }}>
+            <div key={line} className="text-[10px] font-bold text-[#5A4E38] leading-6" style={{ fontFamily: AR }}>
               • {line}
             </div>
           ))}
@@ -1506,9 +1474,9 @@ function AreaSectionDetailView({
       <div className="rounded-3xl border-2 border-[#E2D8C4] bg-white p-5 shadow-sm">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
-            <h3 className="text-[16px] font-bold text-[#082555]" style={{ fontFamily: AR }}>إجراءات التخصص</h3>
-            <p className="mt-1 text-[12px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
-              احفظ تفاصيل هذا التخصص في الحساب أو صدّرها كـ PDF بنفس القيم الحالية.
+            <h3 className="text-[14px] font-bold text-[#082555]" style={{ fontFamily: AR }}>إجراءات التخصص</h3>
+            <p className="mt-1 text-[10px] font-bold text-[#9A8A6A]" style={{ fontFamily: AR }}>
+              احفظ تفاصيل هذا التخصص في الحساب أو صدّرها كتحليل بند بنفس القيم الحالية.
             </p>
           </div>
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F7F3EC] text-[22px]">
@@ -1518,15 +1486,15 @@ function AreaSectionDetailView({
         <div className="flex gap-3">
           <button
             onClick={() => onSave?.()}
-            className="flex-1 min-h-[56px] rounded-2xl bg-[#C9A84C] text-[#082555] font-bold text-[15px] flex items-center justify-center gap-2 shadow-lg transition hover:bg-[#E8C97A] active:scale-[0.98]"
+            className="flex-1 min-h-[56px] rounded-2xl bg-[#C9A84C] text-[#082555] font-bold text-[13px] flex items-center justify-center transition hover:bg-[#E8C97A] active:scale-[0.98]"
           >
-            <SaveIcon className="h-5 w-5" /> حفظ في الحساب
+            حفظ في الحساب
           </button>
           <button
             onClick={handleExportSectionPdf}
-            className="flex-1 min-h-[56px] rounded-2xl bg-white border-2 border-[#082555] text-[#082555] font-bold text-[15px] flex items-center justify-center gap-2 transition hover:bg-[#F5EDD8] active:scale-[0.98]"
+            className="flex-1 min-h-[56px] rounded-2xl bg-white border-2 border-[#082555] text-[#082555] font-bold text-[13px] flex items-center justify-center transition hover:bg-[#F5EDD8] active:scale-[0.98]"
           >
-            <PrinterIcon className="h-5 w-5" /> تصدير PDF
+            تصدير تحليل البند
           </button>
         </div>
       </div>
@@ -1545,7 +1513,7 @@ function AreaSectionDetailView({
 
 // --- Main Pricing Workspace Component ---
 
-export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings, sessionMeta, onOpenAuthScreen, onShowStatus, systemBridge }) {
+export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings, sessionMeta, onOpenAuthScreen, onShowStatus, systemBridge, isActive }) {
   // initialCountry comes from the CountryPicker on PricingPage; always override persisted value
   const isEn = settings?.language === "en";
   const [country, setCountry] = useState(initialCountry || "sa");
@@ -2153,11 +2121,15 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
     return false;
   }, [mode, tab, exportPreview, setExportPreview, confirmDiscardAnalysisChanges]);
 
-  useEffect(() => navigationBridge?.registerBackHandler?.(handleWorkspaceBack), [handleWorkspaceBack, navigationBridge]);
+  useEffect(() => {
+    if (isActive) {
+      return navigationBridge?.registerBackHandler?.(handleWorkspaceBack);
+    }
+  }, [isActive, handleWorkspaceBack, navigationBridge]);
 
   useEffect(() => {
-    navigationBridge?.onEntryChange?.({ mode, tab });
-  }, [mode, tab, navigationBridge]);
+    navigationBridge?.onEntryChange?.({ mode, tab, selectedAreaSection });
+  }, [mode, tab, selectedAreaSection, navigationBridge]);
 
   const tabs = [
     { id: "csi",      label: isEn ? "Items" : "البنود",    icon: "📋" },
@@ -2179,10 +2151,10 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   }
 
   return (
-    <div className="w-full bg-[#F7F3EC] overflow-x-hidden" dir="rtl" style={{ fontFamily: AR }}>
-      <div className="mx-auto w-full max-w-[720px] p-3 sm:p-4 pb-4">
+    <div className="w-full overflow-x-hidden rounded-[28px] bg-[#F7F3EC]" dir="rtl" style={{ fontFamily: AR }}>
+      <div className="mx-auto w-full max-w-[720px] p-3 pb-3">
         {/* Header */}
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-2 flex items-center justify-between">
           <button onClick={() => handleModeChange("selection")} className="group flex items-center gap-3 text-right">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#0d2545] to-[#162e52] text-[#d4a843] shadow-lg ring-1 ring-[#d4a843]/20 transition-shadow group-hover:shadow-[0_4px_16px_rgba(212,168,67,0.25)]">
               <svg viewBox="0 0 24 24" fill="currentColor" className="h-6 w-6">

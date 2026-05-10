@@ -16,7 +16,7 @@ export default function PricingPage(props) {
   };
 
   useEffect(() => {
-    if (!props.navigationBridge?.registerBackHandler) return undefined;
+    if (!props.navigationBridge?.registerBackHandler || !props.isActive) return undefined;
     return props.navigationBridge.registerBackHandler(() => {
       if (workspaceBackHandlerRef.current?.()) return true;
       if (selectedCountry) {
@@ -25,7 +25,7 @@ export default function PricingPage(props) {
       }
       return false;
     });
-  }, [props.navigationBridge, selectedCountry]);
+  }, [props.navigationBridge, selectedCountry, props.isActive]);
 
   const bridgedNavigation = useMemo(() => ({
     ...(props.navigationBridge || {}),
@@ -64,6 +64,7 @@ export default function PricingPage(props) {
         eyebrow={text.pages.pricing.eyebrow}
         title=""
         description={text.pages.pricing.description}
+        density="tight"
       />
       <PricingWorkspace {...props} navigationBridge={bridgedNavigation} initialCountry={countryCode} />
     </div>

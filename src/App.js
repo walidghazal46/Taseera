@@ -20,7 +20,7 @@ import SuppliersPage from "./pages/SuppliersPage";
 import { getAppText } from "./data/appText";
 
 const APP_STORAGE_PREFIX = "taseera.v3";
-const APP_VERSION = "1.0.0.26"; // always reflects current build — overrides localStorage
+const APP_VERSION = "1.0.0.27"; // always reflects current build — overrides localStorage
 
 function makeSeedMergeKey(entry) {
   const name = String(entry?.name || "").trim().toLowerCase();
@@ -210,13 +210,20 @@ export default function App() {
   const forcedScreen = getForcedScreen();
   const bridge = useAndroidBridge();
 
+  // Disable browser automatic scroll restoration to ensure our manual resets work
+  useEffect(() => {
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+  }, []);
+
   // Core States
   const [authMode, setAuthMode] = usePersistentState(`${APP_STORAGE_PREFIX}.authMode`, null);
   const [authSession, setAuthSession] = usePersistentState(`${APP_STORAGE_PREFIX}.authSession`, null);
   const [activePage, setActivePage] = usePersistentState(`${APP_STORAGE_PREFIX}.activePage`, "pricing");
   const [settings, setSettings] = usePersistentState(`${APP_STORAGE_PREFIX}.settings`, sampleSettings);
   // Always inject current build version — never rely on localStorage value
-  const settingsWithVersion = { ...settings, appVersion: APP_VERSION };
+  const settingsWithVersion = useMemo(() => ({ ...settings, appVersion: APP_VERSION }), [settings]);
   const [companies, setCompanies] = usePersistentState(`${APP_STORAGE_PREFIX}.companies`, sampleCompanies);
   const [suppliers, setSuppliers] = usePersistentState(`${APP_STORAGE_PREFIX}.suppliers`, sampleSuppliers);
   const [savedAnalyses, setSavedAnalyses] = usePersistentState(`${APP_STORAGE_PREFIX}.savedAnalyses`, []);
@@ -227,6 +234,7 @@ export default function App() {
   const [routeStack, setRouteStack] = usePersistentState(`${APP_STORAGE_PREFIX}.routeStack`, [createRoute(null)]);
   const [pageResetVersion, setPageResetVersion] = useState({ companies: 0, pricing: 0, suppliers: 0, settings: 0 });
   const [scrollResetVersion, setScrollResetVersion] = useState(0);
+  const appShellRef = useRef(null);
 
   useEffect(() => {
     setCompanies((current) => mergeSeedData(current, sampleCompanies));
@@ -249,8 +257,8 @@ export default function App() {
   const pageBackHandlerRef = useRef(() => false);
   const statusTimeoutRef = useRef(null);
 
-  const appText = getAppText(settings.language);
-  const systemText = getSystemText(settings.language);
+  const appText = useMemo(() => getAppText(settings.language), [settings.language]);
+  const systemText = useMemo(() => getSystemText(settings.language), [settings.language]);
   const shouldShowLogin = !authMode || authScreenMode !== null || forcedScreen === "login";
 
   const showStatus = useCallback((message, tone = "info") => {
@@ -294,7 +302,12 @@ export default function App() {
   }, []);
 
   const pushHistoryEntry = useCallback(() => window.history.pushState({ source: "taseera-guard" }, ""), []);
-  const notifySubpageNavigation = useCallback(() => setScrollResetVersion((c) => c + 1), []);
+  const notifySubpageNavigation = useCallback(() => {
+    if (appShellRef.current) {
+      appShellRef.current.scrollToTop();
+    }
+    setScrollResetVersion((c) => c + 1);
+  }, []);
 
   const performBackNavigation = useCallback(() => {
     if (pageBackHandlerRef.current?.()) { setShowExitPrompt(false); return true; }
@@ -303,7 +316,7 @@ export default function App() {
       const nextStack = currentStack.slice(0, -1);
       const prevRoute = nextStack[nextStack.length - 1];
       setRouteStack(nextStack);
-      if (prevRoute.kind === "login") { setAuthMode(null); setActivePage("companies"); }
+      if (prevRoute.kind === "login") { setAuthMode(null); setActivePage("pricing"); }
       else setActivePage(prevRoute.page);
       setShowExitPrompt(false); return true;
     }
@@ -319,7 +332,7 @@ export default function App() {
       }
       return false;
     }
-    setShowExitPrompt(false);
+    setShowExitPrompt(true);
     return false;
   }, [activePage, authMode, bridge.isAndroid, setActivePage, setAuthMode, setRouteStack, shouldShowLogin]);
 
@@ -339,10 +352,7 @@ export default function App() {
     setRouteStack((current) => {
       const last = current[current.length - 1];
       if (last?.kind === route.kind && last?.page === route.page) return current;
-      if (route.kind === "app") {
-        if (route.page === "companies") return [route];
-        if (last?.kind === "app") return [last, route];
-      }
+      // Linear history allowing multi-step back navigation
       return [...current, route];
     });
     window.history.pushState({ source: "taseera-guard" }, "");
@@ -385,8 +395,8 @@ export default function App() {
       userEmail: isGuestMode ? c.userEmail : (payload.userEmail || c.userEmail),
     }));
     window.history.pushState({ source: "taseera-guard" }, "");
-    if (mode !== "guest") showStatus(settings.language === "en" ? "Signed in successfully." : "تم تسجيل الدخول بنجاح.", "success");
-  }, [authSession, setActivePage, setAuthMode, setAuthSession, setRouteStack, setSettings, settings.language, settings.userName, settings.userEmail, showStatus]);
+    // status notification removed
+  }, [authSession, setActivePage, setAuthMode, setAuthSession, setRouteStack, setSettings, settings.language, settings.userName, settings.userEmail]);
 
   const handleLogout = useCallback(() => {
     pageBackHandlerRef.current = () => false;
@@ -397,8 +407,8 @@ export default function App() {
     setAuthScreenMode("login");
     setRouteStack([createRoute(null)]);
     window.history.pushState({ source: "taseera-guard" }, "");
-    showStatus(settings.language === "en" ? "Signed out." : "تم تسجيل الخروج.", "info");
-  }, [setActivePage, setAuthMode, setAuthSession, setRouteStack, settings.language, showStatus]);
+    // status notification removed
+  }, [setActivePage, setAuthMode, setAuthSession, setRouteStack]);
 
   const openLoginScreen = useCallback(() => {
     setShowExitPrompt(false); setExitFromCompanies(false);
@@ -426,10 +436,10 @@ export default function App() {
     return selectedCompany.projects.find((p) => p.id === selectedProjectId) || selectedCompany.projects[0] || null;
   }, [selectedCompany, selectedProjectId]);
 
-  const selectCompany = (id) => { const c = mergedCompanies.find((i) => i.id === id); setSelectedCompanyId(id); setSelectedProjectId(c?.projects[0]?.id || null); };
-  const selectProject = (cid, pid) => { setSelectedCompanyId(cid); setSelectedProjectId(pid); };
+  const selectCompany = useCallback((id) => { const c = mergedCompanies.find((i) => i.id === id); setSelectedCompanyId(id); setSelectedProjectId(c?.projects[0]?.id || null); }, [mergedCompanies, setSelectedCompanyId, setSelectedProjectId]);
+  const selectProject = useCallback((cid, pid) => { setSelectedCompanyId(cid); setSelectedProjectId(pid); }, [setSelectedCompanyId, setSelectedProjectId]);
 
-  const addCompany = (input) => {
+  const addCompany = useCallback((input) => {
     const newC = {
       id: createId("comp"), name: input.name.trim(), type: input.type, country: input.country.trim(),
       logo: inferCompanyLogo(input.specialization, input.type), specialization: input.specialization.trim(),
@@ -440,22 +450,22 @@ export default function App() {
     setCompanies((c) => [...c, newC]);
     setSelectedCompanyId(newC.id); setSelectedProjectId(null);
     showStatus(systemText.companyAdded(newC.name), "success");
-  };
+  }, [settings.language, setCompanies, setSelectedCompanyId, setSelectedProjectId, showStatus, systemText]);
 
-  const addProject = (cid, input) => {
+  const addProject = useCallback((cid, input) => {
     const newP = { id: createId("proj"), name: input.name.trim(), location: input.location.trim(), stage: input.stage.trim() || "Planning", budget: parseNumericInput(input.budget), pricingItems: [] };
     setCompanies((c) => c.map((i) => i.id === cid ? { ...i, projects: [...i.projects, newP], projectsCount: Math.max(i.projectsCount, i.projects.length + 1) } : i));
     setSelectedCompanyId(cid); setSelectedProjectId(newP.id); setActivePage("companies");
     showStatus(systemText.projectAdded(newP.name), "success");
-  };
+  }, [setCompanies, setSelectedCompanyId, setSelectedProjectId, setActivePage, showStatus, systemText]);
 
-  const addSupplier = (input) => {
+  const addSupplier = useCallback((input) => {
     const newS = { id: createId("sup"), name: input.name.trim(), category: input.category.trim(), phone: input.phone.trim(), email: input.email.trim(), contactPerson: input.contactPerson.trim(), location: input.location.trim(), rating: 4, materials: [input.category.trim()], logo: input.name.trim().slice(0, 1) || "S" };
     setSuppliers((c) => [...c, newS]);
     showStatus(systemText.supplierAdded(newS.name), "success");
-  };
+  }, [setSuppliers, showStatus, systemText]);
 
-  const updateSetting = (f, v) => setSettings((c) => ({ ...c, [f]: ["overheadPercent", "profitPercent", "taxPercent", "locationFactor"].includes(f) ? parseNumericInput(v) : v }));
+  const updateSetting = useCallback((f, v) => setSettings((c) => ({ ...c, [f]: ["overheadPercent", "profitPercent", "taxPercent", "locationFactor"].includes(f) ? parseNumericInput(v) : v })), [setSettings]);
 
   const handleSaveAnalysis = useCallback(({ item, resources, results, params, mode }) => {
     const targetCompany = selectedCompany || mergedCompanies[0] || null;
@@ -477,11 +487,12 @@ export default function App() {
   }, [bridge, settings.appName, showStatus, systemText]);
 
   const handleSettingsAction = useCallback((id) => {
-    if (id === "privacy") openDialog({ title: systemText.privacyTitle, lines: [settings.language === "en" ? "Data stored locally." : "البيانات محفوظة محلياً."] });
+    if (id === "onEntryChange") notifySubpageNavigation();
+    else if (id === "privacy") openDialog({ title: systemText.privacyTitle, lines: [settings.language === "en" ? "Data stored locally." : "البيانات محفوظة محلياً."] });
     else if (id === "contact") bridge.openEmail("walidghazal46@gmail.com", systemText.contactSubject(settings.appName), "Hello");
-    else if (id === "update") openDialog({ title: systemText.appStatus, lines: [`Version: ${settings.appVersion}`, `Analyses: ${savedAnalyses.length}`] });
+    else if (id === "update") bridge.openExternalUrl("https://play.google.com/store/apps/details?id=com.taseera.app");
     else if (id === "rate") bridge.rateApp();
-  }, [bridge, openDialog, savedAnalyses.length, settings.appName, settings.appVersion, settings.language, systemText]);
+  }, [bridge, notifySubpageNavigation, openDialog, settings.appName, settings.language, systemText]);
 
   const handleOpenAdSettings = useCallback(() => {
     setActivePage("settings");
@@ -494,19 +505,52 @@ export default function App() {
 
   const navigationBridge = useMemo(() => ({ registerBackHandler: registerPageBackHandler, pushHistoryEntry, onEntryChange: notifySubpageNavigation }), [notifySubpageNavigation, pushHistoryEntry, registerPageBackHandler]);
 
-  const pageProps = {
-    authMode, companies: mergedCompanies, suppliers: mergedSuppliers, settings: settingsWithVersion, pricingCatalog, importedPricingSource, savedAnalyses, rfqRequests, systemBridge: bridge, navigationBridge,
-    selectedPricingItemId, selectedCompanyId, selectedProjectId, company: selectedCompany, project: selectedProject,
-    onSelectPricingItem: setSelectedPricingItemId, onSelectCompany: selectCompany, onSelectProject: selectProject, onAddCompany: addCompany, onAddProject: addProject, onAddSupplier: addSupplier, onUpdateSetting: updateSetting, onLogout: handleLogout, onShowStatus: showStatus, onSaveAnalysis: handleSaveAnalysis, onCreateRfq: handleCreateRfq, onContactSupplier: handleContactSupplier, onSettingsAction: handleSettingsAction, onOpenAuthScreen: openAuthScreen, sessionMeta: authSession,
+  const pageProps = useMemo(() => ({
+    authMode,
+    companies: mergedCompanies,
+    suppliers: mergedSuppliers,
+    settings: settingsWithVersion,
+    pricingCatalog,
+    importedPricingSource,
+    savedAnalyses,
+    rfqRequests,
+    systemBridge: bridge,
+    navigationBridge,
+    selectedPricingItemId,
+    selectedCompanyId,
+    selectedProjectId,
+    company: selectedCompany,
+    project: selectedProject,
+    onSelectPricingItem: setSelectedPricingItemId,
+    onSelectCompany: selectCompany,
+    onSelectProject: selectProject,
+    onAddCompany: addCompany,
+    onAddProject: addProject,
+    onAddSupplier: addSupplier,
+    onUpdateSetting: updateSetting,
+    onLogout: handleLogout,
+    onShowStatus: showStatus,
+    onSaveAnalysis: handleSaveAnalysis,
+    onCreateRfq: handleCreateRfq,
+    onContactSupplier: handleContactSupplier,
+    onSettingsAction: handleSettingsAction,
+    onOpenAuthScreen: openAuthScreen,
+    sessionMeta: authSession,
     onOpenAdSettings: handleOpenAdSettings,
     onNavigate: handleNavigate,
-  };
+  }), [
+    authMode, mergedCompanies, mergedSuppliers, settingsWithVersion, savedAnalyses, rfqRequests, bridge, navigationBridge,
+    selectedPricingItemId, selectedCompanyId, selectedProjectId, selectedCompany, selectedProject,
+    setSelectedPricingItemId, selectCompany, selectProject, addCompany, addProject, addSupplier, updateSetting,
+    handleLogout, showStatus, handleSaveAnalysis, handleCreateRfq, handleContactSupplier, handleSettingsAction,
+    openAuthScreen, authSession, handleOpenAdSettings, handleNavigate
+  ]);
 
   const renderedPage = {
-    companies: <CompaniesPage key={`comp-${pageResetVersion.companies}`} {...pageProps} />,
-    pricing: <PricingPage key={`pric-${pageResetVersion.pricing}`} {...pageProps} />,
-    suppliers: <SuppliersPage key={`supp-${pageResetVersion.suppliers}`} {...pageProps} />,
-    settings: <SettingsPage key={`sett-${pageResetVersion.settings}`} {...pageProps} />,
+    companies: <CompaniesPage key={`comp-${pageResetVersion.companies}`} {...pageProps} isActive={activePage === "companies"} />,
+    pricing: <PricingPage key={`pric-${pageResetVersion.pricing}`} {...pageProps} isActive={activePage === "pricing"} />,
+    suppliers: <SuppliersPage key={`supp-${pageResetVersion.suppliers}`} {...pageProps} isActive={activePage === "suppliers"} />,
+    settings: <SettingsPage key={`sett-${pageResetVersion.settings}`} {...pageProps} isActive={activePage === "settings"} />,
   }[activePage];
 
   const ExitModal = () => (
@@ -570,7 +614,7 @@ export default function App() {
         </>
       ) : (
         <>
-          <AppShell activePage={activePage} onNavigate={handleNavigate} onBack={handleTopLevelBack} canGoBack={routeStack.length > 1 || activePage !== "companies"} scrollResetVersion={scrollResetVersion} selectedCompany={selectedCompany} selectedProject={selectedProject} authMode={authMode} navText={appText.nav} language={settings.language} theme={settings.theme}>
+          <AppShell ref={appShellRef} activePage={activePage} onNavigate={handleNavigate} onBack={handleTopLevelBack} canGoBack={routeStack.length > 1 || activePage !== "pricing"} scrollResetVersion={scrollResetVersion} selectedCompany={selectedCompany} selectedProject={selectedProject} authMode={authMode} navText={appText.nav} language={settings.language} theme={settings.theme}>
             {renderedPage}
           </AppShell>
           {showExitPrompt && <ExitModal />}

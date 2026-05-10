@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import { getAppText } from "../data/appText";
 import taseeraLogo from "../assets/taseera-logo-light.png";
 
@@ -112,6 +112,10 @@ export default function SettingsPanel({
   const [showGuide, setShowGuide] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
 
+  useLayoutEffect(() => {
+    onSettingsAction?.("onEntryChange"); // Trigger scroll reset if needed
+  }, [showPrivacy, onSettingsAction]);
+
   const stats = useMemo(() => ([
     { label: isAr ? "الشركات" : "Companies", value: companies.length },
     { label: isAr ? "الموردين" : "Suppliers", value: suppliers.length },
@@ -129,9 +133,9 @@ export default function SettingsPanel({
 
   return (
     <div className="grid gap-4 pb-4" dir={isAr ? "rtl" : "ltr"}>
-      <section className="overflow-hidden rounded-[28px] border border-[#d6e5ff] bg-[linear-gradient(135deg,#ffffff_0%,#f1f7ff_46%,#edfffb_100%)] shadow-[0_22px_60px_rgba(85,121,214,0.16)]">
-        <div className="flex items-center gap-4 px-5 py-5">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white p-1 shadow-[0_12px_30px_rgba(90,128,222,0.18)]">
+      <section className="flex min-h-[90px] flex-col justify-center overflow-hidden rounded-[28px] border border-[#d6e5ff] bg-[linear-gradient(135deg,#ffffff_0%,#f1f7ff_46%,#edfffb_100%)] shadow-[0_22px_60px_rgba(85,121,214,0.16)]">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1 shadow-[0_12px_30px_rgba(90,128,222,0.18)]">
             <img src={taseeraLogo} alt="Taseera" className="h-full w-full object-contain" />
           </div>
           <div className="min-w-0 flex-1">
@@ -168,9 +172,9 @@ export default function SettingsPanel({
         <SettingsCard icon="📊" title={isAr ? "نشاط التطبيق" : "App Activity"} subtitle={isAr ? "ملخص سريع للبيانات الحالية" : "Quick summary of current data"}>
           <div className="grid grid-cols-2 gap-2">
             {stats.map((item) => (
-              <div key={item.label} className="rounded-xl bg-[linear-gradient(135deg,#f5f9ff_0%,#effcf9_100%)] px-3 py-3 text-center">
-                <p className="text-[18px] font-black text-[#1554b7]" style={{ fontFamily: F }}>{item.value}</p>
-                <p className="text-[10px] font-bold text-[#6b7da1]" style={{ fontFamily: F }}>{item.label}</p>
+              <div key={item.label} className="flex h-[38px] flex-col items-center justify-center rounded-xl bg-[linear-gradient(135deg,#f5f9ff_0%,#effcf9_100%)] px-3 text-center">
+                <p className="text-[15px] font-black text-[#1554b7]" style={{ fontFamily: F }}>{item.value}</p>
+                <p className="text-[9px] font-bold text-[#6b7da1]" style={{ fontFamily: F }}>{item.label}</p>
               </div>
             ))}
           </div>
