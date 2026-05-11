@@ -188,7 +188,7 @@ service cloud.firestore {
         request.resource.data.uid == resource.data.uid &&
         request.resource.data.type == resource.data.type
       );
-      allow delete: if isAdmin();
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.uid == authUid());
     }
 
     match /{document=**} {

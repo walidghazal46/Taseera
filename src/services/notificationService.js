@@ -1,6 +1,6 @@
 import {
   collection, addDoc, query, where,
-  onSnapshot, updateDoc, doc, getDocs, serverTimestamp,
+  onSnapshot, updateDoc, doc, getDocs, deleteDoc, serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
 
@@ -44,6 +44,16 @@ export async function markAllRead(uid) {
   const snap = await getDocs(q);
   const unread = snap.docs.filter((d) => d.data().read === false);
   await Promise.all(unread.map((d) => updateDoc(d.ref, { read: true })));
+}
+
+export async function deleteNotification(notificationId) {
+  await deleteDoc(doc(db, "notifications", notificationId));
+}
+
+export async function deleteAllNotifications(uid) {
+  const q = query(collection(db, "notifications"), where("uid", "==", uid));
+  const snap = await getDocs(q);
+  await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
 }
 
 // Admin: send a broadcast or targeted message to one or more users.
