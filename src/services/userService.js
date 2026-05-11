@@ -103,16 +103,13 @@ export function computeAccessStatus(profile) {
     }
   }
 
-  // For existing users on trial, always enforce the authoritative end date.
-  // This corrects any old dates already stored in Firestore (e.g. May 19 → May 31).
+  // For existing users on trial, always enforce the authoritative end date from code.
+  // This overrides whatever is stored in Firestore (whether older or newer).
   if (
     subscriptionStatus === SUBSCRIPTION_STATUS.REGISTERED_TRIAL &&
     email && isExistingUser(email)
   ) {
-    const stored = trialEndDate?.toDate?.();
-    if (!stored || stored < EXISTING_USER_TRIAL_END) {
-      trialEndDate = { toDate: () => EXISTING_USER_TRIAL_END };
-    }
+    trialEndDate = { toDate: () => EXISTING_USER_TRIAL_END };
   }
 
   // Suspended
