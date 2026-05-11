@@ -600,6 +600,9 @@ export default function App() {
     isSuperAdmin,
     onOpenSubscription: () => setShowSubscriptionPage(true),
     onOpenAdminDashboard: () => setShowAdminDashboard(true),
+    // Notifications
+    notifications,
+    onOpenNotifications: isFirebaseAuthenticated && !isAdmin ? () => setShowNotifications(true) : undefined,
   };
 
   const renderedPage = {
