@@ -12,7 +12,7 @@ export function subscribeToNotifications(uid, callback) {
   );
   return onSnapshot(q, (snap) => {
     callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-  }, () => callback([]));
+  }, (err) => { console.error("notifications snapshot error:", err); callback([]); });
 }
 
 export async function createNotification({ uid, type, titleAr, titleEn, bodyAr, bodyEn }) {
