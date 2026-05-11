@@ -1,6 +1,5 @@
-// Existing users who get a 14-day trial starting from May 5, 2026.
-// trialStartDate = 2026-05-05T00:00:00.000Z
-// trialEndDate   = 2026-05-19T23:59:59.000Z
+// Existing users — trial ends May 15, 2026.
+// walidghazal51@yahoo.com and walidghazal61@live.com excluded (treated as new users).
 
 export const EXISTING_USER_EMAILS = new Set([
   "abdallah72.zaki74@gmail.com",
@@ -26,12 +25,10 @@ export const EXISTING_USER_EMAILS = new Set([
   "test@example.com",
   "testuser@example.com",
   "walidghazal46@gmail.com",
-  "walidghazal51@yahoo.com",
-  "walidghazal61@live.com",
 ]);
 
 export const EXISTING_USER_TRIAL_START = new Date("2026-05-05T00:00:00.000Z");
-export const EXISTING_USER_TRIAL_END   = new Date("2026-05-31T23:59:59.000Z");
+export const EXISTING_USER_TRIAL_END   = new Date("2026-05-15T23:59:59.000Z");
 
 export function isExistingUser(email) {
   return email && EXISTING_USER_EMAILS.has(email.toLowerCase().trim());
