@@ -1545,7 +1545,7 @@ function AreaSectionDetailView({
 
 // --- Main Pricing Workspace Component ---
 
-export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings, sessionMeta, onOpenAuthScreen, onShowStatus, systemBridge }) {
+export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings, sessionMeta, onOpenAuthScreen, onShowStatus, systemBridge, accessStatus, isAdmin, onOpenSubscription }) {
   // initialCountry comes from the CountryPicker on PricingPage; always override persisted value
   const isEn = settings?.language === "en";
   const [country, setCountry] = useState(initialCountry || "sa");
@@ -1983,12 +1983,20 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   }, [mode, country, areaParams, areaResults, effectiveAreaResults, selectedItem, resources, qty, overhead, profit, factor, showToast, openExportPreview]);
 
   const notifyFullAccess = useCallback(() => {
+    if (!accessStatus?.canAccess && !isAdmin) {
+      onOpenSubscription?.();
+      return;
+    }
     showToast(settings?.language === "en" ? "All pricing tools are already open." : "كل أدوات التسعير مفتوحة للجميع.");
-  }, [settings?.language, showToast]);
+  }, [accessStatus, isAdmin, onOpenSubscription, settings?.language, showToast]);
 
   const ensureUnifiedAccess = useCallback(async () => {
+    if (!accessStatus?.canAccess && !isAdmin) {
+      onOpenSubscription?.();
+      return false;
+    }
     return true;
-  }, []);
+  }, [accessStatus, isAdmin, onOpenSubscription]);
 
   async function handleSelfPrice(item, div) {
     const allowed = await ensureUnifiedAccess();
@@ -2080,7 +2088,8 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
       if (!canLeave) return;
       return;
     }
-    if (["items", "area", "candy"].includes(nextMode)) {
+    // "items" mode is free to browse — only analysis actions inside it are gated.
+    if (["area", "candy"].includes(nextMode)) {
       const allowed = await ensureUnifiedAccess();
       if (!allowed) return;
     }
@@ -2241,7 +2250,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 country={country}
                 onSelectItem={handleSelectItem}
                 onSelfPrice={handleSelfPrice}
-                itemLocked={false}
+                itemLocked={!accessStatus?.canAccess && !isAdmin}
                 itemRemaining={null}
                 onOpenFullAccess={notifyFullAccess}
                 afterDiv28AdBanner={csiAfterDiv28AdBanner}
@@ -2287,7 +2296,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 country={country}
                 onSelectItem={handleSelectItem}
                 onSelfPrice={handleSelfPrice}
-                itemLocked={false}
+                itemLocked={!accessStatus?.canAccess && !isAdmin}
                 itemRemaining={null}
                 onOpenFullAccess={notifyFullAccess}
               />
