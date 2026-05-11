@@ -31,7 +31,7 @@ export const EXISTING_USER_EMAILS = new Set([
 ]);
 
 export const EXISTING_USER_TRIAL_START = new Date("2026-05-05T00:00:00.000Z");
-export const EXISTING_USER_TRIAL_END   = new Date("2026-05-19T23:59:59.000Z");
+export const EXISTING_USER_TRIAL_END   = new Date("2026-05-31T23:59:59.000Z");
 
 export function isExistingUser(email) {
   return email && EXISTING_USER_EMAILS.has(email.toLowerCase().trim());
