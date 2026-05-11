@@ -148,6 +148,65 @@ export async function removeAdminRole({ targetUid, performedByEmail }) {
   });
 }
 
+// Cancel / revoke an active subscription.
+export async function cancelSubscription({ uid, performedByEmail }) {
+  await updateDoc(doc(db, "users", uid), {
+    subscriptionStatus: SUBSCRIPTION_STATUS.EXPIRED,
+    isPaid:             false,
+    selectedPackage:    null,
+    packageStartDate:   null,
+    packageEndDate:     null,
+    updatedAt:          serverTimestamp(),
+  });
+
+  await addDoc(collection(db, "adminLogs"), {
+    action:     "cancel_subscription",
+    uid,
+    performedBy: performedByEmail,
+    createdAt:  serverTimestamp(),
+  });
+}
+
+// Extend a user's subscription by N extra months from today (or from current end if still active).
+export async function extendSubscription({ uid, months, performedByEmail }) {
+  const snap = await import("firebase/firestore").then(({ getDoc }) => getDoc(doc(db, "users", uid)));
+  const data = snap.data() || {};
+  const base = data.packageEndDate?.toDate?.() || new Date();
+  const now  = new Date();
+  const from = base > now ? base : now;
+  const newEnd = Timestamp.fromDate(addMonths(from, months));
+
+  await updateDoc(doc(db, "users", uid), {
+    subscriptionStatus: SUBSCRIPTION_STATUS.ACTIVE,
+    packageEndDate:     newEnd,
+    isPaid:             true,
+    isActive:           true,
+    updatedAt:          serverTimestamp(),
+  });
+
+  await addDoc(collection(db, "adminLogs"), {
+    action:     "extend_subscription",
+    uid,
+    months,
+    newEnd:     newEnd.toDate().toISOString(),
+    performedBy: performedByEmail,
+    createdAt:  serverTimestamp(),
+  });
+}
+
+// Delete a user's Firestore profile (Admin SDK needed to remove Auth account).
+export async function deleteUserProfile({ uid, performedByEmail }) {
+  const { deleteDoc } = await import("firebase/firestore");
+  await deleteDoc(doc(db, "users", uid));
+
+  await addDoc(collection(db, "adminLogs"), {
+    action:     "delete_user",
+    uid,
+    performedBy: performedByEmail,
+    createdAt:  serverTimestamp(),
+  });
+}
+
 // Fetch all users (admin).
 export async function getAllUsers() {
   const q    = query(collection(db, "users"), orderBy("createdAt", "desc"));

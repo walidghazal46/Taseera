@@ -63,28 +63,46 @@ export default function PricingPage(props) {
   const isAr = props.settings?.language !== "en";
   const daysLeft = accessStatus?.daysLeft;
 
-  const badgeConfig = (() => {
+  const formatDate = (date) => {
+    if (!date) return null;
+    return new Date(date).toLocaleDateString(isAr ? "ar-SA" : "en-GB", { day: "numeric", month: "short", year: "numeric" });
+  };
+
+  const badge = (() => {
     if (isAdmin) return {
-      label: isAr ? "الوصول" : "Access",
-      value: isAr ? "صلاحية كاملة ∞" : "Full Access ∞",
-      cls: "border-emerald-200 bg-emerald-50",
-      labelCls: "text-emerald-700",
-      valueCls: "text-emerald-900",
+      icon: "∞",
+      label: isAr ? "صلاحية كاملة" : "Full Access",
+      sub: isAr ? "بدون انتهاء" : "No expiry",
+      gradient: "from-emerald-500 to-teal-500",
+      bg: "border-emerald-200 bg-gradient-to-l from-emerald-50 to-teal-50",
+      iconCls: "text-emerald-600",
+      labelCls: "text-emerald-800",
+      subCls: "text-emerald-600",
     };
-    if (daysLeft != null && daysLeft > 0) return {
-      label: isAr ? "الفترة التجريبية" : "Free Trial",
-      value: isAr ? `${daysLeft} ${daysLeft === 1 ? "يوم متبقي" : "أيام متبقية"}` : `${daysLeft} day${daysLeft === 1 ? "" : "s"} left`,
-      cls: "border-blue-200 bg-blue-50",
-      labelCls: "text-blue-700",
-      valueCls: "text-blue-900",
-    };
-    if (accessStatus?.canAccess) return {
-      label: isAr ? "الاشتراك" : "Subscription",
-      value: isAr ? "فعّال ∞" : "Active ∞",
-      cls: "border-emerald-200 bg-emerald-50",
-      labelCls: "text-emerald-700",
-      valueCls: "text-emerald-900",
-    };
+    if (daysLeft != null && daysLeft > 0) {
+      const endDate = accessStatus?.trialEndDate ? formatDate(accessStatus.trialEndDate) : null;
+      return {
+        icon: daysLeft <= 3 ? "⚡" : "⏳",
+        label: isAr ? `${daysLeft} ${daysLeft === 1 ? "يوم متبقي" : "أيام متبقية"}` : `${daysLeft} day${daysLeft === 1 ? "" : "s"} left`,
+        sub: endDate ? (isAr ? `تنتهي ${endDate}` : `Expires ${endDate}`) : (isAr ? "فترة تجريبية" : "Free Trial"),
+        bg: daysLeft <= 3 ? "border-orange-200 bg-gradient-to-l from-orange-50 to-amber-50" : "border-blue-200 bg-gradient-to-l from-blue-50 to-indigo-50",
+        iconCls: daysLeft <= 3 ? "text-orange-500" : "text-blue-500",
+        labelCls: daysLeft <= 3 ? "text-orange-800" : "text-blue-800",
+        subCls: daysLeft <= 3 ? "text-orange-500" : "text-blue-500",
+      };
+    }
+    if (accessStatus?.canAccess) {
+      const endDate = accessStatus?.packageEndDate ? formatDate(accessStatus.packageEndDate) : null;
+      return {
+        icon: "✅",
+        label: isAr ? "اشتراك فعّال" : "Active Subscription",
+        sub: endDate ? (isAr ? `تنتهي ${endDate}` : `Expires ${endDate}`) : (isAr ? "غير محدود" : "Unlimited"),
+        bg: "border-emerald-200 bg-gradient-to-l from-emerald-50 to-teal-50",
+        iconCls: "text-emerald-500",
+        labelCls: "text-emerald-800",
+        subCls: "text-emerald-600",
+      };
+    }
     return null;
   })();
 
@@ -95,14 +113,17 @@ export default function PricingPage(props) {
         title=""
         description={text.pages.pricing.description}
       />
-      {badgeConfig && (
+      {badge && (
         <div
-          className={`flex items-center justify-between rounded-2xl border px-4 ${badgeConfig.cls}`}
-          style={{ height: 40, fontFamily: "'Cairo','Tajawal',sans-serif" }}
+          className={`flex items-center gap-3 rounded-2xl border px-4 ${badge.bg}`}
+          style={{ height: 52, fontFamily: "'Cairo','Tajawal',sans-serif" }}
           dir={isAr ? "rtl" : "ltr"}
         >
-          <span className={`text-xs font-bold ${badgeConfig.labelCls}`}>{badgeConfig.label}</span>
-          <span className={`text-xs font-black ${badgeConfig.valueCls}`}>{badgeConfig.value}</span>
+          <span className={`text-xl ${badge.iconCls}`}>{badge.icon}</span>
+          <div className="flex flex-col justify-center">
+            <span className={`text-[13px] font-black leading-tight ${badge.labelCls}`}>{badge.label}</span>
+            <span className={`text-[10px] font-semibold leading-tight ${badge.subCls}`}>{badge.sub}</span>
+          </div>
         </div>
       )}
       <PricingWorkspace {...props} navigationBridge={bridgedNavigation} initialCountry={countryCode} />

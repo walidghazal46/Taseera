@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getAllUsers } from "../services/adminService";
 import { getAllPaymentRequests } from "../services/paymentService";
-import { approvePaymentRequest, rejectPaymentRequest, suspendUser, unsuspendUser, assignAdminRole, removeAdminRole } from "../services/adminService";
+import { approvePaymentRequest, rejectPaymentRequest, suspendUser, unsuspendUser, assignAdminRole, removeAdminRole, cancelSubscription, extendSubscription, deleteUserProfile } from "../services/adminService";
 import { SUPER_ADMIN_EMAIL } from "../data/packages";
 
 function Badge({ status }) {
@@ -45,7 +45,10 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
   const [actionMsg, setActionMsg]   = useState("");
   const [rejectModal, setRejectModal] = useState(null); // { requestId, uid }
   const [rejectReason, setRejectReason] = useState("");
-  const [adminModal, setAdminModal] = useState(null);   // { uid, email, currentRole }
+  const [adminModal, setAdminModal] = useState(null);   // { uid, email, action }
+  const [subModal, setSubModal] = useState(null);       // { uid, email, status }
+  const [extendMonths, setExtendMonths] = useState(1);
+  const [deleteModal, setDeleteModal] = useState(null); // { uid, email }
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -103,6 +106,36 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
       await assignAdminRole({ targetUid, adminType: "standard", permissions: [], performedByEmail: adminEmail });
       setAdminModal(null);
       flash(ar ? "تم تعيين المشرف." : "Admin assigned.");
+      reload();
+    } catch (err) { flash(err.message); }
+  };
+
+  const handleCancelSubscription = async () => {
+    if (!subModal) return;
+    try {
+      await cancelSubscription({ uid: subModal.uid, performedByEmail: adminEmail });
+      setSubModal(null);
+      flash(ar ? "تم إلغاء الاشتراك." : "Subscription cancelled.");
+      reload();
+    } catch (err) { flash(err.message); }
+  };
+
+  const handleExtendSubscription = async () => {
+    if (!subModal) return;
+    try {
+      await extendSubscription({ uid: subModal.uid, months: extendMonths, performedByEmail: adminEmail });
+      setSubModal(null);
+      flash(ar ? `تم التمديد بـ ${extendMonths} شهر.` : `Extended by ${extendMonths} month(s).`);
+      reload();
+    } catch (err) { flash(err.message); }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteModal) return;
+    try {
+      await deleteUserProfile({ uid: deleteModal.uid, performedByEmail: adminEmail });
+      setDeleteModal(null);
+      flash(ar ? "تم حذف الحساب." : "Account deleted.");
       reload();
     } catch (err) { flash(err.message); }
   };
@@ -249,6 +282,14 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
 
                       {!isSelf && !isSuperTarget && (
                         <div className="flex flex-wrap gap-2 pt-1">
+                          {/* Subscription control */}
+                          <button
+                            onClick={() => setSubModal({ uid: u.uid || u.id, email: u.email, status: u.subscriptionStatus })}
+                            className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-[11px] font-bold text-amber-700"
+                          >
+                            {ar ? "إدارة الاشتراك" : "Manage Sub"}
+                          </button>
+
                           {/* Suspend / Unsuspend */}
                           {u.isActive !== false ? (
                             <button
@@ -265,6 +306,14 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
                               {ar ? "إعادة تفعيل" : "Reactivate"}
                             </button>
                           )}
+
+                          {/* Delete */}
+                          <button
+                            onClick={() => setDeleteModal({ uid: u.uid || u.id, email: u.email })}
+                            className="rounded-full border border-red-300 bg-red-100 px-3 py-1.5 text-[11px] font-bold text-red-700"
+                          >
+                            {ar ? "حذف" : "Delete"}
+                          </button>
 
                           {/* Admin controls — Super Admin only */}
                           {isSuperAdmin && (
@@ -350,6 +399,79 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
                 {ar ? "تأكيد الرفض" : "Confirm Reject"}
               </button>
               <button onClick={() => setRejectModal(null)} className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-bold text-slate-600">
+                {ar ? "إلغاء" : "Cancel"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Subscription management modal */}
+      {subModal && (
+        <div className="fixed inset-0 z-[300] flex items-end justify-center bg-black/50" onClick={() => setSubModal(null)}>
+          <div
+            className="w-full max-w-lg bg-white rounded-t-[28px] p-5 space-y-4"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
+            onClick={(e) => e.stopPropagation()}
+            dir={ar ? "rtl" : "ltr"}
+          >
+            <div>
+              <h2 className="text-base font-black text-slate-800">{ar ? "إدارة الاشتراك" : "Manage Subscription"}</h2>
+              <p className="text-xs text-slate-500 mt-0.5">{subModal.email}</p>
+              <Badge status={subModal.status} />
+            </div>
+
+            {/* Extend */}
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 space-y-3">
+              <p className="text-sm font-bold text-emerald-800">{ar ? "تمديد الاشتراك" : "Extend Subscription"}</p>
+              <div className="flex items-center gap-3">
+                <label className="text-xs text-emerald-700 font-semibold shrink-0">{ar ? "عدد الأشهر:" : "Months:"}</label>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setExtendMonths(m => Math.max(1, m - 1))} className="flex h-7 w-7 items-center justify-center rounded-full bg-white border border-emerald-300 text-emerald-800 font-black text-sm">−</button>
+                  <span className="w-6 text-center font-black text-emerald-900">{extendMonths}</span>
+                  <button onClick={() => setExtendMonths(m => Math.min(24, m + 1))} className="flex h-7 w-7 items-center justify-center rounded-full bg-white border border-emerald-300 text-emerald-800 font-black text-sm">+</button>
+                </div>
+              </div>
+              <button onClick={handleExtendSubscription} className="w-full rounded-2xl bg-emerald-600 py-2.5 text-xs font-bold text-white">
+                {ar ? `تمديد ${extendMonths} شهر` : `Extend ${extendMonths} month(s)`}
+              </button>
+            </div>
+
+            {/* Cancel */}
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4 space-y-3">
+              <p className="text-sm font-bold text-red-800">{ar ? "إلغاء الاشتراك" : "Cancel Subscription"}</p>
+              <p className="text-xs text-red-600">{ar ? "سيتم إلغاء الباقة الحالية وإيقاف الوصول فوراً." : "Current package will be revoked and access stopped immediately."}</p>
+              <button onClick={handleCancelSubscription} className="w-full rounded-2xl bg-red-600 py-2.5 text-xs font-bold text-white">
+                {ar ? "إلغاء الاشتراك" : "Cancel Subscription"}
+              </button>
+            </div>
+
+            <button onClick={() => setSubModal(null)} className="w-full rounded-2xl border border-slate-200 py-3 text-sm font-bold text-slate-600">
+              {ar ? "إغلاق" : "Close"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteModal && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 px-4" onClick={() => setDeleteModal(null)}>
+          <div
+            className="w-full max-w-sm bg-white rounded-[28px] p-5 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+            dir={ar ? "rtl" : "ltr"}
+          >
+            <div className="text-center">
+              <div className="text-4xl mb-2">🗑️</div>
+              <h2 className="text-base font-black text-slate-800">{ar ? "حذف الحساب" : "Delete Account"}</h2>
+              <p className="text-sm text-slate-500 mt-1">{deleteModal.email}</p>
+              <p className="text-xs text-red-600 mt-2">{ar ? "هذا الإجراء لا يمكن التراجع عنه." : "This action cannot be undone."}</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={handleDeleteUser} className="flex-1 rounded-2xl bg-red-600 py-3 text-sm font-bold text-white">
+                {ar ? "تأكيد الحذف" : "Confirm Delete"}
+              </button>
+              <button onClick={() => setDeleteModal(null)} className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-bold text-slate-600">
                 {ar ? "إلغاء" : "Cancel"}
               </button>
             </div>
