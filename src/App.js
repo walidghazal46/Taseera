@@ -9,6 +9,8 @@ import Modal from "./components/Modal";
 import SubscriptionPage from "./components/SubscriptionPage";
 import TrialBanner from "./components/TrialBanner";
 import AdminDashboard from "./components/AdminDashboard";
+import NotificationsPanel from "./components/NotificationsPanel";
+import { subscribeToNotifications } from "./services/notificationService";
 
 import useAndroidBridge from "./hooks/useAndroidBridge";
 import usePersistentState from "./hooks/usePersistentState";
@@ -237,12 +239,32 @@ export default function App() {
   // Screens
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
   const [showSubscriptionPage, setShowSubscriptionPage] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [paymentSubmittedMsg, setPaymentSubmittedMsg] = useState(false); // eslint-disable-line no-unused-vars
+
+  // In-app notifications (Firestore real-time)
+  const [notifications, setNotifications] = useState([]);
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {
     setCompanies((c) => mergeSeedData(c, sampleCompanies));
     setSuppliers((c) => mergeSeedData(c, sampleSuppliers));
   }, [setCompanies, setSuppliers]);
+
+  // Subscribe to Firestore notifications for the logged-in user.
+  useEffect(() => {
+    if (!firebaseUser || isAdmin) return;
+    const unsub = subscribeToNotifications(firebaseUser.uid, setNotifications);
+    return unsub;
+  }, [firebaseUser, isAdmin]);
+
+  // Request browser/web notification permission once logged in.
+  useEffect(() => {
+    if (!firebaseUser) return;
+    if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+  }, [firebaseUser]);
 
   const mergedCompanies = useMemo(() => mergeSeedData(companies, sampleCompanies), [companies]);
   const mergedSuppliers = useMemo(() => mergeSeedData(suppliers, sampleSuppliers), [suppliers]);
@@ -347,6 +369,7 @@ export default function App() {
 
   const performBackNavigation = useCallback(() => {
     if (showAdminDashboard) { setShowAdminDashboard(false); return true; }
+    if (showNotifications)  { setShowNotifications(false);  return true; }
     if (showSubscriptionPage) { setShowSubscriptionPage(false); return true; }
     if (pageBackHandlerRef.current?.()) { setShowExitPrompt(false); return true; }
     const currentStack = routeStackRef.current;
@@ -369,7 +392,7 @@ export default function App() {
     }
     setShowExitPrompt(false); return false;
   }, [activePage, authMode, bridge.isAndroid, setActivePage, setAuthMode, setRouteStack,
-      shouldShowLoginScreen, showAdminDashboard, showSubscriptionPage]);
+      shouldShowLoginScreen, showAdminDashboard, showNotifications, showSubscriptionPage]);
 
   useEffect(() => {
     window.history.replaceState({ source: "taseera-root" }, "");
@@ -757,6 +780,18 @@ export default function App() {
           </div>
         )}
 
+        {/* Notifications panel overlay */}
+        {showNotifications && (
+          <div className="absolute inset-0 z-[100]">
+            <NotificationsPanel
+              notifications={notifications}
+              uid={firebaseUser?.uid}
+              language={settings.language}
+              onClose={() => setShowNotifications(false)}
+            />
+          </div>
+        )}
+
         <AppShell
           activePage={activePage}
           onNavigate={handleNavigate}
@@ -769,6 +804,8 @@ export default function App() {
           navText={appText.nav}
           language={settings.language}
           theme={settings.theme}
+          unreadCount={unreadCount}
+          onOpenNotifications={isFirebaseAuthenticated && !isAdmin ? () => setShowNotifications(true) : undefined}
         >
           {renderedPage}
         </AppShell>

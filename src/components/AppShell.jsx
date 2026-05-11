@@ -57,6 +57,8 @@ export default function AppShell({
   navText,
   language = "ar",
   theme = "dark",
+  unreadCount = 0,
+  onOpenNotifications,
 }) {
   const isRtl = language !== "en";
   const mainRef = useRef(null);
@@ -123,12 +125,32 @@ export default function AppShell({
           </div>
         </div>
 
-        {/* Active page indicator */}
+        {/* Bell icon + Active page indicator */}
+        <div className="flex items-center gap-2">
+        {onOpenNotifications && (
+          <button
+            type="button"
+            onClick={onOpenNotifications}
+            className="relative flex h-7 w-7 items-center justify-center rounded-full border border-[#dfe6ff] bg-white/85 text-[#6c78ad] transition-all hover:border-[#88c9ff] hover:text-[#3a7fff]"
+            aria-label={language === "en" ? "Notifications" : "الإشعارات"}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-black text-white leading-none">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
+        )}
         <div className="hidden h-7 items-center gap-1.5 rounded-full border border-[#dfe6ff] bg-white/85 px-2.5 py-0 min-[380px]:flex">
           <span className="h-1.5 w-1.5 rounded-full bg-[linear-gradient(135deg,#6e66ff_0%,#36dddf_100%)] animate-pulse" />
           <span className="bg-[linear-gradient(90deg,#665fff_0%,#2990ff_52%,#39dddf_100%)] bg-clip-text text-[9px] font-bold uppercase tracking-widest text-transparent" style={{ fontFamily: AR }}>
             {localizedItems.find(i => i.id === activePage)?.label}
           </span>
+        </div>
         </div>
       </div>
 
