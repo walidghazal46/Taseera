@@ -658,6 +658,7 @@ export default function App() {
           profile={profile}
           isSuperAdmin={isSuperAdmin}
           language={settings.language}
+          onBack={() => setShowAdminDashboard(false)}
         />
       </>
     );

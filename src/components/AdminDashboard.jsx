@@ -34,7 +34,7 @@ function Section({ title, children }) {
   );
 }
 
-export default function AdminDashboard({ profile, isSuperAdmin, language = "ar" }) {
+export default function AdminDashboard({ profile, isSuperAdmin, language = "ar", onBack }) {
   const ar = language === "ar";
   const adminEmail = profile?.email || "";
 
@@ -133,11 +133,23 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar" 
     >
       {/* Header */}
       <div className="bg-[linear-gradient(135deg,#082555,#16335d)] px-5 py-4 shadow-md">
-        <p className="text-amber-300 text-[10px] font-bold uppercase tracking-widest">Taseera Admin</p>
-        <h1 className="text-white text-xl font-black">
-          {ar ? "لوحة الإدارة" : "Admin Dashboard"}
-        </h1>
-        <p className="text-slate-400 text-xs mt-0.5">{adminEmail}</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-amber-300 text-[10px] font-bold uppercase tracking-widest">Taseera Admin</p>
+            <h1 className="text-white text-xl font-black">
+              {ar ? "لوحة الإدارة" : "Admin Dashboard"}
+            </h1>
+            <p className="text-slate-400 text-xs mt-0.5">{adminEmail}</p>
+          </div>
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white text-lg mt-1"
+            >
+              {ar ? "×" : "×"}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Flash message */}
