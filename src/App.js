@@ -198,13 +198,14 @@ function InfoDialog({ dialog, onClose }) {
 }
 
 // ── Subscription gate screen ─────────────────────────────────────────────────
-function SubscriptionGate({ status, language, profile, onPaymentSubmitted }) {
+function SubscriptionGate({ status, language, profile, onPaymentSubmitted, onBack }) {
   return (
     <SubscriptionPage
       language={language}
       subscriptionStatus={status}
       profile={profile}
       onPaymentSubmitted={onPaymentSubmitted}
+      onBack={onBack}
     />
   );
 }
@@ -672,6 +673,7 @@ export default function App() {
           language={settings.language}
           profile={profile}
           onPaymentSubmitted={handlePaymentSubmitted}
+          onBack={() => setShowSubscriptionPage(false)}
         />
       </>
     );
@@ -767,34 +769,7 @@ export default function App() {
           language={settings.language}
           theme={settings.theme}
         >
-          {/* Access gate — only pricing is locked; companies/suppliers/settings always open */}
-          {needsSubscription && !showSubscriptionPage && activePage === "pricing" ? (
-            <div
-              className="flex flex-col items-center justify-center h-full px-6 text-center gap-4"
-              dir={settings.language === "ar" ? "rtl" : "ltr"}
-              style={{ fontFamily: "'Cairo','Tajawal',sans-serif" }}
-            >
-              <div className="text-5xl">🔒</div>
-              <h2 className="text-xl font-black text-[#082555]">
-                {settings.language === "ar"
-                  ? (accessStatus?.status === SUBSCRIPTION_STATUS.TRIAL_EXPIRED ? "انتهت فترة التجربة" : "انتهى الاشتراك")
-                  : (accessStatus?.status === SUBSCRIPTION_STATUS.TRIAL_EXPIRED ? "Trial Expired" : "Subscription Expired")}
-              </h2>
-              <p className="text-sm text-slate-600 max-w-sm leading-relaxed">
-                {settings.language === "ar"
-                  ? "اشترك للوصول إلى التسعير التفصيلي لجميع بنود الأعمال."
-                  : "Subscribe to access detailed pricing for all work items."}
-              </p>
-              <button
-                onClick={() => setShowSubscriptionPage(true)}
-                className="rounded-2xl bg-[linear-gradient(135deg,#16335d,#082555)] px-8 py-4 text-sm font-black text-white shadow-lg"
-              >
-                {settings.language === "ar" ? "اختر باقتك" : "Choose Your Plan"}
-              </button>
-            </div>
-          ) : (
-            renderedPage
-          )}
+          {renderedPage}
         </AppShell>
       </div>
 

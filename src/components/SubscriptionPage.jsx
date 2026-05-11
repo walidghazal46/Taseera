@@ -255,20 +255,27 @@ export default function SubscriptionPage({
       style={{ fontFamily: "'Cairo','Tajawal',sans-serif", paddingTop: "calc(env(safe-area-inset-top) + 12px)", paddingBottom: "calc(env(safe-area-inset-bottom) + 24px)" }}
     >
       {/* Header */}
-      <div className="flex items-center gap-3 px-5 pb-4">
+      <div className="flex items-center justify-between px-5 pb-4">
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <button onClick={onBack} className="flex h-9 w-9 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-600 shadow-sm">
+              {ar ? "›" : "‹"}
+            </button>
+          )}
+          <div>
+            <h1 className="text-xl font-black text-[#082555]">
+              {ar ? "اختر باقتك" : "Choose Your Plan"}
+            </h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {ar ? "وصول كامل لجميع ميزات تسعيرة" : "Full access to all Taseera features"}
+            </p>
+          </div>
+        </div>
         {onBack && (
-          <button onClick={onBack} className="flex h-9 w-9 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-600 shadow-sm">
-            {ar ? "›" : "‹"}
+          <button onClick={onBack} className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 text-lg">
+            ✕
           </button>
         )}
-        <div>
-          <h1 className="text-xl font-black text-[#082555]">
-            {ar ? "اختر باقتك" : "Choose Your Plan"}
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {ar ? "وصول كامل لجميع ميزات تسعيرة" : "Full access to all Taseera features"}
-          </p>
-        </div>
       </div>
 
       {/* Status banner */}
