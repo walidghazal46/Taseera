@@ -54,7 +54,11 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const [u, r, dr] = await Promise.all([getAllUsers(), getAllPaymentRequests(), getAllDeleteRequests()]);
+      const [u, r, dr] = await Promise.all([
+        getAllUsers().catch(() => []),
+        getAllPaymentRequests().catch(() => []),
+        getAllDeleteRequests().catch(() => []),
+      ]);
       setUsers(u);
       setRequests(r);
       setDeleteReqs(dr);
