@@ -58,6 +58,11 @@ export default function PricingPage(props) {
 
   const countryCode = COUNTRY_NAME_TO_CODE[selectedCountry] || "sa";
 
+  const accessStatus = props.accessStatus;
+  const isAr = props.settings?.language !== "en";
+  const daysLeft = accessStatus?.daysLeft;
+  const showTrialBadge = daysLeft != null && daysLeft > 0;
+
   return (
     <div className="grid gap-2.5">
       <PageHeader
@@ -65,6 +70,22 @@ export default function PricingPage(props) {
         title=""
         description={text.pages.pricing.description}
       />
+      {showTrialBadge && (
+        <div
+          className="flex items-center justify-between rounded-2xl border border-blue-200 bg-blue-50 px-4"
+          style={{ height: 40, fontFamily: "'Cairo','Tajawal',sans-serif" }}
+          dir={isAr ? "rtl" : "ltr"}
+        >
+          <span className="text-xs font-bold text-blue-700">
+            {isAr ? "الفترة التجريبية" : "Free Trial"}
+          </span>
+          <span className="text-xs font-black text-blue-900">
+            {isAr
+              ? `${daysLeft} ${daysLeft === 1 ? "يوم متبقي" : "أيام متبقية"}`
+              : `${daysLeft} day${daysLeft === 1 ? "" : "s"} left`}
+          </span>
+        </div>
+      )}
       <PricingWorkspace {...props} navigationBridge={bridgedNavigation} initialCountry={countryCode} />
     </div>
   );
