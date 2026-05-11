@@ -43,8 +43,12 @@ export function buildInitialProfile(firebaseUser) {
   };
 }
 
-// Create or safely merge user profile in Firestore.
-// Never overwrites role, adminType, permissions, or active subscription.
+// Create or merge user profile in Firestore.
+// For new users: write full profile including subscription fields.
+// For existing users: only update safe non-privileged fields (displayName).
+// Subscription fields are intentionally NOT updated for existing users —
+// Firestore rules block self-update of those fields, and computeAccessStatus
+// handles missing fields gracefully using createdAt as a fallback.
 export async function ensureUserProfile(firebaseUser) {
   const ref  = doc(db, "users", firebaseUser.uid);
   const snap = await getDoc(ref);
@@ -56,34 +60,16 @@ export async function ensureUserProfile(firebaseUser) {
 
   const data = snap.data();
 
-  // If existing user is missing trial/subscription fields, fill them in safely.
+  // Only update safe display fields that can't affect privileges.
   const updates = {};
-  const email = firebaseUser.email || "";
-
-  if (!data.trialStartDate) {
-    const isExisting   = isExistingUser(email);
-    updates.trialStartDate = Timestamp.fromDate(isExisting ? EXISTING_USER_TRIAL_START : new Date());
-  }
-  if (!data.trialEndDate) {
-    const start = data.trialStartDate?.toDate?.() || new Date();
-    const isExisting = isExistingUser(email);
-    updates.trialEndDate = isExisting
-      ? Timestamp.fromDate(EXISTING_USER_TRIAL_END)
-      : Timestamp.fromDate(addDays(start, REGISTERED_TRIAL_DAYS));
-  }
-  if (!data.subscriptionStatus) {
-    updates.subscriptionStatus = SUBSCRIPTION_STATUS.REGISTERED_TRIAL;
-  }
-  if (!data.userType) {
-    updates.userType = "registered";
-  }
-  if (data.isActive === undefined) {
-    updates.isActive = true;
+  const newName = firebaseUser.displayName;
+  if (newName && newName !== data.displayName) {
+    updates.displayName = newName;
+    updates.updatedAt   = serverTimestamp();
   }
 
   if (Object.keys(updates).length > 0) {
-    updates.updatedAt = serverTimestamp();
-    await updateDoc(ref, updates);
+    try { await updateDoc(ref, updates); } catch { /* ignore if rules block it */ }
   }
 
   return { ...data, ...updates };
@@ -95,12 +81,27 @@ export async function getUserProfile(uid) {
 }
 
 // Compute effective access status from the stored profile.
+// Handles legacy profiles that may be missing subscription fields.
 export function computeAccessStatus(profile) {
   if (!profile) return { canAccess: false, status: "no_profile" };
 
-  const {
-    subscriptionStatus, packageEndDate, trialEndDate, isActive,
+  let {
+    subscriptionStatus, packageEndDate, trialEndDate, isActive, createdAt, email,
   } = profile;
+
+  // Legacy profiles without subscriptionStatus — compute from known data.
+  if (!subscriptionStatus) {
+    const now = new Date();
+    if (email && isExistingUser(email)) {
+      subscriptionStatus = SUBSCRIPTION_STATUS.REGISTERED_TRIAL;
+      trialEndDate = { toDate: () => EXISTING_USER_TRIAL_END };
+    } else {
+      const created = createdAt?.toDate?.() || now;
+      const trialEnd = addDays(created, REGISTERED_TRIAL_DAYS);
+      subscriptionStatus = SUBSCRIPTION_STATUS.REGISTERED_TRIAL;
+      trialEndDate = { toDate: () => trialEnd };
+    }
+  }
 
   // Suspended
   if (!isActive || subscriptionStatus === SUBSCRIPTION_STATUS.SUSPENDED) {

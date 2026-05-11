@@ -10,7 +10,8 @@ export default function PaymentRequestForm({ language, pkg, profile, onSuccess, 
   const methods = [
     { id: "bank_transfer", ar: "تحويل بنكي", en: "Bank Transfer" },
     { id: "stc_pay",       ar: "STC Pay",     en: "STC Pay" },
-    { id: "other",         ar: "وسيلة أخرى",  en: "Other" },
+    { id: "instapay",      ar: "Instapay",    en: "Instapay" },
+    { id: "cash_wallet",   ar: "محفظة",       en: "E-Wallet" },
   ];
 
   const submit = async () => {
@@ -30,6 +31,7 @@ export default function PaymentRequestForm({ language, pkg, profile, onSuccess, 
       });
       onSuccess?.(id);
     } catch (err) {
+      console.error("createPaymentRequest error:", err);
       setError(ar ? "حدث خطأ، حاول مرة أخرى." : "An error occurred. Please try again.");
     } finally {
       setLoading(false);

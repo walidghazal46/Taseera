@@ -12,20 +12,21 @@ export async function createPaymentRequest({ uid, userEmail, packageId, paymentM
 
   const payload = {
     uid,
+    userId:          uid,
+    userCode:        userEmail,
     userEmail,
+    selectedPlan:    packageId,
     packageId,
     packageName:     pkg.nameAr,
     packagePrice:    pkg.price,
+    amount:          pkg.price,
     packageDuration: pkg.durationMonths,
-    currency:        pkg.currency,
+    currency:        "SAR",
     paymentMethod:   paymentMethod || "bank_transfer",
     proofUrl:        proofUrl || null,
-    requestStatus:   "pending",
-    rejectionReason: null,
+    status:          "pending",
     createdAt:       serverTimestamp(),
     updatedAt:       serverTimestamp(),
-    approvedAt:      null,
-    approvedBy:      null,
   };
 
   const ref = await addDoc(collection(db, "paymentRequests"), payload);

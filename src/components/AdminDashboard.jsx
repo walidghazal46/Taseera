@@ -116,7 +116,7 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar" 
     } catch (err) { flash(err.message); }
   };
 
-  const pendingRequests = requests.filter((r) => r.requestStatus === "pending");
+  const pendingRequests = requests.filter((r) => (r.status || r.requestStatus) === "pending");
   const allRequests     = requests;
 
   const tabs = [
@@ -186,7 +186,7 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar" 
                           <p className="text-sm font-bold text-slate-800">{req.userEmail}</p>
                           <p className="text-xs text-slate-500 mt-0.5">{req.packageName} · {req.packagePrice} {req.currency}</p>
                         </div>
-                        <Badge status={req.requestStatus} />
+                        <Badge status={req.status || req.requestStatus} />
                       </div>
                       <p className="text-xs text-slate-400">
                         {req.createdAt?.toDate?.()?.toLocaleDateString?.() || "—"}
@@ -294,7 +294,7 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar" 
                           <p className="text-sm font-semibold text-slate-800">{req.userEmail}</p>
                           <p className="text-xs text-slate-500">{req.packageName} · {req.packagePrice} {req.currency}</p>
                         </div>
-                        <Badge status={req.requestStatus} />
+                        <Badge status={req.status || req.requestStatus} />
                       </div>
                       {req.rejectionReason && (
                         <p className="text-xs text-red-600 mt-1">

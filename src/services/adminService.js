@@ -23,10 +23,10 @@ export async function approvePaymentRequest({ requestId, uid, packageId, approve
 
   // Update the payment request
   await updateDoc(doc(db, "paymentRequests", requestId), {
-    requestStatus: "approved",
-    approvedAt:    serverTimestamp(),
-    approvedBy:    approvedByEmail,
-    updatedAt:     serverTimestamp(),
+    status:     "approved",
+    approvedAt: serverTimestamp(),
+    approvedBy: approvedByEmail,
+    updatedAt:  serverTimestamp(),
   });
 
   // Activate the user's subscription
@@ -54,7 +54,7 @@ export async function approvePaymentRequest({ requestId, uid, packageId, approve
 // Reject a payment request.
 export async function rejectPaymentRequest({ requestId, uid, rejectionReason, rejectedByEmail }) {
   await updateDoc(doc(db, "paymentRequests", requestId), {
-    requestStatus:   "rejected",
+    status:          "rejected",
     rejectionReason: rejectionReason || "",
     updatedAt:       serverTimestamp(),
   });

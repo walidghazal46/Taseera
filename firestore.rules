@@ -2,144 +2,149 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ─────────────────────────────────────────────────────
-    // Helper functions
-    // ─────────────────────────────────────────────────────
-
     function isSignedIn() {
       return request.auth != null;
     }
 
-    function isOwner(uid) {
-      return isSignedIn() && request.auth.uid == uid;
+    function authUid() {
+      return request.auth.uid;
     }
 
-    // Super Admin is determined exclusively by email in the Firebase JWT token.
-    // Only walidghazal46@gmail.com has super admin rights.
+    function authEmail() {
+      return request.auth.token.email != null ? request.auth.token.email : "";
+    }
+
+    function currentUserDoc() {
+      return get(/databases/$(database)/documents/users/$(authUid()));
+    }
+
+    function currentUserExists() {
+      return exists(/databases/$(database)/documents/users/$(authUid()));
+    }
+
     function isSuperAdmin() {
-      return isSignedIn() && request.auth.token.email == 'walidghazal46@gmail.com';
+      return isSignedIn() && authEmail() == "walidghazal46@gmail.com";
     }
 
-    // A normal admin is a user with role == "admin" in Firestore.
-    // Super admin is always an admin too.
     function isAdmin() {
-      return isSuperAdmin() ||
-        (isSignedIn() &&
-          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      return isSignedIn() && (isSuperAdmin() || (currentUserExists() && currentUserDoc().data.role == "admin"));
     }
 
-    // Fields that only Super Admin may write.
-    // No normal user, registered user, or admin may set these on any document.
-    function noForbiddenAdminFields() {
-      return
-        !('role'        in request.resource.data) ||
-         request.resource.data.role == 'user'
-        &&
-        !('adminType'   in request.resource.data)
-        &&
-        !('permissions' in request.resource.data)
-        &&
-        !('isSuperAdmin' in request.resource.data);
+    function hasPermission(permission) {
+      return isSignedIn() && (
+        isSuperAdmin() ||
+        (isAdmin() && currentUserExists() && currentUserDoc().data.get(["permissions", permission], false) == true)
+      );
     }
 
-    // Subscription/payment fields only admins may write
-    function noSubscriptionFields() {
-      return
-        !('subscriptionStatus' in request.resource.data) &&
-        !('selectedPackage'    in request.resource.data) &&
-        !('packageStartDate'   in request.resource.data) &&
-        !('packageEndDate'     in request.resource.data) &&
-        !('isPaid'             in request.resource.data) &&
-        !('isActive'           in request.resource.data);
+    function isSelf(userId) {
+      return isSignedIn() && authUid() == userId;
+    }
+
+    // Fields that only admins may change on user documents.
+    function touchesAdminFields() {
+      return request.resource.data.role != resource.data.role ||
+        request.resource.data.adminType != resource.data.adminType ||
+        request.resource.data.permissions != resource.data.permissions;
+    }
+
+    // Subscription / payment fields only admins may change.
+    function touchesSubscriptionFields() {
+      return request.resource.data.subscriptionStatus != resource.data.subscriptionStatus ||
+        request.resource.data.selectedPackage != resource.data.selectedPackage ||
+        request.resource.data.packageStartDate != resource.data.packageStartDate ||
+        request.resource.data.packageEndDate != resource.data.packageEndDate ||
+        request.resource.data.isPaid != resource.data.isPaid ||
+        request.resource.data.isActive != resource.data.isActive;
+    }
+
+    // User may not change their own role / admin / subscription / identity fields.
+    function touchesPrivilegedFields() {
+      return touchesAdminFields() || touchesSubscriptionFields() ||
+        request.resource.data.get("status", null) != resource.data.get("status", null) ||
+        request.resource.data.email != resource.data.email ||
+        request.resource.data.uid != resource.data.uid;
+    }
+
+    // First-time profile creation — only "user" role allowed, email/uid must match auth.
+    function creatingSelfBaseProfile(userId) {
+      return isSelf(userId) &&
+        request.resource.data.uid == authUid() &&
+        request.resource.data.email == authEmail() &&
+        request.resource.data.role == "user";
+    }
+
+    function targetIsSuperAdmin(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId)) &&
+        get(/databases/$(database)/documents/users/$(userId)).data.email == "walidghazal46@gmail.com";
+    }
+
+    // Valid create for a payment request (new format used by this app).
+    function isValidPaymentRequestCreate() {
+      return (
+        request.resource.data.uid == authUid() &&
+        request.resource.data.userId == authUid() &&
+        request.resource.data.userCode is string &&
+        request.resource.data.selectedPlan in ["monthly", "six_months", "yearly", "lifetime"] &&
+        request.resource.data.amount is number &&
+        request.resource.data.currency == "SAR" &&
+        request.resource.data.paymentMethod in ["bank_transfer", "instapay", "cash_wallet", "stc_pay"] &&
+        request.resource.data.status == "pending"
+      );
     }
 
     // ─────────────────────────────────────────────────────
-    // /users/{uid}
+    // /users/{userId}
     // ─────────────────────────────────────────────────────
-    match /users/{uid} {
+    match /users/{userId} {
+      allow read: if isSelf(userId) || isAdmin();
 
-      // Any authenticated user can read their own profile; admins can read all.
-      allow read: if isOwner(uid) || isAdmin();
+      // User creates their own profile (first login).
+      allow create: if creatingSelfBaseProfile(userId) || isSuperAdmin();
 
-      // A user may CREATE only their own profile.
-      // They MUST NOT include admin or subscription fields.
-      allow create: if isOwner(uid)
-        && (!('role' in request.resource.data) || request.resource.data.role == 'user')
-        && !('adminType'    in request.resource.data)
-        && !('permissions'  in request.resource.data)
-        && !('isSuperAdmin' in request.resource.data)
-        && !('subscriptionStatus' in request.resource.data)
-        && !('packageStartDate'   in request.resource.data)
-        && !('packageEndDate'     in request.resource.data)
-        && !('isPaid'             in request.resource.data)
-        && !('isActive'           in request.resource.data);
-
-      // A user may UPDATE only their own profile.
-      // They cannot change role, adminType, permissions, or subscription fields.
-      allow update: if isOwner(uid)
-        && (!('role' in request.resource.data) || request.resource.data.role == resource.data.role)
-        && !('adminType'    in request.resource.data)
-        && !('permissions'  in request.resource.data)
-        && !('isSuperAdmin' in request.resource.data)
-        && !('subscriptionStatus' in request.resource.data)
-        && !('packageStartDate'   in request.resource.data)
-        && !('packageEndDate'     in request.resource.data)
-        && !('isPaid'             in request.resource.data)
-        && !('isActive'           in request.resource.data);
-
-      // Super Admin has full write access to all user profiles.
+      // Super Admin has full write access.
       allow write: if isSuperAdmin();
 
-      // Normal admin (not super) can read/update users
-      // but CANNOT touch the Super Admin account and CANNOT grant admin roles.
-      allow read: if isAdmin();
+      // Normal admin can update users (cannot touch Super Admin or promote to admin).
       allow update: if isAdmin()
-        && request.auth.token.email != 'walidghazal46@gmail.com'
-        && (resource.data.role != 'admin' || isSuperAdmin())
-        && (!('role'       in request.resource.data) || isSuperAdmin())
-        && !('adminType'   in request.resource.data)
-        && !('permissions' in request.resource.data);
+        && !targetIsSuperAdmin(userId)
+        && !touchesAdminFields()
+        && (hasPermission("editUsers") || hasPermission("suspendUsers"));
+
+      // User can update their own non-privileged fields only.
+      allow update: if isSelf(userId) && !touchesPrivilegedFields();
+
+      allow delete: if isSuperAdmin() || (hasPermission("deleteUsers") && !targetIsSuperAdmin(userId));
+    }
+
+    // ─────────────────────────────────────────────────────
+    // /systemCounters/{counterId}
+    // ─────────────────────────────────────────────────────
+    match /systemCounters/{counterId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() &&
+        request.resource.data.keys().hasOnly(["seq", "updatedAt"]) &&
+        request.resource.data.seq is int;
+      allow delete: if isSuperAdmin();
     }
 
     // ─────────────────────────────────────────────────────
     // /paymentRequests/{requestId}
     // ─────────────────────────────────────────────────────
     match /paymentRequests/{requestId} {
-
-      // User reads their own requests; admins read all.
-      allow read: if isOwner(resource.data.uid) || isAdmin();
-
-      // A user may only create a payment request for themselves.
-      // It must start as "pending" and cannot include admin-controlled fields.
-      allow create: if isSignedIn()
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.requestStatus == 'pending'
-        && !('approvedBy' in request.resource.data)
-        && !('approvedAt' in request.resource.data)
-        && !('rejectionReason' in request.resource.data);
-
-      // Only admins may update (approve / reject) payment requests.
-      allow update: if isAdmin();
-
-      // Only Super Admin may delete requests.
+      allow read: if isAdmin()
+        || (isSignedIn() && (resource.data.userId == authUid() || resource.data.uid == authUid()));
+      allow create: if isSignedIn() && isValidPaymentRequestCreate();
+      allow update: if isAdmin() && hasPermission("approvePayments");
       allow delete: if isSuperAdmin();
     }
 
     // ─────────────────────────────────────────────────────
-    // /packages/{docId}  — subscription package definitions
-    // ─────────────────────────────────────────────────────
-    match /packages/{docId} {
-      allow read: if true;
-      allow write: if isSuperAdmin();
-    }
-
-    // ─────────────────────────────────────────────────────
-    // /paymentSettings/{docId}  — bank / payment info
+    // /paymentSettings/{docId}
     // ─────────────────────────────────────────────────────
     match /paymentSettings/{docId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, update, delete: if isAdmin() && hasPermission("approvePayments");
     }
 
     // ─────────────────────────────────────────────────────
@@ -147,42 +152,40 @@ service cloud.firestore {
     // ─────────────────────────────────────────────────────
     match /ads/{docId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow create, update, delete: if isAdmin() && hasPermission("approvePayments");
     }
 
     // ─────────────────────────────────────────────────────
-    // /adminLogs/{docId}  — immutable audit trail
+    // /adminLogs/{logId}
     // ─────────────────────────────────────────────────────
-    match /adminLogs/{docId} {
-      allow read: if isSuperAdmin();
+    match /adminLogs/{logId} {
+      allow read: if isAdmin() && hasPermission("viewLogs");
       allow create: if isAdmin();
       allow update, delete: if false;
     }
 
     // ─────────────────────────────────────────────────────
-    // /systemCounters/{docId}
+    // /countryStats/{countryId}
     // ─────────────────────────────────────────────────────
-    match /systemCounters/{docId} {
+    match /countryStats/{countryId} {
       allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // ─────────────────────────────────────────────────────
+    // /packages/{docId}
+    // ─────────────────────────────────────────────────────
+    match /packages/{docId} {
+      allow read: if true;
       allow write: if isSuperAdmin();
     }
 
     // ─────────────────────────────────────────────────────
-    // /countryStats/{docId}
+    // /subscriptions/{subscriptionId}
     // ─────────────────────────────────────────────────────
-    match /countryStats/{docId} {
-      allow read: if isAdmin();
-      allow create, update: if isSignedIn();
-      allow delete: if isSuperAdmin();
-    }
-
-    // ─────────────────────────────────────────────────────
-    // /subscriptions/{docId}  — legacy / extra safety
-    // ─────────────────────────────────────────────────────
-    match /subscriptions/{docId} {
-      allow read: if isOwner(resource.data.uid) || isAdmin();
-      allow create, update: if isAdmin();
-      allow delete: if isSuperAdmin();
+    match /subscriptions/{subscriptionId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == authUid());
+      allow create, update, delete: if isAdmin() && hasPermission("approvePayments");
     }
 
     // ─────────────────────────────────────────────────────

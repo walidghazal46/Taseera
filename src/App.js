@@ -767,8 +767,8 @@ export default function App() {
           language={settings.language}
           theme={settings.theme}
         >
-          {/* Access gate — show subscription CTA inside app if trial expired */}
-          {needsSubscription && !showSubscriptionPage ? (
+          {/* Access gate — only pricing is locked; companies/suppliers/settings always open */}
+          {needsSubscription && !showSubscriptionPage && activePage === "pricing" ? (
             <div
               className="flex flex-col items-center justify-center h-full px-6 text-center gap-4"
               dir={settings.language === "ar" ? "rtl" : "ltr"}
@@ -782,8 +782,8 @@ export default function App() {
               </h2>
               <p className="text-sm text-slate-600 max-w-sm leading-relaxed">
                 {settings.language === "ar"
-                  ? "اختر باقة للمتابعة والاستمتاع بجميع ميزات تسعيرة."
-                  : "Choose a plan to continue and enjoy all Taseera features."}
+                  ? "اشترك للوصول إلى التسعير التفصيلي لجميع بنود الأعمال."
+                  : "Subscribe to access detailed pricing for all work items."}
               </p>
               <button
                 onClick={() => setShowSubscriptionPage(true)}
