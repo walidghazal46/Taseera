@@ -1,18 +1,25 @@
 import {
-  collection, addDoc, query, where, orderBy,
+  collection, addDoc, query, where,
   onSnapshot, updateDoc, doc, getDocs, serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
 
 export function subscribeToNotifications(uid, callback) {
+  // No orderBy — avoids composite index requirement. Sort client-side.
   const q = query(
     collection(db, "notifications"),
-    where("uid", "==", uid),
-    orderBy("createdAt", "desc")
+    where("uid", "==", uid)
   );
   return onSnapshot(q, (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-  }, (err) => { console.error("notifications snapshot error:", err); callback([]); });
+    const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    // Sort newest first using createdAt (Timestamp or null)
+    docs.sort((a, b) => {
+      const ta = a.createdAt?.toMillis?.() ?? 0;
+      const tb = b.createdAt?.toMillis?.() ?? 0;
+      return tb - ta;
+    });
+    callback(docs);
+  }, (err) => { console.error("notifications error:", err); callback([]); });
 }
 
 export async function createNotification({ uid, type, titleAr, titleEn, bodyAr, bodyEn }) {
@@ -32,13 +39,11 @@ export async function markRead(notificationId) {
 }
 
 export async function markAllRead(uid) {
-  const q = query(
-    collection(db, "notifications"),
-    where("uid", "==", uid),
-    where("read", "==", false)
-  );
+  // Single where clause avoids composite index; filter unread client-side.
+  const q = query(collection(db, "notifications"), where("uid", "==", uid));
   const snap = await getDocs(q);
-  await Promise.all(snap.docs.map((d) => updateDoc(d.ref, { read: true })));
+  const unread = snap.docs.filter((d) => d.data().read === false);
+  await Promise.all(unread.map((d) => updateDoc(d.ref, { read: true })));
 }
 
 // Admin: send a broadcast or targeted message to one or more users.
