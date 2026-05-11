@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
+import { submitDeleteRequest } from "../services/adminService";
 import { getAppText } from "../data/appText";
 import taseeraLogo from "../assets/taseera-logo-light.png";
 import { SUBSCRIPTION_STATUS } from "../data/packages";
@@ -217,6 +218,9 @@ export default function SettingsPanel({
   const isAr = settings.language !== "en";
   const [showGuide, setShowGuide] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteRequestSent, setDeleteRequestSent] = useState(false);
+  const [deleteSending, setDeleteSending] = useState(false);
 
   const stats = useMemo(() => ([
     { label: isAr ? "الشركات"   : "Companies", value: companies.length },
@@ -230,6 +234,21 @@ export default function SettingsPanel({
     : settings.userName || sessionMeta?.userName || (isAr ? "مستخدم" : "User");
 
   const userEmail = sessionMeta?.userEmail || settings.userEmail || "";
+  const userUid   = sessionMeta?.uid || null;
+
+  const handleDeleteRequest = useCallback(async () => {
+    if (!userUid || !userEmail) return;
+    setDeleteSending(true);
+    try {
+      await submitDeleteRequest({ uid: userUid, email: userEmail });
+      setDeleteRequestSent(true);
+      setShowDeleteConfirm(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeleteSending(false);
+    }
+  }, [userUid, userEmail]);
 
   if (showPrivacy) {
     return <PrivacyPolicyPage language={settings.language} onBack={() => setShowPrivacy(false)} />;
@@ -334,13 +353,24 @@ export default function SettingsPanel({
         </SettingsCard>
 
         <SettingsCard icon="👤" title={text.settings.sessionStatus} subtitle={authMode === "guest" ? (isAr ? "وضع الزائر" : "Guest mode") : `${isAr ? "مسجّل دخول" : "Signed in"}`}>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <ActionButton square onClick={() => onOpenAuthScreen?.("login")}>
               {authMode === "guest" ? (isAr ? "تسجيل دخول" : "Sign In") : (isAr ? "تبديل الحساب" : "Switch")}
             </ActionButton>
             <ActionButton square tone="gold" onClick={() => onSettingsAction?.("rate")}>{text.settings.rate}</ActionButton>
             {authMode !== "guest" && (
               <ActionButton square tone="rose" onClick={onLogout}>{text.settings.logout}</ActionButton>
+            )}
+            {authMode !== "guest" && (
+              deleteRequestSent ? (
+                <div className="flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-[11px] font-bold text-slate-500">
+                  {isAr ? "✓ تم إرسال الطلب" : "✓ Request sent"}
+                </div>
+              ) : (
+                <ActionButton square tone="rose" onClick={() => setShowDeleteConfirm(true)}>
+                  {isAr ? "حذف الحساب" : "Delete Account"}
+                </ActionButton>
+              )
             )}
           </div>
         </SettingsCard>
@@ -375,6 +405,43 @@ export default function SettingsPanel({
             <button type="button" onClick={() => setShowGuide(false)} className="mt-4 w-full rounded-xl bg-[#1554b7] py-3 text-[13px] font-black text-white" style={{ fontFamily: F }}>
               {isAr ? "تم" : "Done"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete account confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 px-4" onClick={() => setShowDeleteConfirm(false)}>
+          <div
+            className="w-full max-w-sm rounded-[28px] bg-white p-5 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+            dir={isAr ? "rtl" : "ltr"}
+            style={{ fontFamily: F }}
+          >
+            <div className="text-center">
+              <div className="text-4xl mb-2">🗑️</div>
+              <h2 className="text-base font-black text-slate-800">{isAr ? "حذف الحساب" : "Delete Account"}</h2>
+              <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                {isAr
+                  ? "سيتم إرسال طلب حذف حسابك إلى الإدارة. يمكن للإدارة الموافقة أو الرفض. لن يُحذف حسابك فوراً."
+                  : "A deletion request will be sent to the admin. They can approve or reject it. Your account won't be deleted immediately."}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleDeleteRequest}
+                disabled={deleteSending}
+                className="flex-1 rounded-2xl bg-red-600 py-3 text-sm font-bold text-white disabled:opacity-60"
+              >
+                {deleteSending ? (isAr ? "جارٍ الإرسال…" : "Sending…") : (isAr ? "إرسال الطلب" : "Send Request")}
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-bold text-slate-600"
+              >
+                {isAr ? "إلغاء" : "Cancel"}
+              </button>
+            </div>
           </div>
         </div>
       )}

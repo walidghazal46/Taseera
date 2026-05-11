@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getAllUsers } from "../services/adminService";
 import { getAllPaymentRequests } from "../services/paymentService";
-import { approvePaymentRequest, rejectPaymentRequest, suspendUser, unsuspendUser, assignAdminRole, removeAdminRole, cancelSubscription, extendSubscription, deleteUserProfile } from "../services/adminService";
+import { approvePaymentRequest, rejectPaymentRequest, suspendUser, unsuspendUser, assignAdminRole, removeAdminRole, cancelSubscription, extendSubscription, deleteUserProfile, getAllDeleteRequests, approveDeleteRequest, rejectDeleteRequest, dismissDeleteRequest } from "../services/adminService";
 import { SUPER_ADMIN_EMAIL } from "../data/packages";
 
 function Badge({ status }) {
@@ -41,6 +41,7 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
   const [tab, setTab]               = useState("requests");
   const [users, setUsers]           = useState([]);
   const [requests, setRequests]     = useState([]);
+  const [deleteReqs, setDeleteReqs] = useState([]);
   const [loading, setLoading]       = useState(true);
   const [actionMsg, setActionMsg]   = useState("");
   const [rejectModal, setRejectModal] = useState(null); // { requestId, uid }
@@ -53,9 +54,10 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const [u, r] = await Promise.all([getAllUsers(), getAllPaymentRequests()]);
+      const [u, r, dr] = await Promise.all([getAllUsers(), getAllPaymentRequests(), getAllDeleteRequests()]);
       setUsers(u);
       setRequests(r);
+      setDeleteReqs(dr);
     } catch (err) {
       console.error(err);
     } finally {
@@ -149,12 +151,37 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
     } catch (err) { flash(err.message); }
   };
 
-  const pendingRequests = requests.filter((r) => (r.status || r.requestStatus) === "pending");
-  const allRequests     = requests;
+  const pendingRequests     = requests.filter((r) => (r.status || r.requestStatus) === "pending");
+  const allRequests         = requests;
+  const pendingDeleteReqs   = deleteReqs.filter((r) => r.status === "pending");
+
+  const handleApproveDelete = async (req) => {
+    try {
+      await approveDeleteRequest({ requestId: req.id, uid: req.uid, performedByEmail: adminEmail });
+      flash(ar ? "تم حذف الحساب." : "Account deleted.");
+      reload();
+    } catch (err) { flash(err.message); }
+  };
+
+  const handleRejectDelete = async (req) => {
+    try {
+      await rejectDeleteRequest({ requestId: req.id, performedByEmail: adminEmail });
+      flash(ar ? "تم رفض طلب الحذف." : "Delete request rejected.");
+      reload();
+    } catch (err) { flash(err.message); }
+  };
+
+  const handleDismissDelete = async (req) => {
+    try {
+      await dismissDeleteRequest({ requestId: req.id });
+      reload();
+    } catch (err) { flash(err.message); }
+  };
 
   const tabs = [
     { id: "requests", label: ar ? `الطلبات (${pendingRequests.length})` : `Requests (${pendingRequests.length})` },
     { id: "users",    label: ar ? `المستخدمون (${users.length})` : `Users (${users.length})` },
+    { id: "delete",   label: ar ? `حذف الحسابات (${pendingDeleteReqs.length})` : `Delete Reqs (${pendingDeleteReqs.length})` },
     { id: "all",      label: ar ? "كل الطلبات" : "All Requests" },
   ];
 
@@ -338,6 +365,42 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
                     </div>
                   );
                 })}
+              </Section>
+            )}
+
+            {/* ── Delete Requests Tab ── */}
+            {tab === "delete" && (
+              <Section title={ar ? "طلبات حذف الحسابات" : "Account Deletion Requests"}>
+                {deleteReqs.length === 0 ? (
+                  <p className="text-center py-8 text-slate-400 text-sm">{ar ? "لا توجد طلبات حذف." : "No deletion requests."}</p>
+                ) : (
+                  deleteReqs.map((req) => (
+                    <div key={req.id} className="bg-white rounded-2xl border border-red-100 p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-bold text-slate-800">{req.email}</p>
+                          <p className="text-xs text-slate-400 mt-0.5">{req.createdAt?.toDate?.()?.toLocaleDateString?.() || "—"}</p>
+                        </div>
+                        <Badge status={req.status} />
+                      </div>
+                      {req.status === "pending" && (
+                        <div className="flex gap-2">
+                          <button onClick={() => handleApproveDelete(req)} className="flex-1 rounded-2xl bg-red-600 py-2.5 text-xs font-bold text-white">
+                            {ar ? "موافقة (حذف)" : "Approve (Delete)"}
+                          </button>
+                          <button onClick={() => handleRejectDelete(req)} className="flex-1 rounded-2xl bg-slate-200 py-2.5 text-xs font-bold text-slate-700">
+                            {ar ? "رفض" : "Reject"}
+                          </button>
+                        </div>
+                      )}
+                      {req.status !== "pending" && (
+                        <button onClick={() => handleDismissDelete(req)} className="w-full rounded-2xl border border-slate-200 py-2 text-xs font-bold text-slate-500">
+                          {ar ? "إزالة من القائمة" : "Dismiss"}
+                        </button>
+                      )}
+                    </div>
+                  ))
+                )}
               </Section>
             )}
 

@@ -194,6 +194,59 @@ export async function extendSubscription({ uid, months, performedByEmail }) {
   });
 }
 
+// Submit a delete-account request from the user side.
+export async function submitDeleteRequest({ uid, email }) {
+  await addDoc(collection(db, "deleteRequests"), {
+    uid,
+    email,
+    status:    "pending",
+    createdAt: serverTimestamp(),
+  });
+}
+
+// Fetch all delete requests (admin).
+export async function getAllDeleteRequests() {
+  const q    = query(collection(db, "deleteRequests"), orderBy("createdAt", "desc"));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+// Approve a delete request: remove Firestore profile + mark request resolved.
+export async function approveDeleteRequest({ requestId, uid, performedByEmail }) {
+  const { deleteDoc } = await import("firebase/firestore");
+  await deleteDoc(doc(db, "users", uid));
+  await deleteDoc(doc(db, "deleteRequests", requestId));
+
+  await addDoc(collection(db, "adminLogs"), {
+    action:     "approve_delete_request",
+    requestId,
+    uid,
+    performedBy: performedByEmail,
+    createdAt:  serverTimestamp(),
+  });
+}
+
+// Reject a delete request.
+export async function rejectDeleteRequest({ requestId, performedByEmail }) {
+  await updateDoc(doc(db, "deleteRequests", requestId), {
+    status:    "rejected",
+    updatedAt: serverTimestamp(),
+  });
+
+  await addDoc(collection(db, "adminLogs"), {
+    action:     "reject_delete_request",
+    requestId,
+    performedBy: performedByEmail,
+    createdAt:  serverTimestamp(),
+  });
+}
+
+// Dismiss (delete) a delete request without action.
+export async function dismissDeleteRequest({ requestId }) {
+  const { deleteDoc } = await import("firebase/firestore");
+  await deleteDoc(doc(db, "deleteRequests", requestId));
+}
+
 // Delete a user's Firestore profile (Admin SDK needed to remove Auth account).
 export async function deleteUserProfile({ uid, performedByEmail }) {
   const { deleteDoc } = await import("firebase/firestore");
