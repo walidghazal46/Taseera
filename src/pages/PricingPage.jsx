@@ -114,16 +114,40 @@ export default function PricingPage(props) {
         description={text.pages.pricing.description}
       />
       {badge && (
-        <div
-          className={`flex items-center gap-3 rounded-2xl border px-4 ${badge.bg}`}
-          style={{ height: 52, fontFamily: "'Cairo','Tajawal',sans-serif" }}
-          dir={isAr ? "rtl" : "ltr"}
-        >
-          <span className={`text-xl ${badge.iconCls}`}>{badge.icon}</span>
-          <div className="flex flex-col justify-center">
-            <span className={`text-[13px] font-black leading-tight ${badge.labelCls}`}>{badge.label}</span>
-            <span className={`text-[10px] font-semibold leading-tight ${badge.subCls}`}>{badge.sub}</span>
+        <div className={`grid gap-2 ${isAdmin ? "grid-cols-1" : "grid-cols-2"}`}>
+          {/* Badge 1 — access status */}
+          <div
+            className={`flex items-center gap-3 rounded-2xl border px-4 ${badge.bg}`}
+            style={{ height: 52, fontFamily: "'Cairo','Tajawal',sans-serif" }}
+            dir={isAr ? "rtl" : "ltr"}
+          >
+            <span className={`text-xl ${badge.iconCls}`}>{badge.icon}</span>
+            <div className="flex flex-col justify-center">
+              <span className={`text-[13px] font-black leading-tight ${badge.labelCls}`}>{badge.label}</span>
+              <span className={`text-[10px] font-semibold leading-tight ${badge.subCls}`}>{badge.sub}</span>
+            </div>
           </div>
+
+          {/* Badge 2 — packages (hidden for admin) */}
+          {!isAdmin && (
+            <button
+              type="button"
+              onClick={() => props.onOpenSubscription?.()}
+              className="flex items-center gap-3 rounded-2xl border px-4 border-violet-200 bg-gradient-to-l from-violet-50 to-purple-50 hover:from-violet-100 hover:to-purple-100 active:scale-[0.97] transition-all"
+              style={{ height: 52, fontFamily: "'Cairo','Tajawal',sans-serif" }}
+              dir={isAr ? "rtl" : "ltr"}
+            >
+              <span className="text-xl text-violet-500">📦</span>
+              <div className="flex flex-col justify-center text-start">
+                <span className="text-[13px] font-black leading-tight text-violet-800">
+                  {isAr ? "الباقات" : "Packages"}
+                </span>
+                <span className="text-[10px] font-semibold leading-tight text-violet-500">
+                  {isAr ? "اشترك الآن" : "Subscribe now"}
+                </span>
+              </div>
+            </button>
+          )}
         </div>
       )}
       <PricingWorkspace {...props} navigationBridge={bridgedNavigation} initialCountry={countryCode} />
