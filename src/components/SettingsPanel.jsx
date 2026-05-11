@@ -1,6 +1,8 @@
-import { useLayoutEffect, useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
+import { submitDeleteRequest } from "../services/adminService";
 import { getAppText } from "../data/appText";
 import taseeraLogo from "../assets/taseera-logo-light.png";
+import { SUBSCRIPTION_STATUS } from "../data/packages";
 
 const F = "'Cairo','Tajawal',sans-serif";
 
@@ -21,10 +23,11 @@ function SettingsCard({ title, subtitle, icon, children, className = "" }) {
 
 function ActionButton({ children, onClick, tone = "blue", square = false }) {
   const tones = {
-    blue: "border-[#bcd6ff] bg-[#eef6ff] text-[#174f9a] hover:bg-[#e2f0ff]",
-    mint: "border-[#bceee4] bg-[#effdfa] text-[#0f766e] hover:bg-[#dcfbf5]",
-    gold: "border-[#f0dca4] bg-[#fff8e5] text-[#8a6516] hover:bg-[#fff1c2]",
-    rose: "border-[#ffc5d0] bg-[#fff1f4] text-[#b42346] hover:bg-[#ffe4ea]",
+    blue:   "border-[#bcd6ff] bg-[#eef6ff] text-[#174f9a] hover:bg-[#e2f0ff]",
+    mint:   "border-[#bceee4] bg-[#effdfa] text-[#0f766e] hover:bg-[#dcfbf5]",
+    gold:   "border-[#f0dca4] bg-[#fff8e5] text-[#8a6516] hover:bg-[#fff1c2]",
+    rose:   "border-[#ffc5d0] bg-[#fff1f4] text-[#b42346] hover:bg-[#ffe4ea]",
+    purple: "border-[#e0c5ff] bg-[#f5f0ff] text-[#6b21a8] hover:bg-[#ede5ff]",
   };
   return (
     <button
@@ -44,7 +47,7 @@ function PrivacyPolicyPage({ language, onBack }) {
     ? [
         ["البيانات التي نحفظها", "يحفظ التطبيق بيانات الاستخدام الأساسية داخل الجهاز مثل الإعدادات، الدولة المختارة، الشركات، الموردين، التحليلات، وطلبات الأسعار التي تنشئها."],
         ["طريقة الاستخدام", "تُستخدم البيانات لتشغيل وظائف التطبيق، تحسين تجربة التسعير، حفظ اختياراتك، وتسهيل الرجوع إلى التحليلات والمعلومات التي أدخلتها."],
-        ["الضيوف والمستخدمون", "يمكن للضيوف والمستخدمين استخدام التطبيق بالكامل. قد تختلف طريقة حفظ البيانات حسب حالة الدخول، لكنها لا تُستخدم لتقييد الوصول إلى الأدوات."],
+        ["الضيوف والمستخدمون", "يمكن للضيوف الاستخدام لفترة تجريبية. المستخدمون المسجلون يحصلون على فترة تجربة مجانية. بعد انتهاء الفترة التجريبية يمكن اختيار باقة اشتراك."],
         ["مشاركة البيانات", "لا نبيع بياناتك ولا نشاركها مع أطراف خارجية لأغراض تسويقية. عند فتح واتساب أو لينكدإن أو يوتيوب أو البريد، تنتقل إلى خدمات خارجية تخضع لسياسات الخصوصية الخاصة بها."],
         ["الصلاحيات", "قد يطلب التطبيق صلاحيات مرتبطة بالجهاز مثل الاتصال أو المشاركة أو فتح الروابط فقط عند استخدام ميزة تحتاج لذلك. يمكنك إدارة هذه الصلاحيات من إعدادات الجهاز."],
         ["حماية البيانات", "نستخدم أقل قدر ممكن من البيانات لتشغيل التطبيق، ونوصي بعدم إدخال معلومات حساسة داخل حقول الملاحظات أو الطلبات إلا عند الحاجة."],
@@ -53,7 +56,7 @@ function PrivacyPolicyPage({ language, onBack }) {
     : [
         ["Data We Store", "The app stores basic in-app data such as settings, selected country, companies, suppliers, analyses, and RFQ records you create."],
         ["How Data Is Used", "Data is used to run app features, improve pricing workflows, save your choices, and make your analyses easy to revisit."],
-        ["Guests And Users", "Guests and signed-in users can use the full app. Storage may differ by session type, but data is not used to restrict tool access."],
+        ["Guests And Users", "Guests get a limited trial period. Registered users get a free trial. After the trial you can choose a subscription plan."],
         ["Data Sharing", "We do not sell your data or share it with third parties for marketing. External links such as WhatsApp, LinkedIn, YouTube, or email follow their own privacy policies."],
         ["Permissions", "The app may request device permissions only when a feature needs them, such as calling, sharing, or opening links. You can manage permissions from device settings."],
         ["Data Protection", "We keep data use minimal and recommend avoiding sensitive information in notes or requests unless needed."],
@@ -93,6 +96,105 @@ function PrivacyPolicyPage({ language, onBack }) {
   );
 }
 
+function SubscriptionStatusCard({ accessStatus, language, isAr, onUpgrade }) {
+  if (!accessStatus) return null;
+  const { status, daysLeft, packageEndDate } = accessStatus;
+
+  const configs = {
+    [SUBSCRIPTION_STATUS.ACTIVE]: {
+      icon: "✅", color: "border-emerald-200 bg-emerald-50",
+      titleAr: "اشتراك فعّال", titleEn: "Active Subscription",
+      bodyAr: packageEndDate ? `ينتهي ${packageEndDate.toLocaleDateString("ar-SA")}` : "اشتراكك فعّال",
+      bodyEn: packageEndDate ? `Expires ${packageEndDate.toLocaleDateString()}` : "Your subscription is active",
+      action: false,
+    },
+    [SUBSCRIPTION_STATUS.REGISTERED_TRIAL]: {
+      icon: "⏳", color: "border-blue-200 bg-blue-50",
+      titleAr: `تجربة مجانية · ${daysLeft} ${daysLeft === 1 ? "يوم" : "أيام"} متبقية`,
+      titleEn: `Free Trial · ${daysLeft} day${daysLeft === 1 ? "" : "s"} left`,
+      bodyAr: "استمتع بالوصول الكامل خلال فترة التجربة.",
+      bodyEn: "Enjoy full access during your trial period.",
+      action: daysLeft <= 5,
+    },
+    [SUBSCRIPTION_STATUS.GUEST_TRIAL]: {
+      icon: "👤", color: "border-purple-200 bg-purple-50",
+      titleAr: `وضع الزائر · ${daysLeft} ${daysLeft === 1 ? "يوم" : "أيام"} متبقية`,
+      titleEn: `Guest Mode · ${daysLeft} day${daysLeft === 1 ? "" : "s"} left`,
+      bodyAr: "سجّل للحصول على كامل الميزات.",
+      bodyEn: "Register for full features.",
+      action: true,
+    },
+    [SUBSCRIPTION_STATUS.TRIAL_EXPIRED]: {
+      icon: "🔒", color: "border-orange-200 bg-orange-50",
+      titleAr: "انتهت فترة التجربة",
+      titleEn: "Trial Expired",
+      bodyAr: "اختر باقة لمتابعة استخدام التطبيق.",
+      bodyEn: "Choose a plan to continue using the app.",
+      action: true,
+    },
+    [SUBSCRIPTION_STATUS.EXPIRED]: {
+      icon: "🔒", color: "border-red-200 bg-red-50",
+      titleAr: "انتهى الاشتراك",
+      titleEn: "Subscription Expired",
+      bodyAr: "جدّد اشتراكك لمتابعة الوصول.",
+      bodyEn: "Renew your subscription to continue.",
+      action: true,
+    },
+    [SUBSCRIPTION_STATUS.PENDING_PAYMENT]: {
+      icon: "⏳", color: "border-amber-200 bg-amber-50",
+      titleAr: "طلب الدفع قيد المراجعة",
+      titleEn: "Payment Under Review",
+      bodyAr: "سيتم تفعيل حسابك خلال 24 ساعة.",
+      bodyEn: "Your account will be activated within 24 hours.",
+      action: false,
+    },
+    [SUBSCRIPTION_STATUS.REJECTED]: {
+      icon: "❌", color: "border-red-200 bg-red-50",
+      titleAr: "تم رفض طلب الدفع",
+      titleEn: "Payment Rejected",
+      bodyAr: "يمكنك المحاولة مرة أخرى باختيار باقة جديدة.",
+      bodyEn: "You can try again by choosing a new plan.",
+      action: true,
+    },
+    [SUBSCRIPTION_STATUS.SUSPENDED]: {
+      icon: "⛔", color: "border-red-300 bg-red-50",
+      titleAr: "الحساب موقوف",
+      titleEn: "Account Suspended",
+      bodyAr: "تواصل مع الدعم: walidghazal46@gmail.com",
+      bodyEn: "Contact support: walidghazal46@gmail.com",
+      action: false,
+    },
+  };
+
+  const cfg = configs[status];
+  if (!cfg) return null;
+
+  return (
+    <div className={`rounded-2xl border p-4 ${cfg.color}`} dir={isAr ? "rtl" : "ltr"}>
+      <div className="flex items-start gap-3">
+        <span className="text-2xl">{cfg.icon}</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-black text-slate-800" style={{ fontFamily: F }}>
+            {isAr ? cfg.titleAr : cfg.titleEn}
+          </p>
+          <p className="text-xs text-slate-600 mt-0.5" style={{ fontFamily: F }}>
+            {isAr ? cfg.bodyAr : cfg.bodyEn}
+          </p>
+        </div>
+        {cfg.action && onUpgrade && (
+          <button
+            onClick={onUpgrade}
+            className="shrink-0 rounded-xl bg-[#082555] px-3 py-2 text-[11px] font-black text-white"
+            style={{ fontFamily: F }}
+          >
+            {isAr ? "اشترك" : "Subscribe"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsPanel({
   settings,
   authMode,
@@ -106,26 +208,47 @@ export default function SettingsPanel({
   sessionMeta,
   companies = [],
   suppliers = [],
+  accessStatus,
+  isAdmin,
+  isSuperAdmin,
+  onOpenSubscription,
+  onOpenAdminDashboard,
 }) {
   const text = getAppText(settings.language);
   const isAr = settings.language !== "en";
   const [showGuide, setShowGuide] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
-
-  useLayoutEffect(() => {
-    onSettingsAction?.("onEntryChange"); // Trigger scroll reset if needed
-  }, [showPrivacy, onSettingsAction]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteRequestSent, setDeleteRequestSent] = useState(false);
+  const [deleteSending, setDeleteSending] = useState(false);
 
   const stats = useMemo(() => ([
-    { label: isAr ? "الشركات" : "Companies", value: companies.length },
-    { label: isAr ? "الموردين" : "Suppliers", value: suppliers.length },
-    { label: isAr ? "التحليلات" : "Analyses", value: savedAnalyses.length },
-    { label: isAr ? "طلبات السعر" : "RFQs", value: rfqRequests.length },
+    { label: isAr ? "الشركات"   : "Companies", value: companies.length },
+    { label: isAr ? "الموردين"  : "Suppliers", value: suppliers.length },
+    { label: isAr ? "التحليلات" : "Analyses",  value: savedAnalyses.length },
+    { label: isAr ? "طلبات السعر" : "RFQs",    value: rfqRequests.length },
   ]), [companies.length, isAr, rfqRequests.length, savedAnalyses.length, suppliers.length]);
 
   const displayName = authMode === "guest"
-    ? text.settings.guest
+    ? (isAr ? "زائر" : "Guest")
     : settings.userName || sessionMeta?.userName || (isAr ? "مستخدم" : "User");
+
+  const userEmail = sessionMeta?.userEmail || settings.userEmail || "";
+  const userUid   = sessionMeta?.uid || null;
+
+  const handleDeleteRequest = useCallback(async () => {
+    if (!userUid || !userEmail) return;
+    setDeleteSending(true);
+    try {
+      await submitDeleteRequest({ uid: userUid, email: userEmail });
+      setDeleteRequestSent(true);
+      setShowDeleteConfirm(false);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeleteSending(false);
+    }
+  }, [userUid, userEmail]);
 
   if (showPrivacy) {
     return <PrivacyPolicyPage language={settings.language} onBack={() => setShowPrivacy(false)} />;
@@ -133,26 +256,53 @@ export default function SettingsPanel({
 
   return (
     <div className="grid gap-4 pb-4" dir={isAr ? "rtl" : "ltr"}>
-      <section className="flex min-h-[90px] flex-col justify-center overflow-hidden rounded-[28px] border border-[#d6e5ff] bg-[linear-gradient(135deg,#ffffff_0%,#f1f7ff_46%,#edfffb_100%)] shadow-[0_22px_60px_rgba(85,121,214,0.16)]">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-1 shadow-[0_12px_30px_rgba(90,128,222,0.18)]">
+
+      {/* Profile card */}
+      <section className="overflow-hidden rounded-[28px] border border-[#d6e5ff] bg-[linear-gradient(135deg,#ffffff_0%,#f1f7ff_46%,#edfffb_100%)] shadow-[0_22px_60px_rgba(85,121,214,0.16)]">
+        <div className="flex items-center gap-4 px-5 py-5">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white p-1 shadow-[0_12px_30px_rgba(90,128,222,0.18)]">
             <img src={taseeraLogo} alt="Taseera" className="h-full w-full object-contain" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-black uppercase tracking-widest text-[#36a8c7]" style={{ fontFamily: F }}>
-              {isAr ? "وصول كامل للجميع" : "Full access for everyone"}
-            </p>
-            <h2 className="mt-1 break-words text-[20px] font-black leading-tight text-[#102a56]" style={{ fontFamily: F }}>
+            {isAdmin && (
+              <p className="text-[10px] font-black uppercase tracking-widest text-purple-600" style={{ fontFamily: F }}>
+                {isSuperAdmin ? "Super Admin" : (isAr ? "مشرف" : "Admin")}
+              </p>
+            )}
+            <h2 className="mt-0.5 break-words text-[20px] font-black leading-tight text-[#102a56]" style={{ fontFamily: F }}>
               {displayName}
             </h2>
-            <p className="mt-1 text-[12px] font-semibold leading-5 text-[#66789d]" style={{ fontFamily: F }}>
-              {isAr ? "كل الأدوات والبيانات متاحة للجميع بشكل مباشر." : "All tools and data are available to everyone immediately."}
-            </p>
+            {userEmail ? (
+              <p className="text-[11px] font-semibold text-[#66789d] mt-0.5" style={{ fontFamily: F }}>{userEmail}</p>
+            ) : null}
           </div>
         </div>
+
+        {/* Subscription status — hidden for admins */}
+        {accessStatus && authMode !== "guest" && !isAdmin && (
+          <div className="px-4 pb-4">
+            <SubscriptionStatusCard
+              accessStatus={accessStatus}
+              language={settings.language}
+              isAr={isAr}
+              onUpgrade={onOpenSubscription}
+            />
+          </div>
+        )}
       </section>
 
-      {/* Row 1: 3 cards side by side on sm+ */}
+      {/* Admin dashboard link — only for admins */}
+      {isAdmin && (
+        <button
+          onClick={onOpenAdminDashboard}
+          className="w-full rounded-2xl border border-purple-200 bg-[linear-gradient(135deg,#3b0764,#6b21a8)] py-4 text-sm font-black text-white shadow-lg transition active:scale-[0.98]"
+          style={{ fontFamily: F }}
+        >
+          {isAr ? "🔐 لوحة الإدارة" : "🔐 Admin Dashboard"}
+        </button>
+      )}
+
+      {/* Row 1 */}
       <div className="grid gap-3 sm:grid-cols-3">
         <SettingsCard icon="🌐" title={text.settings.languageSwitch} subtitle={isAr ? "اختر لغة الواجهة" : "Choose interface language"}>
           <div className="grid grid-cols-2 gap-2 rounded-2xl bg-[#eef5ff] p-1.5">
@@ -172,15 +322,15 @@ export default function SettingsPanel({
         <SettingsCard icon="📊" title={isAr ? "نشاط التطبيق" : "App Activity"} subtitle={isAr ? "ملخص سريع للبيانات الحالية" : "Quick summary of current data"}>
           <div className="grid grid-cols-2 gap-2">
             {stats.map((item) => (
-              <div key={item.label} className="flex h-[38px] flex-col items-center justify-center rounded-xl bg-[linear-gradient(135deg,#f5f9ff_0%,#effcf9_100%)] px-3 text-center">
-                <p className="text-[15px] font-black text-[#1554b7]" style={{ fontFamily: F }}>{item.value}</p>
-                <p className="text-[9px] font-bold text-[#6b7da1]" style={{ fontFamily: F }}>{item.label}</p>
+              <div key={item.label} className="rounded-xl bg-[linear-gradient(135deg,#f5f9ff_0%,#effcf9_100%)] px-3 py-3 text-center">
+                <p className="text-[18px] font-black text-[#1554b7]" style={{ fontFamily: F }}>{item.value}</p>
+                <p className="text-[10px] font-bold text-[#6b7da1]" style={{ fontFamily: F }}>{item.label}</p>
               </div>
             ))}
           </div>
         </SettingsCard>
 
-        <SettingsCard icon="⚡" title={isAr ? "إجراءات سريعة" : "Quick Actions"} subtitle={isAr ? "روابط وخدمات مساعدة" : "Helpful app links and services"}>
+        <SettingsCard icon="⚡" title={isAr ? "إجراءات سريعة" : "Quick Actions"} subtitle={isAr ? "روابط وخدمات مساعدة" : "Helpful links and services"}>
           <div className="grid grid-cols-2 gap-2">
             <ActionButton onClick={() => setShowPrivacy(true)}>{text.settings.privacy}</ActionButton>
             <ActionButton tone="mint" onClick={() => systemBridge?.openEmail?.("walidghazal46@gmail.com", isAr ? "تواصل من تطبيق تسعيرة" : "Contact from Taseera", "")}>
@@ -192,7 +342,7 @@ export default function SettingsPanel({
         </SettingsCard>
       </div>
 
-      {/* Row 2: تواصل معنا + حالة الجلسة */}
+      {/* Row 2 */}
       <div className="grid gap-3 sm:grid-cols-2">
         <SettingsCard icon="💬" title={isAr ? "تواصل معنا" : "Contact Us"} subtitle={isAr ? "اختر قناة التواصل المناسبة" : "Choose a contact channel"}>
           <div className="grid grid-cols-3 gap-2">
@@ -202,11 +352,26 @@ export default function SettingsPanel({
           </div>
         </SettingsCard>
 
-        <SettingsCard icon="👤" title={text.settings.sessionStatus} subtitle={authMode === "guest" ? text.settings.guestSessionBody : `${text.settings.signedInAs} ${displayName}`}>
-          <div className="grid grid-cols-3 gap-2">
-            <ActionButton square onClick={() => onOpenAuthScreen?.("login")}>{authMode === "guest" ? text.settings.loginNow : text.settings.switchAccount}</ActionButton>
+        <SettingsCard icon="👤" title={text.settings.sessionStatus} subtitle={authMode === "guest" ? (isAr ? "وضع الزائر" : "Guest mode") : `${isAr ? "مسجّل دخول" : "Signed in"}`}>
+          <div className="grid grid-cols-2 gap-2">
+            <ActionButton square onClick={() => onOpenAuthScreen?.("login")}>
+              {authMode === "guest" ? (isAr ? "تسجيل دخول" : "Sign In") : (isAr ? "تبديل الحساب" : "Switch")}
+            </ActionButton>
             <ActionButton square tone="gold" onClick={() => onSettingsAction?.("rate")}>{text.settings.rate}</ActionButton>
-            {authMode !== "guest" ? <ActionButton square tone="rose" onClick={onLogout}>{text.settings.logout}</ActionButton> : null}
+            {authMode !== "guest" && (
+              <ActionButton square tone="rose" onClick={onLogout}>{text.settings.logout}</ActionButton>
+            )}
+            {authMode !== "guest" && (
+              deleteRequestSent ? (
+                <div className="flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-[11px] font-bold text-slate-500">
+                  {isAr ? "✓ تم إرسال الطلب" : "✓ Request sent"}
+                </div>
+              ) : (
+                <ActionButton square tone="rose" onClick={() => setShowDeleteConfirm(true)}>
+                  {isAr ? "حذف الحساب" : "Delete Account"}
+                </ActionButton>
+              )
+            )}
           </div>
         </SettingsCard>
       </div>
@@ -218,18 +383,22 @@ export default function SettingsPanel({
         <p className="mx-auto mt-2 max-w-md text-[10px] leading-5 text-[#66789d]" style={{ fontFamily: F }}>{text.settings.disclaimer}</p>
       </footer>
 
-      {showGuide ? (
+      {showGuide && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 backdrop-blur-sm" onClick={() => setShowGuide(false)}>
-          <div className="w-full max-w-lg rounded-t-3xl bg-white p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+          <div
+            className="w-full max-w-lg rounded-t-3xl bg-white p-5 shadow-2xl"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 16px)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="text-[16px] font-black text-[#102a56]" style={{ fontFamily: F }}>{isAr ? "كيفية الاستخدام" : "How to use"}</h3>
             <div className="mt-3 grid gap-2">
               {[
                 isAr ? "اختر الدولة من بطاقات ثابتة ثم افتح كامل محتوى الصفحة." : "Select a country card, then access the full page content.",
                 isAr ? "استخدم التسعير لتحليل البنود أو تسعير مساحة المبنى بدون حدود." : "Use pricing to analyze items or building areas without limits.",
-                isAr ? "افتح الموردين والشركات وبيانات التواصل مباشرة للجميع." : "Open supplier and company contact data directly for everyone.",
-              ].map((line, index) => (
-                <p key={line} className="rounded-xl bg-[#f4f8ff] px-3 py-2 text-[12px] font-semibold leading-5 text-[#44536f]" style={{ fontFamily: F }}>
-                  {index + 1}. {line}
+                isAr ? "افتح الموردين والشركات وبيانات التواصل مباشرة." : "Open supplier and company contact data directly.",
+              ].map((line, i) => (
+                <p key={i} className="rounded-xl bg-[#f4f8ff] px-3 py-2 text-[12px] font-semibold leading-5 text-[#44536f]" style={{ fontFamily: F }}>
+                  {i + 1}. {line}
                 </p>
               ))}
             </div>
@@ -238,7 +407,44 @@ export default function SettingsPanel({
             </button>
           </div>
         </div>
-      ) : null}
+      )}
+
+      {/* Delete account confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 px-4" onClick={() => setShowDeleteConfirm(false)}>
+          <div
+            className="w-full max-w-sm rounded-[28px] bg-white p-5 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+            dir={isAr ? "rtl" : "ltr"}
+            style={{ fontFamily: F }}
+          >
+            <div className="text-center">
+              <div className="text-4xl mb-2">🗑️</div>
+              <h2 className="text-base font-black text-slate-800">{isAr ? "حذف الحساب" : "Delete Account"}</h2>
+              <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                {isAr
+                  ? "سيتم إرسال طلب حذف حسابك إلى الإدارة. يمكن للإدارة الموافقة أو الرفض. لن يُحذف حسابك فوراً."
+                  : "A deletion request will be sent to the admin. They can approve or reject it. Your account won't be deleted immediately."}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleDeleteRequest}
+                disabled={deleteSending}
+                className="flex-1 rounded-2xl bg-red-600 py-3 text-sm font-bold text-white disabled:opacity-60"
+              >
+                {deleteSending ? (isAr ? "جارٍ الإرسال…" : "Sending…") : (isAr ? "إرسال الطلب" : "Send Request")}
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 rounded-2xl border border-slate-200 py-3 text-sm font-bold text-slate-600"
+              >
+                {isAr ? "إلغاء" : "Cancel"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

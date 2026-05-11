@@ -1,8 +1,185 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function authUid() {
+      return request.auth.uid;
+    }
+
+    function authEmail() {
+      return request.auth.token.email != null ? request.auth.token.email : "";
+    }
+
+    function currentUserDoc() {
+      return get(/databases/$(database)/documents/users/$(authUid()));
+    }
+
+    function currentUserExists() {
+      return exists(/databases/$(database)/documents/users/$(authUid()));
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && authEmail() == "walidghazal46@gmail.com";
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (isSuperAdmin() || (currentUserExists() && currentUserDoc().data.role == "admin"));
+    }
+
+    function hasPermission(permission) {
+      return isSignedIn() && (
+        isSuperAdmin() ||
+        (isAdmin() && currentUserExists() && currentUserDoc().data.permissions[permission] == true)
+      );
+    }
+
+    function isSelf(userId) {
+      return isSignedIn() && authUid() == userId;
+    }
+
+    function touchesPrivilegedFields() {
+      return request.resource.data.role != resource.data.role ||
+        request.resource.data.adminType != resource.data.adminType ||
+        request.resource.data.permissions != resource.data.permissions ||
+        request.resource.data.isPaid != resource.data.isPaid ||
+        request.resource.data.status != resource.data.status;
+    }
+
+    function isValidPaymentRequestCreate() {
+      return (
+        request.resource.data.userId == authUid() &&
+        request.resource.data.orderId is string &&
+        request.resource.data.userSerial is string &&
+        request.resource.data.requestStatus in ["pending_review", "waiting_receipt"]
+      ) || (
+        request.resource.data.uid == authUid() &&
+        request.resource.data.userId == authUid() &&
+        request.resource.data.userCode is string &&
+        request.resource.data.selectedPlan in ["monthly", "six_months", "yearly", "lifetime"] &&
+        request.resource.data.amount is number &&
+        request.resource.data.currency == "SAR" &&
+        request.resource.data.paymentMethod in ["bank_transfer", "instapay", "cash_wallet", "stc_pay"] &&
+        request.resource.data.status == "pending"
+      );
+    }
+
+    function touchesAdminFields() {
+      return request.resource.data.role != resource.data.role ||
+        request.resource.data.adminType != resource.data.adminType ||
+        request.resource.data.permissions != resource.data.permissions;
+    }
+
+    function creatingSelfBaseProfile(userId) {
+      return isSelf(userId) &&
+        request.resource.data.uid == authUid() &&
+        request.resource.data.email == authEmail() &&
+        request.resource.data.role in ["user", "admin"];
+    }
+
+    function targetIsSuperAdmin(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId)) &&
+        get(/databases/$(database)/documents/users/$(userId)).data.email == "walidghazal46@gmail.com";
+    }
+
+    match /users/{userId} {
+      allow read: if isSelf(userId) || isAdmin();
+
+      allow create: if creatingSelfBaseProfile(userId) || isSuperAdmin();
+
+      allow update: if isSuperAdmin()
+        || (
+          isAdmin() &&
+          !targetIsSuperAdmin(userId) &&
+          !touchesAdminFields() &&
+          (
+            hasPermission("editUsers") ||
+            hasPermission("suspendUsers")
+          )
+        )
+        || (
+          isSelf(userId) &&
+          !touchesPrivilegedFields() &&
+          request.resource.data.email == resource.data.email &&
+          request.resource.data.uid == resource.data.uid
+        );
+
+      allow delete: if isSuperAdmin() || (hasPermission("deleteUsers") && !targetIsSuperAdmin(userId));
+    }
+
+    match /systemCounters/{counterId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() &&
+        request.resource.data.keys().hasOnly(["seq", "updatedAt"]) &&
+        request.resource.data.seq is int;
+      allow delete: if isSuperAdmin();
+    }
+
+    match /paymentRequests/{requestId} {
+      allow read: if (isAdmin() && (hasPermission("viewPayments") || hasPermission("approvePayments")))
+        || (isSignedIn() && (resource.data.userId == authUid() || resource.data.uid == authUid()));
+      allow create: if isSignedIn() && isValidPaymentRequestCreate();
+      allow update: if isAdmin() && hasPermission("approvePayments");
+      allow delete: if isSuperAdmin();
+    }
+
+    match /paymentSettings/{docId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && hasPermission("approvePayments");
+    }
+
+    match /ads/{docId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && hasPermission("approvePayments");
+    }
+
+    match /adminLogs/{logId} {
+      allow read: if isAdmin() && hasPermission("viewLogs");
+      allow create: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    match /countryStats/{countryId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /qsPremiumSubscriptions/{userId} {
+      allow read: if isSelf(userId) || isAdmin();
+      allow create: if isSelf(userId) &&
+        request.resource.data.userId == authUid() &&
+        request.resource.data.status == "pending";
+      allow update: if isSelf(userId) &&
+        request.resource.data.userId == resource.data.userId &&
+        (
+          request.resource.data.status == resource.data.status ||
+          (
+            resource.data.status in ["rejected", "deactivated"] &&
+            request.resource.data.status == "pending"
+          )
+        )
+        || isAdmin() && hasPermission("approvePayments");
+      allow delete: if isSuperAdmin() || (isAdmin() && hasPermission("approvePayments"));
+    }
+
+    match /subscriptions/{subscriptionId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == authUid());
+      allow create, update, delete: if isAdmin() && hasPermission("approvePayments");
+    }
+
+    match /deleteRequests/{requestId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == authUid());
+      allow create: if isSignedIn() &&
+        request.resource.data.uid == authUid() &&
+        request.resource.data.email == authEmail() &&
+        request.resource.data.status == "pending";
+      allow update, delete: if isAdmin();
+    }
+
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }

@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
+import { useEffect, useRef } from "react";
 import {
   BuildingsIcon,
   PricingIcon,
@@ -47,7 +47,7 @@ const tabConfig = {
   },
 };
 
-const AppShell = forwardRef(function AppShell({
+export default function AppShell({
   activePage,
   onNavigate,
   onBack,
@@ -57,7 +57,7 @@ const AppShell = forwardRef(function AppShell({
   navText,
   language = "ar",
   theme = "dark",
-}, ref) {
+}) {
   const isRtl = language !== "en";
   const mainRef = useRef(null);
 
@@ -66,37 +66,23 @@ const AppShell = forwardRef(function AppShell({
     label: navText?.[item.id] || (language === "en" ? item.labelEn : item.label),
   }));
 
-  const scrollMainToTop = useCallback(() => {
+  const scrollMainToTop = () => {
     const el = mainRef.current;
     if (!el) return;
+    if (typeof el.scrollTo === "function") {
+      el.scrollTo({ top: 0, behavior: "auto" });
+      return;
+    }
+    el.scrollTop = 0;
+  };
 
-    const resetAction = () => {
-      if (!el) return;
-      el.scrollTop = 0;
-      if (typeof el.scrollTo === "function") {
-        el.scrollTo({ top: 0, behavior: "auto" });
-      }
-      // Also reset root elements just in case
-      window.scrollTo(0, 0);
-      document.body.scrollTop = 0;
-      if (document.documentElement) document.documentElement.scrollTop = 0;
-    };
-
-    // Chain of resets to catch various browser/webview rendering phases
-    resetAction();
-    window.requestAnimationFrame(resetAction);
-    setTimeout(resetAction, 10);
-    setTimeout(resetAction, 50);
-    setTimeout(resetAction, 150);
-  }, []);
-
-  useImperativeHandle(ref, () => ({ scrollToTop: scrollMainToTop }));
-
-  // Use useEffect instead of useLayoutEffect for scroll,
-  // as we want to ensure the new content is painted/reflowed.
   useEffect(() => {
     scrollMainToTop();
-  }, [activePage, scrollResetVersion, scrollMainToTop]);
+  }, [activePage]);
+
+  useEffect(() => {
+    scrollMainToTop();
+  }, [scrollResetVersion]);
 
   return (
     <div
@@ -105,7 +91,7 @@ const AppShell = forwardRef(function AppShell({
     >
       {/* Top Brand Bar */}
       <div
-        className="app-header-safe relative z-20 mx-3 flex min-h-[44px] shrink-0 items-center justify-between rounded-[18px] border border-white/70 bg-white/72 px-3 py-0 shadow-[0_8px_24px_rgba(104,128,223,0.1)] backdrop-blur-xl sm:mx-5 sm:px-5"
+        className="app-header-safe relative z-20 mx-3 flex min-h-[44px] shrink-0 items-center justify-between rounded-[18px] border border-white/70 bg-white/72 px-3 py-0 shadow-[0_8px_24px_rgba(104,128,223,0.1)] backdrop-blur-xl sm:mx-5 sm:px-5 lg:mx-auto lg:w-full lg:max-w-6xl lg:px-8"
       >
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <button
@@ -150,21 +136,20 @@ const AppShell = forwardRef(function AppShell({
       <main
         ref={mainRef}
         className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden bg-transparent"
-        style={{ overflowAnchor: "none" }}
       >
-        <div className="app-content-safe mx-auto flex w-full max-w-[806px] flex-1 flex-col py-4">
+        <div className="app-content-safe mx-auto flex w-[90%] sm:w-full max-w-2xl lg:max-w-6xl flex-1 flex-col py-4 lg:py-6">
           {children}
         </div>
       </main>
 
       {/* Bottom Navigation */}
       <nav
-        className="app-footer-safe mx-3 shrink-0 rounded-[24px] border border-white/70 bg-white/78 backdrop-blur-xl sm:mx-5"
+        className="app-footer-safe mx-3 shrink-0 rounded-[24px] border border-white/70 bg-white/78 backdrop-blur-xl sm:mx-5 lg:mx-auto lg:w-full lg:max-w-6xl"
         style={{
           boxShadow: "0 -12px 40px rgba(104,128,223,0.12)",
         }}
       >
-        <div className="mx-auto flex w-full max-w-2xl items-center justify-around px-2 py-0.5">
+        <div className="mx-auto flex w-full max-w-2xl lg:max-w-6xl items-center justify-around px-2 py-0.5 lg:px-6">
           {localizedItems.map((item) => {
             const isActive = item.id === activePage;
             const config = tabConfig[item.id] || tabConfig.pricing;
@@ -175,7 +160,7 @@ const AppShell = forwardRef(function AppShell({
                 key={item.id}
                 type="button"
                 onClick={() => onNavigate(item.id)}
-                className="relative group flex min-h-[70px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 transition-all duration-300"
+                className="relative group flex min-h-[58px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 transition-all duration-300"
               >
                 {/* Active Highlight Panel */}
                 <div
@@ -189,11 +174,11 @@ const AppShell = forwardRef(function AppShell({
 
                 {/* Icon */}
                 <span
-                  className={`relative flex h-[30px] w-[30px] items-center justify-center transition-all duration-300 ${
+                  className={`relative flex h-6 w-6 items-center justify-center transition-all duration-300 ${
                     isActive ? config.activeText : "text-[#95a0c6] group-hover:text-[#5d6fb6]"
                   }`}
                 >
-                  <Icon className="h-[24px] w-[24px]" />
+                  <Icon className="h-[19px] w-[19px]" />
                 </span>
 
                 {/* Label */}
@@ -201,7 +186,7 @@ const AppShell = forwardRef(function AppShell({
                   className={`relative text-center font-bold tracking-wide transition-all duration-300 ${
                     isActive ? config.activeText : "text-[#95a0c6] group-hover:text-[#5d6fb6]"
                   }`}
-                  style={{ fontFamily: AR, fontSize: isActive ? "12px" : "11px" }}
+                  style={{ fontFamily: AR, fontSize: isActive ? "9.5px" : "9px" }}
                 >
                   {item.label}
                 </span>
@@ -219,6 +204,4 @@ const AppShell = forwardRef(function AppShell({
       </nav>
     </div>
   );
-});
-
-export default AppShell;
+}

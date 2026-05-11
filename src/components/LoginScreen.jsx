@@ -10,6 +10,7 @@ import {
   signInWithPopup,
   updateProfile,
 } from "firebase/auth";
+import { ensureUserProfile } from "../services/userService";
 
 export default function LoginScreen({
   onLogin, onGuest, language = "ar", onChangeLanguage, theme = "dark", initialMode = "login",
@@ -82,8 +83,9 @@ export default function LoginScreen({
   useEffect(() => {
     let active = true;
     getRedirectResult(auth)
-      .then((cred) => {
+      .then(async (cred) => {
         if (!active || !cred?.user) return;
+        await ensureUserProfile(cred.user);
         onLogin("authenticated", {
           uid: cred.user.uid,
           userName: cred.user.displayName || cred.user.email?.split("@")[0] || "User",
@@ -116,9 +118,12 @@ export default function LoginScreen({
       if (mode === "register") {
         const cred = await createUserWithEmailAndPassword(auth, form.email.trim(), form.password);
         await updateProfile(cred.user, { displayName: form.fullName.trim() });
+        // Always role: "user" — never admin
+        await ensureUserProfile(cred.user);
         onLogin("authenticated", { uid: cred.user.uid, userName: form.fullName.trim(), userEmail: form.email.trim() });
       } else {
         const cred = await signInWithEmailAndPassword(auth, form.email.trim(), form.password);
+        await ensureUserProfile(cred.user);
         onLogin("authenticated", { uid: cred.user.uid, userName: cred.user.displayName || cred.user.email.split("@")[0], userEmail: cred.user.email });
       }
     } catch (err) {
@@ -154,6 +159,7 @@ export default function LoginScreen({
     } else {
       try {
         const cred = await signInWithPopup(auth, googleProvider);
+        await ensureUserProfile(cred.user);
         onLogin("authenticated", { uid: cred.user.uid, userName: cred.user.displayName || cred.user.email.split("@")[0], userEmail: cred.user.email });
       } catch (err) {
         if (err.code === "auth/popup-closed-by-user") {
