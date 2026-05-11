@@ -42,13 +42,16 @@ export async function createPaymentRequest({ uid, userEmail, packageId, paymentM
   return ref.id;
 }
 
-// User cancels their own active subscription (does not touch isPaid — admin-only field).
-export async function userCancelSubscription(uid) {
+// User submits a cancellation request — admin must approve before subscription is cancelled.
+export async function submitCancellationRequest({ uid, userEmail }) {
+  await addDoc(collection(db, "cancellationRequests"), {
+    uid,
+    email:     userEmail,
+    status:    "pending",
+    createdAt: serverTimestamp(),
+  });
   await updateDoc(doc(db, "users", uid), {
-    subscriptionStatus: SUBSCRIPTION_STATUS.EXPIRED,
-    selectedPackage:    null,
-    packageStartDate:   null,
-    packageEndDate:     null,
+    subscriptionStatus: SUBSCRIPTION_STATUS.PENDING_CANCELLATION,
     updatedAt:          serverTimestamp(),
   });
 }

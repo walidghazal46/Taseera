@@ -270,6 +270,46 @@ export async function rejectDeleteRequest({ requestId, performedByEmail }) {
   });
 }
 
+// Fetch all cancellation requests (admin).
+export async function getAllCancellationRequests() {
+  const q    = query(collection(db, "cancellationRequests"), orderBy("createdAt", "desc"));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+// Approve a cancellation request: cancel the subscription and mark request resolved.
+export async function approveCancellationRequest({ requestId, uid, performedByEmail }) {
+  await cancelSubscription({ uid, performedByEmail });
+  const { deleteDoc } = await import("firebase/firestore");
+  await deleteDoc(doc(db, "cancellationRequests", requestId));
+  await addDoc(collection(db, "adminLogs"), {
+    action:     "approve_cancellation_request",
+    requestId,
+    uid,
+    performedBy: performedByEmail,
+    createdAt:  serverTimestamp(),
+  });
+}
+
+// Reject a cancellation request: restore ACTIVE status and mark request rejected.
+export async function rejectCancellationRequest({ requestId, uid, performedByEmail }) {
+  await updateDoc(doc(db, "users", uid), {
+    subscriptionStatus: SUBSCRIPTION_STATUS.ACTIVE,
+    updatedAt:          serverTimestamp(),
+  });
+  await updateDoc(doc(db, "cancellationRequests", requestId), {
+    status:    "rejected",
+    updatedAt: serverTimestamp(),
+  });
+  await addDoc(collection(db, "adminLogs"), {
+    action:     "reject_cancellation_request",
+    requestId,
+    uid,
+    performedBy: performedByEmail,
+    createdAt:  serverTimestamp(),
+  });
+}
+
 // Dismiss (delete) a delete request without action.
 export async function dismissDeleteRequest({ requestId }) {
   const { deleteDoc } = await import("firebase/firestore");

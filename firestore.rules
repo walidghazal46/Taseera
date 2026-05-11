@@ -169,6 +169,15 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin() && hasPermission("approvePayments");
     }
 
+    match /cancellationRequests/{requestId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == authUid());
+      allow create: if isSignedIn() &&
+        request.resource.data.uid == authUid() &&
+        request.resource.data.email == authEmail() &&
+        request.resource.data.status == "pending";
+      allow update, delete: if isAdmin();
+    }
+
     match /deleteRequests/{requestId} {
       allow read: if isAdmin() || (isSignedIn() && resource.data.uid == authUid());
       allow create: if isSignedIn() &&
