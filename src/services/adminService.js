@@ -260,9 +260,17 @@ export async function deleteUserProfile({ uid, performedByEmail }) {
   });
 }
 
-// Fetch all users (admin).
+// Fetch all users (admin) — deduplicated by email, keeping the most recent document per email.
 export async function getAllUsers() {
   const q    = query(collection(db, "users"), orderBy("createdAt", "desc"));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const seen = new Set();
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((u) => {
+      const key = u.email?.toLowerCase() || u.id;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }
