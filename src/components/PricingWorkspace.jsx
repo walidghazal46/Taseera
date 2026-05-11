@@ -3348,8 +3348,7 @@ function AnalysisScreen({
       </div>
 
       <div
-        className="grid gap-3 px-1"
-        style={{ gridTemplateColumns: "repeat(auto-fit, minmax(148px, 1fr))" }}
+        className="grid grid-cols-2 gap-3 px-1"
       >
         {[
           { label: "الكمية", val: qty, setter: setQty, unit: selectedItem.unit, step: "0.1" },
