@@ -213,6 +213,8 @@ export default function SettingsPanel({
   isSuperAdmin,
   onOpenSubscription,
   onOpenAdminDashboard,
+  notifications = [],
+  onOpenNotifications,
 }) {
   const text = getAppText(settings.language);
   const isAr = settings.language !== "en";
@@ -280,13 +282,73 @@ export default function SettingsPanel({
 
         {/* Subscription status — hidden for admins */}
         {accessStatus && authMode !== "guest" && !isAdmin && (
-          <div className="px-4 pb-4">
+          <div className="px-4 pb-4 space-y-3">
             <SubscriptionStatusCard
               accessStatus={accessStatus}
               language={settings.language}
               isAr={isAr}
               onUpgrade={onOpenSubscription}
             />
+
+            {/* Notifications card */}
+            <button
+              type="button"
+              onClick={onOpenNotifications}
+              className="w-full rounded-2xl border border-violet-200 bg-violet-50 p-4 text-start transition active:scale-[0.98]"
+              dir={isAr ? "rtl" : "ltr"}
+              style={{ fontFamily: F }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🔔</span>
+                  <span className="text-sm font-black text-slate-800">
+                    {isAr ? "الرسائل والإشعارات" : "Messages & Notifications"}
+                  </span>
+                </div>
+                {notifications.filter(n => !n.read).length > 0 && (
+                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-black text-white">
+                    {notifications.filter(n => !n.read).length > 9 ? "9+" : notifications.filter(n => !n.read).length}
+                  </span>
+                )}
+              </div>
+
+              {notifications.length === 0 ? (
+                <p className="text-xs text-slate-400">
+                  {isAr ? "لا توجد رسائل بعد." : "No messages yet."}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {notifications.slice(0, 3).map((notif) => {
+                    const title = isAr ? notif.titleAr : notif.titleEn;
+                    const body  = isAr ? notif.bodyAr  : notif.bodyEn;
+                    return (
+                      <div
+                        key={notif.id}
+                        className={`flex items-start gap-2 rounded-xl px-3 py-2 ${notif.read ? "bg-white/60" : "bg-white border border-violet-100"}`}
+                      >
+                        <span className="text-sm mt-0.5 shrink-0">
+                          {notif.type === "payment_approved" ? "✅" : notif.type === "payment_rejected" ? "❌" : "📢"}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-[12px] font-bold leading-tight ${notif.read ? "text-slate-500" : "text-slate-800"}`}>
+                            {title}
+                          </p>
+                          {body && (
+                            <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed line-clamp-1">{body}</p>
+                          )}
+                        </div>
+                        {!notif.read && <div className="shrink-0 mt-1.5 h-1.5 w-1.5 rounded-full bg-violet-500" />}
+                      </div>
+                    );
+                  })}
+                  {notifications.length > 3 && (
+                    <p className="text-center text-[11px] font-bold text-violet-500">
+                      {isAr ? `+ ${notifications.length - 3} رسائل أخرى` : `+ ${notifications.length - 3} more`}
+                    </p>
+                  )}
+                </div>
+              )}
+            </button>
           </div>
         )}
       </section>
