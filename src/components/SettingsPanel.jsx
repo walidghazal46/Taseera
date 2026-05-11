@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from "react";
 import { submitDeleteRequest } from "../services/adminService";
-import { userCancelSubscription } from "../services/paymentService";
+import { submitCancellationRequest } from "../services/paymentService";
 import { getAppText } from "../data/appText";
 import taseeraLogo from "../assets/taseera-logo-light.png";
 import { SUBSCRIPTION_STATUS } from "../data/packages";
@@ -97,17 +97,18 @@ function PrivacyPolicyPage({ language, onBack }) {
   );
 }
 
-function SubscriptionStatusCard({ accessStatus, language, isAr, onUpgrade, onCancelSubscription, uid }) {
+function SubscriptionStatusCard({ accessStatus, language, isAr, onUpgrade, uid, userEmail }) {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
   const handleCancelConfirm = async () => {
     if (!uid) return;
     setCancelling(true);
-    try { await userCancelSubscription(uid); } catch {}
+    try {
+      await submitCancellationRequest({ uid, userEmail: userEmail || "" });
+    } catch {}
     setCancelling(false);
     setConfirmCancel(false);
-    onCancelSubscription?.();
   };
 
   if (!accessStatus) return null;
@@ -159,6 +160,14 @@ function SubscriptionStatusCard({ accessStatus, language, isAr, onUpgrade, onCan
       titleEn: "Payment Under Review",
       bodyAr: "سيتم تفعيل حسابك خلال 24 ساعة.",
       bodyEn: "Your account will be activated within 24 hours.",
+      action: false,
+    },
+    [SUBSCRIPTION_STATUS.PENDING_CANCELLATION]: {
+      icon: "🔄", color: "border-orange-200 bg-orange-50",
+      titleAr: "طلب الإلغاء قيد المراجعة",
+      titleEn: "Cancellation Under Review",
+      bodyAr: "تم إرسال طلب الإلغاء وسيُراجَع من الإدارة.",
+      bodyEn: "Your cancellation request has been submitted for review.",
       action: false,
     },
     [SUBSCRIPTION_STATUS.REJECTED]: {
@@ -353,7 +362,7 @@ export default function SettingsPanel({
               isAr={isAr}
               onUpgrade={onOpenSubscription}
               uid={sessionMeta?.uid}
-              onCancelSubscription={() => {}}
+              userEmail={sessionMeta?.email}
             />
 
             {/* Notifications card */}

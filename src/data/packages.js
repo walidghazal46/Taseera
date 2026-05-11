@@ -92,6 +92,7 @@ export const SUBSCRIPTION_STATUS = {
   TRIAL_EXPIRED: "trial_expired",
   PENDING_PAYMENT: "pending_payment",
   ACTIVE: "active",
+  PENDING_CANCELLATION: "pending_cancellation",
   EXPIRED: "expired",
   REJECTED: "rejected",
   SUSPENDED: "suspended",
