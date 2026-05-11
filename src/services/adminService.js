@@ -5,6 +5,7 @@ import {
 import { db } from "../firebase";
 import { PACKAGES, SUBSCRIPTION_STATUS } from "../data/packages";
 import { SUPER_ADMIN_EMAIL } from "../data/packages";
+import { createNotification } from "./notificationService";
 
 function addMonths(date, months) {
   const d = new Date(date);
@@ -49,6 +50,18 @@ export async function approvePaymentRequest({ requestId, uid, packageId, approve
     performedBy: approvedByEmail,
     createdAt:   serverTimestamp(),
   });
+
+  // Notify user
+  try {
+    await createNotification({
+      uid,
+      type: "payment_approved",
+      titleAr: "✅ تم تفعيل اشتراكك",
+      titleEn: "✅ Subscription Activated",
+      bodyAr: `تم تفعيل باقة ${pkg.nameAr} بنجاح. استمتع بالوصول الكامل للتطبيق.`,
+      bodyEn: `Your ${pkg.nameEn} plan has been activated. Enjoy full access.`,
+    });
+  } catch {}
 }
 
 // Reject a payment request.
@@ -72,6 +85,22 @@ export async function rejectPaymentRequest({ requestId, uid, rejectionReason, re
     performedBy: rejectedByEmail,
     createdAt:   serverTimestamp(),
   });
+
+  // Notify user
+  try {
+    await createNotification({
+      uid,
+      type: "payment_rejected",
+      titleAr: "❌ تم رفض طلب الدفع",
+      titleEn: "❌ Payment Request Rejected",
+      bodyAr: rejectionReason
+        ? `سبب الرفض: ${rejectionReason}. يمكنك إعادة المحاولة بعد مراجعة بيانات الدفع.`
+        : "يمكنك إعادة تقديم طلب دفع جديد. تواصل معنا إذا احتجت مساعدة.",
+      bodyEn: rejectionReason
+        ? `Reason: ${rejectionReason}. You may try again after reviewing your payment details.`
+        : "You may submit a new payment request. Contact us if you need help.",
+    });
+  } catch {}
 }
 
 // Suspend a user account.

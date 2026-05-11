@@ -3,6 +3,7 @@ import { getAllUsers } from "../services/adminService";
 import { getAllPaymentRequests } from "../services/paymentService";
 import { approvePaymentRequest, rejectPaymentRequest, suspendUser, unsuspendUser, assignAdminRole, removeAdminRole, cancelSubscription, extendSubscription, deleteUserProfile, getAllDeleteRequests, approveDeleteRequest, rejectDeleteRequest, dismissDeleteRequest } from "../services/adminService";
 import { SUPER_ADMIN_EMAIL } from "../data/packages";
+import { sendAdminMessage } from "../services/notificationService";
 
 function Badge({ status }) {
   const map = {
@@ -44,12 +45,18 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
   const [deleteReqs, setDeleteReqs] = useState([]);
   const [loading, setLoading]       = useState(true);
   const [actionMsg, setActionMsg]   = useState("");
-  const [rejectModal, setRejectModal] = useState(null); // { requestId, uid }
+  const [rejectModal, setRejectModal] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
-  const [adminModal, setAdminModal] = useState(null);   // { uid, email, action }
-  const [subModal, setSubModal] = useState(null);       // { uid, email, status }
+  const [adminModal, setAdminModal] = useState(null);
+  const [subModal, setSubModal] = useState(null);
   const [extendMonths, setExtendMonths] = useState(1);
-  const [deleteModal, setDeleteModal] = useState(null); // { uid, email }
+  const [deleteModal, setDeleteModal] = useState(null);
+  // Messages tab state
+  const [msgTitle, setMsgTitle]   = useState("");
+  const [msgBody, setMsgBody]     = useState("");
+  const [msgTarget, setMsgTarget] = useState("all"); // "all" | "specific"
+  const [msgTargetUid, setMsgTargetUid] = useState("");
+  const [msgSending, setMsgSending] = useState(false);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -182,11 +189,33 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
     } catch (err) { flash(err.message); }
   };
 
+  const handleSendMessage = async () => {
+    if (!msgTitle.trim() || !msgBody.trim()) {
+      flash(ar ? "أدخل العنوان والنص." : "Enter title and body.");
+      return;
+    }
+    const uids = msgTarget === "all"
+      ? users.map((u) => u.uid).filter(Boolean)
+      : [msgTargetUid].filter(Boolean);
+    if (uids.length === 0) {
+      flash(ar ? "لا يوجد مستخدمون محددون." : "No target users.");
+      return;
+    }
+    setMsgSending(true);
+    try {
+      await sendAdminMessage({ uids, titleAr: msgTitle, titleEn: msgTitle, bodyAr: msgBody, bodyEn: msgBody });
+      setMsgTitle(""); setMsgBody(""); setMsgTargetUid("");
+      flash(ar ? `✅ تم الإرسال لـ ${uids.length} مستخدم.` : `✅ Sent to ${uids.length} users.`);
+    } catch (err) { flash(err.message); }
+    finally { setMsgSending(false); }
+  };
+
   const tabs = [
     { id: "requests", label: ar ? `الطلبات (${pendingRequests.length})` : `Requests (${pendingRequests.length})` },
     { id: "users",    label: ar ? `المستخدمون (${users.length})` : `Users (${users.length})` },
     { id: "delete",   label: ar ? `حذف الحسابات (${pendingDeleteReqs.length})` : `Delete Reqs (${pendingDeleteReqs.length})` },
     { id: "all",      label: ar ? "كل الطلبات" : "All Requests" },
+    { id: "messages", label: ar ? "📢 الرسائل" : "📢 Messages" },
   ];
 
   return (
@@ -436,6 +465,82 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
                     </div>
                   ))
                 )}
+              </Section>
+            )}
+            {/* ── Messages Tab ── */}
+            {tab === "messages" && (
+              <Section title={ar ? "إرسال رسالة للمستخدمين" : "Send Message to Users"}>
+                <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+                  {/* Target */}
+                  <div>
+                    <p className="text-xs font-bold text-slate-600 mb-2">{ar ? "المستلمون:" : "Recipients:"}</p>
+                    <div className="flex gap-2">
+                      {[{ v: "all", ar: "جميع المستخدمين", en: "All Users" }, { v: "specific", ar: "مستخدم محدد", en: "Specific User" }].map((opt) => (
+                        <button
+                          key={opt.v}
+                          type="button"
+                          onClick={() => setMsgTarget(opt.v)}
+                          className={`flex-1 rounded-xl border py-2 text-xs font-bold transition ${msgTarget === opt.v ? "border-[#082555] bg-[#082555] text-white" : "border-slate-200 text-slate-600"}`}
+                        >
+                          {ar ? opt.ar : opt.en}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Specific user picker */}
+                  {msgTarget === "specific" && (
+                    <div>
+                      <p className="text-xs font-bold text-slate-600 mb-1">{ar ? "اختر المستخدم:" : "Select user:"}</p>
+                      <select
+                        value={msgTargetUid}
+                        onChange={(e) => setMsgTargetUid(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 focus:outline-none"
+                        dir="ltr"
+                      >
+                        <option value="">{ar ? "— اختر —" : "— Choose —"}</option>
+                        {users.filter((u) => u.uid).map((u) => (
+                          <option key={u.uid} value={u.uid}>{u.email}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Title */}
+                  <div>
+                    <p className="text-xs font-bold text-slate-600 mb-1">{ar ? "عنوان الرسالة:" : "Title:"}</p>
+                    <input
+                      value={msgTitle}
+                      onChange={(e) => setMsgTitle(e.target.value)}
+                      placeholder={ar ? "مثال: عرض خاص لشهر رمضان" : "e.g. Special Ramadan offer"}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:border-[#082555]"
+                      dir={ar ? "rtl" : "ltr"}
+                    />
+                  </div>
+
+                  {/* Body */}
+                  <div>
+                    <p className="text-xs font-bold text-slate-600 mb-1">{ar ? "نص الرسالة:" : "Message body:"}</p>
+                    <textarea
+                      value={msgBody}
+                      onChange={(e) => setMsgBody(e.target.value)}
+                      rows={3}
+                      placeholder={ar ? "اكتب محتوى الرسالة هنا..." : "Write message content here..."}
+                      className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm resize-none focus:outline-none focus:border-[#082555]"
+                      dir={ar ? "rtl" : "ltr"}
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={msgSending || !msgTitle.trim() || !msgBody.trim()}
+                    className="w-full rounded-2xl bg-[linear-gradient(135deg,#082555,#16335d)] py-3 text-sm font-black text-white disabled:opacity-50 transition active:scale-[0.98]"
+                  >
+                    {msgSending
+                      ? (ar ? "جارٍ الإرسال…" : "Sending…")
+                      : (ar ? "📢 إرسال الرسالة" : "📢 Send Message")}
+                  </button>
+                </div>
               </Section>
             )}
           </>

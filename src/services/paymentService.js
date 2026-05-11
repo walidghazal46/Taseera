@@ -1,11 +1,11 @@
 import {
   collection, addDoc, query, where, orderBy, getDocs,
-  serverTimestamp,
+  updateDoc, doc, serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import { PACKAGES } from "../data/packages";
+import { PACKAGES, SUBSCRIPTION_STATUS } from "../data/packages";
 
-// Create a new payment request (user side).
+// Create a new payment request and mark user as pending_payment.
 export async function createPaymentRequest({ uid, userEmail, packageId, paymentMethod, proofUrl }) {
   const pkg = PACKAGES[packageId];
   if (!pkg) throw new Error("Invalid package");
@@ -30,6 +30,15 @@ export async function createPaymentRequest({ uid, userEmail, packageId, paymentM
   };
 
   const ref = await addDoc(collection(db, "paymentRequests"), payload);
+
+  // Update user status so they see the "pending review" screen immediately.
+  try {
+    await updateDoc(doc(db, "users", uid), {
+      subscriptionStatus: SUBSCRIPTION_STATUS.PENDING_PAYMENT,
+      updatedAt: serverTimestamp(),
+    });
+  } catch {}
+
   return ref.id;
 }
 
