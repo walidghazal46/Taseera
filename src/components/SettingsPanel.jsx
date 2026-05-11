@@ -259,8 +259,8 @@ export default function SettingsPanel({
           </div>
         </div>
 
-        {/* Subscription status */}
-        {accessStatus && authMode !== "guest" && (
+        {/* Subscription status — hidden for admins */}
+        {accessStatus && authMode !== "guest" && !isAdmin && (
           <div className="px-4 pb-4">
             <SubscriptionStatusCard
               accessStatus={accessStatus}
