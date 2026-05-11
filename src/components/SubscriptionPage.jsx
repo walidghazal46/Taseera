@@ -1,6 +1,85 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { PACKAGES_LIST, SUBSCRIPTION_STATUS } from "../data/packages";
 import PaymentRequestForm from "./PaymentRequestForm";
+
+// ─── Payment Details ─────────────────────────────────────────────────────────
+function CopyRow({ label, value, icon, colorCls, borderCls, bgCls, textCls }) {
+  const [copied, setCopied] = useState(false);
+  const copy = useCallback(() => {
+    navigator.clipboard?.writeText(value).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [value]);
+
+  return (
+    <div className={`rounded-2xl border ${borderCls} ${bgCls} p-3`} dir="rtl">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-base">{icon}</span>
+        <span className={`text-[11px] font-bold ${textCls}`}>{label}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span
+          className={`flex-1 rounded-xl border ${borderCls} bg-white px-3 py-1.5 text-[12px] font-bold text-slate-800 select-all`}
+          style={{ fontFamily: "monospace", letterSpacing: "0.03em", direction: "ltr", textAlign: "left" }}
+        >
+          {value}
+        </span>
+        <button
+          type="button"
+          onClick={copy}
+          className={`shrink-0 rounded-xl border ${borderCls} ${bgCls} px-3 py-1.5 text-[11px] font-bold ${textCls} transition-all active:scale-95`}
+        >
+          {copied ? "✓ تم" : "نسخ"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PaymentDetails({ ar }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-base">💳</span>
+        <h3 className="text-sm font-black text-slate-800">
+          {ar ? "بيانات الدفع" : "Payment Details"}
+        </h3>
+      </div>
+      <p className="text-[11px] text-slate-500 leading-relaxed -mt-1">
+        {ar
+          ? "حوّل المبلغ عبر أي وسيلة أدناه ثم أرسل الإيصال على البريد الإلكتروني. سيتم التفعيل خلال 24 ساعة."
+          : "Transfer the amount via any method below then send the receipt to our email. Activation within 24 hours."}
+      </p>
+
+      <CopyRow
+        label={ar ? "إنستاباي / محفظة كاش — وليد غزال إبراهيم" : "InstaPay / Cash Wallet — Walid Ghazal Ibrahim"}
+        value="01064463650"
+        icon="📱"
+        borderCls="border-emerald-200"
+        bgCls="bg-emerald-50"
+        textCls="text-emerald-700"
+      />
+
+      <CopyRow
+        label={ar ? "بنك الراجحي — وليد غزال إبراهيم" : "Al Rajhi Bank — Walid Ghazal Ibrahim"}
+        value="SA46 8000 0996 6080 1754 2586"
+        icon="🏦"
+        borderCls="border-blue-200"
+        bgCls="bg-blue-50"
+        textCls="text-blue-700"
+      />
+
+      <CopyRow
+        label={ar ? "البريد الإلكتروني — إرسال الإيصال" : "Email — Send Receipt"}
+        value="walidghazal46@gmail.com"
+        icon="✉️"
+        borderCls="border-violet-200"
+        bgCls="bg-violet-50"
+        textCls="text-violet-700"
+      />
+    </div>
+  );
+}
 
 // ─── Package Detail Modal ────────────────────────────────────────────────────
 function PackageDetailsModal({ pkg, language, onClose, onSelect }) {
@@ -68,19 +147,7 @@ function PackageDetailsModal({ pkg, language, onClose, onSelect }) {
           </div>
 
           {/* Payment instructions */}
-          <div className="rounded-2xl bg-blue-50 border border-blue-100 p-4 space-y-2">
-            <h3 className="text-sm font-bold text-blue-800">
-              {ar ? "تعليمات الدفع:" : "Payment Instructions:"}
-            </h3>
-            <p className="text-xs text-blue-700 leading-relaxed">
-              {ar
-                ? "قم بتحويل المبلغ عبر البنك أو أي وسيلة دفع متاحة ثم أرسل إيصال الدفع إلى البريد الإلكتروني أدناه. سيتم تفعيل اشتراكك خلال 24 ساعة."
-                : "Transfer the amount via bank or any available payment method, then send the payment receipt to the email below. Your subscription will be activated within 24 hours."}
-            </p>
-            <div className="text-center font-bold text-blue-900 text-sm py-2 bg-white rounded-xl border border-blue-200">
-              walidghazal46@gmail.com
-            </div>
-          </div>
+          <PaymentDetails ar={ar} />
 
           {/* Policies */}
           <div className="space-y-3 text-xs text-slate-500 leading-relaxed">
