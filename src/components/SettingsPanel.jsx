@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback } from "react";
 import { submitDeleteRequest } from "../services/adminService";
+import { userCancelSubscription } from "../services/paymentService";
 import { getAppText } from "../data/appText";
 import taseeraLogo from "../assets/taseera-logo-light.png";
 import { SUBSCRIPTION_STATUS } from "../data/packages";
@@ -96,7 +97,19 @@ function PrivacyPolicyPage({ language, onBack }) {
   );
 }
 
-function SubscriptionStatusCard({ accessStatus, language, isAr, onUpgrade }) {
+function SubscriptionStatusCard({ accessStatus, language, isAr, onUpgrade, onCancelSubscription, uid }) {
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  const handleCancelConfirm = async () => {
+    if (!uid) return;
+    setCancelling(true);
+    try { await userCancelSubscription(uid); } catch {}
+    setCancelling(false);
+    setConfirmCancel(false);
+    onCancelSubscription?.();
+  };
+
   if (!accessStatus) return null;
   const { status, daysLeft, packageEndDate } = accessStatus;
 
@@ -169,8 +182,39 @@ function SubscriptionStatusCard({ accessStatus, language, isAr, onUpgrade }) {
   const cfg = configs[status];
   if (!cfg) return null;
 
+  const isActive = status === SUBSCRIPTION_STATUS.ACTIVE;
+
   return (
     <div className={`rounded-2xl border p-4 ${cfg.color}`} dir={isAr ? "rtl" : "ltr"}>
+      {/* Confirm cancel dialog */}
+      {confirmCancel && (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3">
+          <p className="text-[12px] font-black text-red-700 mb-2" style={{ fontFamily: F }}>
+            {isAr ? "هل أنت متأكد من إلغاء الاشتراك؟" : "Are you sure you want to cancel?"}
+          </p>
+          <p className="text-[11px] text-red-500 mb-3" style={{ fontFamily: F }}>
+            {isAr ? "سيتوقف وصولك فور الإلغاء." : "Your access will end immediately."}
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={handleCancelConfirm}
+              disabled={cancelling}
+              className="flex-1 rounded-lg bg-red-500 py-2 text-[11px] font-black text-white active:bg-red-600 disabled:opacity-50"
+              style={{ fontFamily: F }}
+            >
+              {cancelling ? "..." : (isAr ? "نعم، إلغِ الاشتراك" : "Yes, Cancel")}
+            </button>
+            <button
+              onClick={() => setConfirmCancel(false)}
+              className="flex-1 rounded-lg border border-slate-200 bg-white py-2 text-[11px] font-black text-slate-600"
+              style={{ fontFamily: F }}
+            >
+              {isAr ? "تراجع" : "Go back"}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-start gap-3">
         <span className="text-2xl">{cfg.icon}</span>
         <div className="flex-1 min-w-0">
@@ -191,6 +235,26 @@ function SubscriptionStatusCard({ accessStatus, language, isAr, onUpgrade }) {
           </button>
         )}
       </div>
+
+      {/* Active subscription management buttons */}
+      {isActive && !confirmCancel && (
+        <div className="mt-3 flex gap-2 pt-3 border-t border-emerald-200/60">
+          <button
+            onClick={onUpgrade}
+            className="flex-1 rounded-xl border border-emerald-300 bg-emerald-100 py-2 text-[11px] font-black text-emerald-800 active:bg-emerald-200"
+            style={{ fontFamily: F }}
+          >
+            {isAr ? "⬆️ ترقية الباقة" : "⬆️ Upgrade Plan"}
+          </button>
+          <button
+            onClick={() => setConfirmCancel(true)}
+            className="flex-1 rounded-xl border border-red-200 bg-white py-2 text-[11px] font-black text-red-500 active:bg-red-50"
+            style={{ fontFamily: F }}
+          >
+            {isAr ? "إلغاء الاشتراك" : "Cancel Plan"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -288,6 +352,8 @@ export default function SettingsPanel({
               language={settings.language}
               isAr={isAr}
               onUpgrade={onOpenSubscription}
+              uid={sessionMeta?.uid}
+              onCancelSubscription={() => {}}
             />
 
             {/* Notifications card */}

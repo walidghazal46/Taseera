@@ -42,6 +42,17 @@ export async function createPaymentRequest({ uid, userEmail, packageId, paymentM
   return ref.id;
 }
 
+// User cancels their own active subscription (does not touch isPaid — admin-only field).
+export async function userCancelSubscription(uid) {
+  await updateDoc(doc(db, "users", uid), {
+    subscriptionStatus: SUBSCRIPTION_STATUS.EXPIRED,
+    selectedPackage:    null,
+    packageStartDate:   null,
+    packageEndDate:     null,
+    updatedAt:          serverTimestamp(),
+  });
+}
+
 // Fetch all payment requests for a specific user.
 export async function getUserPaymentRequests(uid) {
   const q = query(
