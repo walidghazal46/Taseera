@@ -132,7 +132,16 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
       style={{ fontFamily: "'Cairo','Tajawal',sans-serif", paddingTop: "calc(env(safe-area-inset-top) + 8px)", paddingBottom: "calc(env(safe-area-inset-bottom) + 24px)" }}
     >
       {/* Header */}
-      <div className="bg-[linear-gradient(135deg,#082555,#16335d)] px-5 py-4 shadow-md">
+      <div className="sticky top-0 z-10 bg-[linear-gradient(135deg,#082555,#16335d)] px-5 py-4 shadow-md">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="mb-3 flex items-center gap-1.5 text-white/70 text-xs font-bold hover:text-white transition"
+          >
+            <span className="text-base leading-none">{ar ? "›" : "‹"}</span>
+            {ar ? "رجوع" : "Back"}
+          </button>
+        )}
         <div className="flex items-start justify-between">
           <div>
             <p className="text-amber-300 text-[10px] font-bold uppercase tracking-widest">Taseera Admin</p>
@@ -141,14 +150,6 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
             </h1>
             <p className="text-slate-400 text-xs mt-0.5">{adminEmail}</p>
           </div>
-          {onBack && (
-            <button
-              onClick={onBack}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white text-lg mt-1"
-            >
-              {ar ? "×" : "×"}
-            </button>
-          )}
         </div>
       </div>
 
