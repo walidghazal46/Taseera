@@ -86,7 +86,7 @@ export function computeAccessStatus(profile) {
   if (!profile) return { canAccess: false, status: "no_profile" };
 
   let {
-    subscriptionStatus, packageEndDate, trialEndDate, isActive, createdAt, email,
+    subscriptionStatus, packageEndDate, trialEndDate, isActive, createdAt, email, selectedPackage,
   } = profile;
 
   // Legacy profiles without subscriptionStatus — compute from known data.
@@ -123,7 +123,7 @@ export function computeAccessStatus(profile) {
   if (subscriptionStatus === SUBSCRIPTION_STATUS.ACTIVE) {
     const end = packageEndDate?.toDate?.();
     if (end && end > now) {
-      return { canAccess: true, status: SUBSCRIPTION_STATUS.ACTIVE, packageEndDate: end };
+      return { canAccess: true, status: SUBSCRIPTION_STATUS.ACTIVE, packageEndDate: end, selectedPackage };
     }
     return { canAccess: false, status: SUBSCRIPTION_STATUS.EXPIRED };
   }
