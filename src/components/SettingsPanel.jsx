@@ -3,7 +3,7 @@ import { submitDeleteRequest } from "../services/adminService";
 import { submitCancellationRequest } from "../services/paymentService";
 import { getAppText } from "../data/appText";
 import taseeraLogo from "../assets/taseera-logo-light.png";
-import { SUBSCRIPTION_STATUS } from "../data/packages";
+import { SUBSCRIPTION_STATUS, PACKAGES } from "../data/packages";
 
 const F = "'Cairo','Tajawal',sans-serif";
 
@@ -112,12 +112,14 @@ function SubscriptionStatusCard({ accessStatus, language, isAr, onUpgrade, uid, 
   };
 
   if (!accessStatus) return null;
-  const { status, daysLeft, packageEndDate } = accessStatus;
+  const { status, daysLeft, packageEndDate, selectedPackage } = accessStatus;
+  const pkgName = selectedPackage ? (isAr ? PACKAGES[selectedPackage]?.nameAr : PACKAGES[selectedPackage]?.nameEn) : null;
 
   const configs = {
     [SUBSCRIPTION_STATUS.ACTIVE]: {
       icon: "✅", color: "border-emerald-200 bg-emerald-50",
-      titleAr: "اشتراك فعّال", titleEn: "Active Subscription",
+      titleAr: pkgName ? `اشتراك فعّال · ${pkgName}` : "اشتراك فعّال",
+      titleEn: pkgName ? `Active · ${pkgName}` : "Active Subscription",
       bodyAr: packageEndDate ? `ينتهي ${packageEndDate.toLocaleDateString("ar-SA")}` : "اشتراكك فعّال",
       bodyEn: packageEndDate ? `Expires ${packageEndDate.toLocaleDateString()}` : "Your subscription is active",
       action: false,
