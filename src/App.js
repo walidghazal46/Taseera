@@ -296,12 +296,10 @@ export default function App() {
   const isPendingPayment  = isFirebaseAuthenticated && accessStatus?.status === SUBSCRIPTION_STATUS.PENDING_PAYMENT;
 
   const showStatus = useCallback((message, tone = "info") => {
+    setStatus({ message, tone });
     bridge.showToast(message);
-    if (!bridge.isAndroid) {
-      setStatus({ message, tone });
-      if (statusTimeoutRef.current) window.clearTimeout(statusTimeoutRef.current);
-      statusTimeoutRef.current = window.setTimeout(() => setStatus(null), 3200);
-    }
+    if (statusTimeoutRef.current) window.clearTimeout(statusTimeoutRef.current);
+    statusTimeoutRef.current = window.setTimeout(() => setStatus(null), 3200);
   }, [bridge]);
 
   const openDialog  = useCallback((d) => setDialog(d), []);
