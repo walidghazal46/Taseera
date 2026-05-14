@@ -101,13 +101,13 @@ function ExportPreviewModal({ data, onClose, language = "ar" }) {
       dir={isEn ? "ltr" : "rtl"}
       style={{ fontFamily: AR }}
     >
-      {/* ── Top bar — intentionally lowered for mobile comfort ── */}
+      {/* ── Top bar — aligned to safe area + 0.5cm ── */}
       <div
-        className="mx-3 flex items-center justify-between rounded-[20px] px-4 bg-[#082555] shadow-md print:hidden"
+        className="mx-3 flex items-center justify-between rounded-[22px] px-4 bg-[#082555] shadow-lg print:hidden"
         style={{
-          marginTop: "calc(env(safe-area-inset-top) + 2.4cm)",
-          paddingTop: "0.65rem",
-          paddingBottom: "0.65rem",
+          marginTop: "calc(env(safe-area-inset-top) + 0.5cm)",
+          paddingTop: "0.75rem",
+          paddingBottom: "0.75rem",
         }}
       >
         <button
@@ -119,7 +119,7 @@ function ExportPreviewModal({ data, onClose, language = "ar" }) {
           <span className="text-[13px] leading-none">✕</span>
           {isEn ? "Close" : "إغلاق"}
         </button>
-        <span className="text-[11px] font-bold text-[#d4a843] tracking-wide">{isEn ? "Item Analysis" : "تحليل البند"}</span>
+        <span className="text-[13px] font-bold text-[#d4a843] tracking-wide">{isEn ? "Item Analysis" : "تحليل البند"}</span>
         <div className="flex items-center gap-2">
           {/* Print/Save — web only, hidden on Android */}
           {!window.TaseeraAndroid && (
@@ -132,7 +132,7 @@ function ExportPreviewModal({ data, onClose, language = "ar" }) {
           )}
           {/* Screenshot hint — Android only */}
           {window.TaseeraAndroid && (
-            <span className="text-[10px] text-white/50 font-bold">{isEn ? "📸 Screenshot" : "📸 سكرين شوت"}</span>
+            <span className="text-[11px] text-white/50 font-bold">{isEn ? "📸 Screenshot" : "📸 سكرين شوت"}</span>
           )}
           <button
             type="button"
@@ -146,9 +146,9 @@ function ExportPreviewModal({ data, onClose, language = "ar" }) {
         </div>
       </div>
 
-      {/* ── Scalable content wrapper ── */}
-      <div ref={frameRef} className="overflow-hidden px-2 pb-2" style={{ position: "relative" }}>
-        <div ref={contentRef} className="mx-auto max-w-[26rem] px-2 pt-2 pb-1.5 space-y-1.5">
+      {/* ── Scalable content wrapper — aligned with header ── */}
+      <div ref={frameRef} className="overflow-hidden px-3 pb-6" style={{ position: "relative" }}>
+        <div ref={contentRef} className="mx-auto max-w-[28rem] pt-2.5 space-y-2">
 
           {/* Item header */}
           <div className="bg-[#082555] rounded-2xl px-4 py-2 text-right">
@@ -2189,7 +2189,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
 
   return (
     <div className="w-full bg-[#F7F3EC] overflow-x-hidden" dir="rtl" style={{ fontFamily: AR }}>
-      <div className="mx-auto w-full max-w-[720px] p-3 sm:p-4 pb-4">
+      <div className="mx-auto w-full max-w-[720px] py-3 sm:py-4 pb-4">
         {/* Header */}
         <div className="mb-4 flex items-center justify-between">
           <button onClick={() => handleModeChange("selection")} className="group flex items-center gap-3 text-right">

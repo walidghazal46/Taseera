@@ -159,7 +159,7 @@ export default function AppShell({
         ref={mainRef}
         className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden bg-transparent"
       >
-        <div className="app-content-safe mx-auto flex w-[90%] sm:w-full max-w-2xl lg:max-w-6xl flex-1 flex-col py-4 lg:py-6">
+        <div className="app-content-safe mx-auto flex w-full max-w-2xl lg:max-w-6xl flex-1 flex-col py-4 lg:py-6">
           {children}
         </div>
       </main>

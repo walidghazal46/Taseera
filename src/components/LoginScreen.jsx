@@ -9,6 +9,8 @@ import {
   signInWithRedirect,
   signInWithPopup,
   updateProfile,
+  signInWithCredential,
+  GoogleAuthProvider,
 } from "firebase/auth";
 import { ensureUserProfile } from "../services/userService";
 
@@ -136,11 +138,27 @@ export default function LoginScreen({
     const isAndroid = typeof window !== "undefined" && window.TaseeraAndroid;
     if (isAndroid) {
       try {
-        const handleSuccess = (e) => {
+        const handleSuccess = async (e) => {
           window.removeEventListener("taseera:google-signin-success", handleSuccess);
           window.removeEventListener("taseera:google-signin-error", handleError);
+
+          const { idToken, uid, displayName, email } = e.detail;
+
+          if (idToken) {
+            try {
+              const credential = GoogleAuthProvider.credential(idToken);
+              await signInWithCredential(auth, credential);
+              // The useAuth hook will pick up the change and sync state
+            } catch (err) {
+              console.error("Firebase web sign-in failed", err);
+              setError(language === "en" ? "Sign-in sync failed." : "فشل مزامنة تسجيل الدخول.");
+              setLoading(false);
+              return;
+            }
+          }
+
           setLoading(false);
-          onLogin("authenticated", { uid: e.detail.uid, userName: e.detail.displayName, userEmail: e.detail.email });
+          onLogin("authenticated", { uid, userName: displayName, userEmail: email });
         };
         const handleError = (e) => {
           window.removeEventListener("taseera:google-signin-success", handleSuccess);

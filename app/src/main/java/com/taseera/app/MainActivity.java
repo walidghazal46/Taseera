@@ -333,7 +333,7 @@ public class MainActivity extends AppCompatActivity {
                     String resolvedEmail = task.getResult() != null && task.getResult().getUser() != null
                         ? task.getResult().getUser().getEmail()
                         : email;
-                    emitGoogleSignInSuccess(uid, resolvedName, resolvedEmail);
+                    emitGoogleSignInSuccess(uid, resolvedName, resolvedEmail, idToken);
                 } else {
                     Log.w(TAG, "signInWithCredential:failure", task.getException());
                     String message = task.getException() != null && task.getException().getMessage() != null
@@ -344,7 +344,7 @@ public class MainActivity extends AppCompatActivity {
             });
     }
 
-    private void emitGoogleSignInSuccess(String uid, String displayName, String email) {
+    private void emitGoogleSignInSuccess(String uid, String displayName, String email, String idToken) {
         if (webView == null) {
             return;
         }
@@ -354,6 +354,7 @@ public class MainActivity extends AppCompatActivity {
             data.put("uid", uid != null ? uid : "");
             data.put("displayName", displayName != null ? displayName : "");
             data.put("email", email != null ? email : "");
+            data.put("idToken", idToken != null ? idToken : "");
             String payload = data.toString();
             String escapedPayload = JSONObject.quote(payload);
             webView.post(() ->
