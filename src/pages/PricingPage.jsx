@@ -43,20 +43,8 @@ export default function PricingPage(props) {
     const isAr = props.settings?.language !== "en";
     return (
       <div className="flex flex-col gap-4">
-        <CountryPicker
-          language={props.settings?.language}
-          icon="💰"
-          titleAr="اختر دولة التسعير"
-          titleEn="Select Pricing Country"
-          subtitleAr="اختر الدولة لتحديد أسعار ومعايير التسعير المناسبة"
-          subtitleEn="Choose a country to apply the correct pricing standards"
-          onSelect={handleSelectCountry}
-          sessionMeta={props.sessionMeta}
-          authMode={props.authMode}
-          section="pricing"
-        />
 
-        {/* ── مجتمع التسعير card ── */}
+        {/* ── مجتمع التسعير card — يظهر فوق قايمة الدول ── */}
         <button
           type="button"
           onClick={() => props.onNavigate?.("community")}
@@ -97,6 +85,19 @@ export default function PricingPage(props) {
             </svg>
           </div>
         </button>
+
+        <CountryPicker
+          language={props.settings?.language}
+          icon="💰"
+          titleAr="اختر دولة التسعير"
+          titleEn="Select Pricing Country"
+          subtitleAr="اختر الدولة لتحديد أسعار ومعايير التسعير المناسبة"
+          subtitleEn="Choose a country to apply the correct pricing standards"
+          onSelect={handleSelectCountry}
+          sessionMeta={props.sessionMeta}
+          authMode={props.authMode}
+          section="pricing"
+        />
       </div>
     );
   }
