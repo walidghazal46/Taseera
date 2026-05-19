@@ -40,19 +40,64 @@ export default function PricingPage(props) {
   }), [props.navigationBridge]);
 
   if (!selectedCountry) {
+    const isAr = props.settings?.language !== "en";
     return (
-      <CountryPicker
-        language={props.settings?.language}
-        icon="💰"
-        titleAr="اختر دولة التسعير"
-        titleEn="Select Pricing Country"
-        subtitleAr="اختر الدولة لتحديد أسعار ومعايير التسعير المناسبة"
-        subtitleEn="Choose a country to apply the correct pricing standards"
-        onSelect={handleSelectCountry}
-        sessionMeta={props.sessionMeta}
-        authMode={props.authMode}
-        section="pricing"
-      />
+      <div className="flex flex-col gap-4">
+        <CountryPicker
+          language={props.settings?.language}
+          icon="💰"
+          titleAr="اختر دولة التسعير"
+          titleEn="Select Pricing Country"
+          subtitleAr="اختر الدولة لتحديد أسعار ومعايير التسعير المناسبة"
+          subtitleEn="Choose a country to apply the correct pricing standards"
+          onSelect={handleSelectCountry}
+          sessionMeta={props.sessionMeta}
+          authMode={props.authMode}
+          section="pricing"
+        />
+
+        {/* ── مجتمع التسعير card ── */}
+        <button
+          type="button"
+          onClick={() => props.onNavigate?.("community")}
+          className="group relative overflow-hidden rounded-[22px] active:scale-[0.98] transition-transform duration-150 text-right"
+          style={{ background: "linear-gradient(130deg,#065f46 0%,#047857 55%,#059669 100%)", minHeight: 110, fontFamily: "'Cairo','Tajawal',sans-serif" }}
+          dir="rtl"
+        >
+          {/* pattern */}
+          <div className="absolute inset-0 opacity-[0.06]" style={{
+            backgroundImage: "radial-gradient(circle at 20% 50%, #fff 1px, transparent 1px), radial-gradient(circle at 80% 20%, #fff 1px, transparent 1px)",
+            backgroundSize: "36px 36px",
+          }} />
+          <div className="relative flex items-center gap-4 px-5 py-5">
+            {/* icon */}
+            <div className="flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-2xl text-[26px] ring-1 ring-emerald-400/30"
+              style={{ background: "linear-gradient(145deg,#047857,#065f46)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15),0 4px 16px rgba(5,150,105,0.35)" }}>
+              👥
+            </div>
+            {/* text */}
+            <div className="flex-1">
+              <h3 className="text-[17px] font-black text-white leading-tight">
+                {isAr ? "مجتمع التسعير" : "Pricing Community"}
+              </h3>
+              <span className="inline-flex mt-1 rounded-full px-2 py-0.5 text-[9px] font-bold text-white"
+                style={{ background: "rgba(255,255,255,0.15)", letterSpacing: "0.05em" }}>
+                COMMUNITY · LIVE
+              </span>
+              <p className="mt-1 text-[13px] leading-relaxed text-white/90">
+                {isAr
+                  ? "شارك واكتشف أسعاراً حقيقية من مقاولين حول العالم"
+                  : "Share and discover real prices from contractors worldwide"}
+              </p>
+            </div>
+            {/* arrow */}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+              className="h-5 w-5 shrink-0 text-white/50 group-hover:text-white transition-colors">
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </div>
+        </button>
+      </div>
     );
   }
 
