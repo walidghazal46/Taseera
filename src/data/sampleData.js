@@ -34,7 +34,7 @@ export const sampleSettings = {
   userEmail: "walidghazal46@gmail.com",
   userPhone: "+966 50 000 0000",
   appName: "Taseera",
-  appVersion: "1.0.0.26",
+  appVersion: "1.0.0.20",
   settingsPanelSection: "account",
 };
 

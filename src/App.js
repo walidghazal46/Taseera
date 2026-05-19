@@ -26,13 +26,14 @@ import {
 import { SUBSCRIPTION_STATUS } from "./data/packages";
 
 import CompaniesPage from "./pages/CompaniesPage";
+import CommunityPage from "./pages/CommunityPage";
 import PricingPage from "./pages/PricingPage";
 import SettingsPage from "./pages/SettingsPage";
 import SuppliersPage from "./pages/SuppliersPage";
 import { getAppText } from "./data/appText";
 
 const APP_STORAGE_PREFIX = "taseera.v3";
-const APP_VERSION = "1.0.0.27";
+const APP_VERSION = "1.0.0.20";
 
 function makeSeedMergeKey(entry) {
   const name    = String(entry?.name    || "").trim().toLowerCase();
@@ -610,6 +611,7 @@ export default function App() {
     pricing:   <PricingPage   key={`pric-${pageResetVersion.pricing}`}   {...pageProps} />,
     suppliers: <SuppliersPage key={`supp-${pageResetVersion.suppliers}`} {...pageProps} />,
     settings:  <SettingsPage  key={`sett-${pageResetVersion.settings}`}  {...pageProps} />,
+    community: <CommunityPage key={`comm-${pageResetVersion.community || 0}`} {...pageProps} profile={profile} />,
   }[activePage];
 
   const ExitModal = () => (

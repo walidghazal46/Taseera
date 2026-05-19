@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PhoneIcon, MailIcon, ShareIcon, SearchIcon, ChevronLeftIcon } from "./icons";
 import useBackStack from "../hooks/useBackStack";
 import AdSenseUnit from "./AdSenseUnit";
@@ -206,7 +206,7 @@ function InlineAdBanner({ adBanner, canManageAds = false, onEdit, onToggleVisibi
 }
 
 export default function SuppliersPanel({
-  suppliers, authMode, settings, onAddSupplier, onContactSupplier, onCreateRfq, navigationBridge, initialCountry, sessionMeta, isActive,
+  suppliers, authMode, settings, onAddSupplier, onContactSupplier, onCreateRfq, navigationBridge, initialCountry, sessionMeta,
 }) {
   const copy = getSuppliersCopy(settings?.language);
   const isEn = settings?.language === "en";
@@ -222,7 +222,7 @@ export default function SuppliersPanel({
 
   const nav = useBackStack({
     initialEntry: { section: "directory" },
-    registerBackHandler: (handler) => isActive ? navigationBridge?.registerBackHandler?.(handler) : null,
+    registerBackHandler: navigationBridge?.registerBackHandler,
     pushHistoryEntry: navigationBridge?.pushHistoryEntry,
     onEntryChange: navigationBridge?.onEntryChange,
   });
@@ -293,10 +293,6 @@ export default function SuppliersPanel({
   const pageSize = 5;
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
-
-  useEffect(() => {
-    navigationBridge?.onEntryChange?.();
-  }, [activeSection, selectedSupplier, navigationBridge]);
 
   useEffect(() => { if (page > totalPages) setPage(totalPages); }, [page, totalPages]);
   useEffect(() => { setPage(1); }, [activeCity, activeCountry, activeGroup, searchTerm]);

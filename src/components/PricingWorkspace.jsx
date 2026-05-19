@@ -578,6 +578,42 @@ function ModeSelection({ onSelect, areaLocked = false, areaMessage = "", onOpenF
         </div>
       </button>
 
+      {/* ── Card 4: مجتمع التسعير (teal/emerald) ── */}
+      <button
+        onClick={() => onSelect("community")}
+        className="group relative overflow-hidden rounded-[22px] active:scale-[0.98] transition-transform duration-150"
+        style={{ background: "linear-gradient(130deg,#065f46 0%,#047857 55%,#059669 100%)", minHeight: 120 }}
+      >
+        {/* subtle pattern bg */}
+        <div className="absolute inset-0 opacity-[0.06]" style={{
+          backgroundImage: "radial-gradient(circle at 20% 50%, #fff 1px, transparent 1px), radial-gradient(circle at 80% 20%, #fff 1px, transparent 1px), radial-gradient(circle at 50% 80%, #fff 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
+        }} />
+        <div className="relative flex items-center gap-4 px-5 py-6">
+          {/* Arrow circle */}
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full ring-1 ring-white/20 transition-all group-hover:bg-emerald-400/20 group-hover:ring-emerald-300/50"
+            style={{ background: "rgba(255,255,255,0.08)" }}>
+            <ChevronLeftIcon className="h-5 w-5 text-white/60 group-hover:text-emerald-300 transition-colors" />
+          </div>
+          {/* Text */}
+          <div className="flex-1 text-right">
+            <h3 className="text-[18px] font-black text-white leading-tight">{isEn ? "Pricing Community" : "مجتمع التسعير"}</h3>
+            <span className="inline-flex mt-1 rounded-full px-2.5 py-0.5 text-[9px] font-bold text-white"
+              style={{ background: "rgba(255,255,255,0.15)", fontFamily: "'IBM Plex Mono',monospace", letterSpacing: "0.05em" }}>
+              COMMUNITY · LIVE
+            </span>
+            <p className="mt-1 text-[15px] leading-relaxed text-white">
+              {isEn ? "Share and discover real prices from contractors worldwide." : "شارك واكتشف أسعاراً حقيقية من مقاولين حول العالم."}<br/>{isEn ? "Live market feed — built by professionals, for professionals." : "تغذية السوق الحية — بُنيت بواسطة المحترفين، للمحترفين."}
+            </p>
+          </div>
+          {/* Icon box */}
+          <div className="flex h-[62px] w-[62px] shrink-0 items-center justify-center rounded-2xl text-[28px] ring-1 ring-emerald-400/30"
+            style={{ background: "linear-gradient(145deg,#047857,#065f46)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.15), 0 4px 16px rgba(5,150,105,0.35)" }}>
+            👥
+          </div>
+        </div>
+      </button>
+
       <p className="text-center text-[11px] text-slate-400 mt-1" style={{ fontFamily: AR }}>
         {isEn ? "All calculations are indicative and based on current market averages in the selected country." : "جميع الحسابات تقديرية وتعتمد على متوسطات السوق الحالية في الدولة المختارة."}
       </p>
@@ -1545,7 +1581,7 @@ function AreaSectionDetailView({
 
 // --- Main Pricing Workspace Component ---
 
-export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings, sessionMeta, onOpenAuthScreen, onShowStatus, systemBridge, accessStatus, isAdmin, onOpenSubscription }) {
+export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings, sessionMeta, onOpenAuthScreen, onShowStatus, systemBridge, accessStatus, isAdmin, onOpenSubscription, onNavigate }) {
   // initialCountry comes from the CountryPicker on PricingPage; always override persisted value
   const isEn = settings?.language === "en";
   const [country, setCountry] = useState(initialCountry || "sa");
@@ -2086,6 +2122,11 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
         setMode(nextMode);
       });
       if (!canLeave) return;
+      return;
+    }
+    // Community is a top-level page, navigate out of PricingWorkspace
+    if (nextMode === "community") {
+      onNavigate?.("community");
       return;
     }
     // "items" mode is free to browse — only analysis actions inside it are gated.

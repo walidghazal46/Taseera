@@ -476,7 +476,7 @@ export default function SettingsPanel({
               {text.settings.contact}
             </ActionButton>
             <ActionButton tone="gold" onClick={() => setShowGuide(true)}>{isAr ? "كيفية الاستخدام" : "How to use"}</ActionButton>
-            <ActionButton tone="blue" onClick={() => onSettingsAction?.("update")}>{text.settings.update}</ActionButton>
+            <ActionButton tone="blue" onClick={() => systemBridge?.openExternalUrl?.("https://play.google.com/store/apps/details?id=com.taseera.app")}>{text.settings.update}</ActionButton>
           </div>
         </SettingsCard>
       </div>
@@ -518,7 +518,7 @@ export default function SettingsPanel({
       <footer className="rounded-2xl border border-[#dbe5ff] bg-white/80 px-4 py-4 text-center shadow-sm">
         <img src={taseeraLogo} alt="Taseera" className="mx-auto h-12 w-auto object-contain" />
         <p className="mt-2 text-[13px] font-black text-[#102a56]" style={{ fontFamily: F }}>{settings.appName}</p>
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[#7a8ba9]" style={{ fontFamily: F }}>{text.settings.version} 1.0.0.26</p>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[#7a8ba9]" style={{ fontFamily: F }}>{text.settings.version} {settings.appVersion}</p>
         <p className="mx-auto mt-2 max-w-md text-[10px] leading-5 text-[#66789d]" style={{ fontFamily: F }}>{text.settings.disclaimer}</p>
       </footer>
 
