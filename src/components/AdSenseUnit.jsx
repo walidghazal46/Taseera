@@ -1,35 +1,66 @@
 import { useEffect, useRef } from "react";
 
 const AD_CLIENT = "ca-pub-6810176545596111";
-// ← ضع هنا slot ID من حسابك في AdSense بعد إنشاء وحدة إعلانية
-const AD_SLOT = "XXXXXXXXXX";
 
-export default function AdSenseUnit({ className = "" }) {
-  const ref = useRef(null);
+// Slot IDs — أضف slot IDs الحقيقية من حساب AdSense هنا
+// لإنشاء slot جديد: AdSense Dashboard → Ads → By ad unit → Display ads
+export const AD_SLOTS = {
+  default:           "XXXXXXXXXX", // ← استبدل بـ Slot ID الحقيقي
+  companiesMain:     "XXXXXXXXXX",
+  suppliersMain:     "XXXXXXXXXX",
+  analysisTop:       "XXXXXXXXXX",
+  analysisActions:   "XXXXXXXXXX",
+  analysisBottom:    "XXXXXXXXXX",
+  areaForm:          "XXXXXXXXXX",
+  areaResults:       "XXXXXXXXXX",
+  areaSection:       "XXXXXXXXXX",
+  csiDiv28:          "XXXXXXXXXX",
+  selfPricing:       "XXXXXXXXXX",
+};
+
+export default function AdSenseUnit({ className = "", slotId }) {
+  const ref    = useRef(null);
   const pushed = useRef(false);
+  const slot   = slotId || AD_SLOTS.default;
+
+  // لا تحمّل الإعلان إذا الـ Slot ID لسه placeholder
+  const isReal = slot && slot !== "XXXXXXXXXX";
 
   useEffect(() => {
-    if (pushed.current) return;
+    if (!isReal || pushed.current) return;
     try {
       if (ref.current && ref.current.offsetWidth > 0) {
         (window.adsbygoogle = window.adsbygoogle || []).push({});
         pushed.current = true;
       }
-    } catch (e) {
-      // AdSense not loaded yet
+    } catch {
+      // AdSense script not yet loaded
     }
-  }, []);
+  }, [isReal]);
+
+  if (!isReal) {
+    // في بيئة التطوير نُظهر placeholder بدل إرسال طلب فارغ
+    if (process.env.NODE_ENV === "development") {
+      return (
+        <div className={`overflow-hidden rounded-xl bg-slate-100 border border-dashed border-slate-300 flex items-center justify-center ${className}`}
+          style={{ minHeight: 90 }}>
+          <span className="text-[11px] text-slate-400 font-mono">AdSense — Slot ID مطلوب</span>
+        </div>
+      );
+    }
+    return null;
+  }
 
   return (
     <div className={`overflow-hidden rounded-xl ${className}`}>
       <ins
+        ref={ref}
         className="adsbygoogle"
         style={{ display: "block" }}
         data-ad-client={AD_CLIENT}
-        data-ad-slot={AD_SLOT}
+        data-ad-slot={slot}
         data-ad-format="auto"
         data-full-width-responsive="true"
-        ref={ref}
       />
     </div>
   );
