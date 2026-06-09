@@ -2,19 +2,25 @@ import { useEffect, useRef } from "react";
 
 const AD_CLIENT = "ca-pub-6810176545596111";
 
-// Slot IDs من حساب AdSense/AdMob
+// ─── AdSense Web Slot IDs ────────────────────────────────────────────────────
+// هذه الـ slots خاصة بالموقع فقط (adsense.google.com)
+// خطوات الحصول عليها:
+//   1. سجّل دخول على adsense.google.com
+//   2. إعلانات ← حسب وحدة الإعلان ← إنشاء وحدة إعلانية جديدة (Display ads)
+//   3. انسخ رقم الـ slot (مثال: 1234567890) واستبدله هنا
+// ⚠️ ملاحظة: slot IDs من AdMob (admob.google.com) لا تعمل هنا — هي مختلفة
 export const AD_SLOTS = {
-  default:           "3409229133",
-  companiesMain:     "3409229133",
-  suppliersMain:     "3409229133",
-  analysisTop:       "3409229133",
-  analysisActions:   "3409229133",
-  analysisBottom:    "3409229133",
-  areaForm:          "3409229133",
-  areaResults:       "3409229133",
-  areaSection:       "3409229133",
-  csiDiv28:          "3409229133",
-  selfPricing:       "3409229133",
+  default:           "XXXXXXXXXX", // ← استبدل بـ slot ID من AdSense (ليس AdMob)
+  companiesMain:     "XXXXXXXXXX",
+  suppliersMain:     "XXXXXXXXXX",
+  analysisTop:       "XXXXXXXXXX",
+  analysisActions:   "XXXXXXXXXX",
+  analysisBottom:    "XXXXXXXXXX",
+  areaForm:          "XXXXXXXXXX",
+  areaResults:       "XXXXXXXXXX",
+  areaSection:       "XXXXXXXXXX",
+  csiDiv28:          "XXXXXXXXXX",
+  selfPricing:       "XXXXXXXXXX",
 };
 
 export default function AdSenseUnit({ className = "", slotId }) {
