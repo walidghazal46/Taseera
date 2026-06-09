@@ -22,7 +22,13 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.Toast;
+
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdSize;
+import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.MobileAds;
 
 import java.io.OutputStream;
 
@@ -54,7 +60,10 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_GOOGLE_SIGN_IN = 4103;
     private static final int REQUEST_SAVE_FILE = 4104;
 
+    private static final String ADMOB_BANNER_UNIT_ID = "ca-app-pub-6810176545596111/3409229133";
+
     private WebView webView;
+    private AdView adView;
     private GoogleSignInClient googleSignInClient;
     private FirebaseAuth firebaseAuth;
 
@@ -83,18 +92,36 @@ public class MainActivity extends AppCompatActivity {
         SplashScreen.installSplashScreen(this);
         super.onCreate(savedInstanceState);
 
-        FrameLayout root = new FrameLayout(this);
+        // Initialize AdMob SDK
+        MobileAds.initialize(this, initializationStatus -> {});
+
+        // Root: vertical LinearLayout — WebView on top, AdMob banner at bottom
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(Color.parseColor("#001F3F"));
 
+        // WebView fills all remaining space above the banner
         webView = new WebView(this);
         webView.setBackgroundColor(Color.TRANSPARENT);
         root.addView(
             webView,
-            new FrameLayout.LayoutParams(
+            new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
+                0,
+                1f  // weight=1 → takes all space above banner
             )
         );
+
+        // AdMob Banner at the bottom
+        adView = new AdView(this);
+        adView.setAdUnitId(ADMOB_BANNER_UNIT_ID);
+        adView.setAdSize(AdSize.BANNER);
+        LinearLayout.LayoutParams bannerParams = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        root.addView(adView, bannerParams);
+        adView.loadAd(new AdRequest.Builder().build());
 
         setContentView(root);
 
@@ -387,10 +414,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onPause() {
+        if (adView != null) adView.pause();
+        super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (adView != null) adView.resume();
+    }
+
+    @Override
     protected void onDestroy() {
-        if (webView != null) {
-            webView.destroy();
-        }
+        if (adView != null) adView.destroy();
+        if (webView != null) webView.destroy();
         super.onDestroy();
     }
 

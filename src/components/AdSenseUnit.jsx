@@ -2,20 +2,19 @@ import { useEffect, useRef } from "react";
 
 const AD_CLIENT = "ca-pub-6810176545596111";
 
-// Slot IDs — أضف slot IDs الحقيقية من حساب AdSense هنا
-// لإنشاء slot جديد: AdSense Dashboard → Ads → By ad unit → Display ads
+// Slot IDs من حساب AdSense/AdMob
 export const AD_SLOTS = {
-  default:           "XXXXXXXXXX", // ← استبدل بـ Slot ID الحقيقي
-  companiesMain:     "XXXXXXXXXX",
-  suppliersMain:     "XXXXXXXXXX",
-  analysisTop:       "XXXXXXXXXX",
-  analysisActions:   "XXXXXXXXXX",
-  analysisBottom:    "XXXXXXXXXX",
-  areaForm:          "XXXXXXXXXX",
-  areaResults:       "XXXXXXXXXX",
-  areaSection:       "XXXXXXXXXX",
-  csiDiv28:          "XXXXXXXXXX",
-  selfPricing:       "XXXXXXXXXX",
+  default:           "3409229133",
+  companiesMain:     "3409229133",
+  suppliersMain:     "3409229133",
+  analysisTop:       "3409229133",
+  analysisActions:   "3409229133",
+  analysisBottom:    "3409229133",
+  areaForm:          "3409229133",
+  areaResults:       "3409229133",
+  areaSection:       "3409229133",
+  csiDiv28:          "3409229133",
+  selfPricing:       "3409229133",
 };
 
 export default function AdSenseUnit({ className = "", slotId }) {
