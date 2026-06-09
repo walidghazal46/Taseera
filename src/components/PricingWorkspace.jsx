@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from 'xlsx';
 import AdSenseUnit from "./AdSenseUnit";
 import CandyWorkspace from "./CandyWorkspace";
+import { saveAdBanner, toggleAdBanner, removeAdBanner } from "../services/adService";
 import { SaveIcon, TagIcon, BuildingsIcon, PricingIcon, ChevronLeftIcon, ArrowRightIcon, ShareIcon, PrinterIcon, FileIcon } from "./icons";
 import { CSI_DIVISIONS, COUNTRIES, getDefaultResources, AREA_PRICING_BASE, CURRENCY_INFO } from "../data/csiData";
 import ScreenProtection from "./ScreenProtection";
@@ -1545,7 +1546,7 @@ function AreaSectionDetailView({
 
 // --- Main Pricing Workspace Component ---
 
-export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings, sessionMeta, onOpenAuthScreen, onShowStatus, systemBridge, accessStatus, isAdmin, onOpenSubscription, onNavigate }) {
+export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq, savedAnalyses, navigationBridge, initialCountry, settings, sessionMeta, onOpenAuthScreen, onShowStatus, systemBridge, accessStatus, isAdmin, onOpenSubscription, onNavigate, adBanners, canManageAds }) {
   // initialCountry comes from the CountryPicker on PricingPage; always override persisted value
   const isEn = settings?.language === "en";
   const [country, setCountry] = useState(initialCountry || "sa");
@@ -1568,13 +1569,14 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   const [selfPriceProfit, setSelfPriceProfit] = useState(15);
 
   const { msg: toastMsg, visible: toastVisible, show: showToast } = useToast();
-  const [analysisTopAdBanner] = useState(null);
-  const [analysisActionsAdBanner] = useState(null);
-  const [analysisBottomAdBanner] = useState(null);
-  const [areaFormAdBanner] = useState(null);
-  const [areaResultsAdBanner] = useState(null);
-  const [areaSectionAdBanner] = useState(null);
-  const [csiAfterDiv28AdBanner] = useState(null);
+  const analysisTopAdBanner     = adBanners?.analysisPreResult           || null;
+  const analysisActionsAdBanner = adBanners?.analysisAfterActions        || null;
+  const analysisBottomAdBanner  = adBanners?.analysisPostResult          || null;
+  const areaFormAdBanner        = adBanners?.areaFormAfterCard           || null;
+  const areaResultsAdBanner     = adBanners?.areaResultsAfterNote        || null;
+  const areaSectionAdBanner     = adBanners?.areaSectionAfterAssumptions || null;
+  const csiAfterDiv28AdBanner   = adBanners?.csiAfterDiv28               || null;
+  const selfPricingAdBanner     = adBanners?.selfPricingAfterActions     || null;
   const [adEditor, setAdEditor] = useState({
     open: false,
     slotId: AD_SLOT_IDS.analysisPreResult,
@@ -1630,17 +1632,22 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
   }, []);
 
   const handleSaveAdEditor = useCallback(async () => {
+    setAdEditor((prev) => ({ ...prev, saving: true }));
+    try {
+      await saveAdBanner(adEditor.slotId, adEditor.draft);
+      showToast("✅ تم حفظ الإعلان");
+    } catch { showToast("فشل حفظ الإعلان"); }
     setAdEditor((prev) => ({ ...prev, open: false, saving: false }));
-    showToast("تم تعطيل إدارة الإعلانات من التطبيق");
-  }, [showToast]);
+  }, [adEditor.slotId, adEditor.draft, showToast]);
 
   const handleToggleAdVisibility = useCallback(async (slotId, currentBanner, nextEnabled) => {
-    showToast("تم تعطيل إدارة الإعلانات من التطبيق");
-  }, [showToast]);
+    try { await toggleAdBanner(slotId, nextEnabled); } catch {}
+  }, []);
 
   const handleRemoveAd = useCallback(async (slotId) => {
-    showToast("تم تعطيل إدارة الإعلانات من التطبيق");
-  }, [showToast]);
+    if (!window.confirm("هل تريد إزالة محتوى هذا الإعلان؟")) return;
+    try { await removeAdBanner(slotId); } catch {}
+  }, []);
 
   const buildAnalysisSnapshot = useCallback((itemValue, resourcesValue, paramsValue) => ({
     selectedItem: itemValue ? { ...itemValue } : null,
@@ -2289,7 +2296,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 topAdBanner={analysisTopAdBanner}
                 actionsAdBanner={analysisActionsAdBanner}
                 bottomAdBanner={analysisBottomAdBanner}
-                canManageAds={false}
+                canManageAds={canManageAds}
                 onManageAds={handleOpenAdEditor}
                 onToggleAdVisibility={handleToggleAdVisibility}
                 onRemoveAd={handleRemoveAd}
@@ -2314,7 +2321,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             country={country}
             onCalculate={handleCalculateArea}
             adBanner={areaFormAdBanner}
-            canManageAds={false}
+            canManageAds={canManageAds}
             onManageAds={handleOpenAdEditor}
             onToggleAdVisibility={handleToggleAdVisibility}
             onRemoveAd={handleRemoveAd}
@@ -2345,7 +2352,7 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             }}
             onOpenSection={handleOpenAreaSection}
             adBanner={areaResultsAdBanner}
-            canManageAds={false}
+            canManageAds={canManageAds}
             onManageAds={handleOpenAdEditor}
             onToggleAdVisibility={handleToggleAdVisibility}
             onRemoveAd={handleRemoveAd}
@@ -2364,6 +2371,8 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
             authMode={authMode}
             sessionMeta={sessionMeta}
             settings={settings}
+            selfPricingAd={selfPricingAdBanner}
+            canManageAds={canManageAds}
             onBack={() => { setMode("items"); setTab("csi"); }}
             onExport={openExportPreview}
             onSave={(result) => {
@@ -2460,13 +2469,10 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
 // Sub-components (Moved from previous implementation or newly added)
 
 // ===== سعر بنفسك Screen =====
-function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhead, setOverhead, profit, setProfit, country, authMode, sessionMeta, settings, onBack, onSave, onExport, language = "ar" }) {
+function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhead, setOverhead, profit, setProfit, country, authMode, sessionMeta, settings, onBack, onSave, onExport, language = "ar", selfPricingAd, canManageAds }) {
   const isEn = language === "en";
   const sym = getCurrencySymbol(country);
   const fmt = (n) => Number(n).toLocaleString("en-US", { maximumFractionDigits: 0 });
-
-  const canManageAds = false;
-  const [selfPricingAd] = useState(null);
 
   // حساب مجموع كل مجموعة
   const sumGroup = (grp) =>
@@ -2695,12 +2701,11 @@ function SelfPricingScreen({ item, resources, setResources, qty, setQty, overhea
 function SelfPricingAdBanner({ adBanner, canManageAds }) {
   const hasContent = adBanner?.enabled && adBanner?.imageUrl;
   const handleToggle = async (nextEnabled) => {
-    return null;
+    try { await toggleAdBanner("selfPricingAfterActions", nextEnabled); } catch {}
   };
   const handleRemove = async () => {
-    const ok = window.confirm("هل تريد إزالة محتوى هذا الإعلان؟");
-    if (!ok) return;
-    return null;
+    if (!window.confirm("هل تريد إزالة محتوى هذا الإعلان؟")) return;
+    try { await removeAdBanner("selfPricingAfterActions"); } catch {}
   };
   return (
     <div className="relative rounded-2xl border-2 border-[#E2D8C4] bg-white p-2.5 shadow-sm overflow-hidden">

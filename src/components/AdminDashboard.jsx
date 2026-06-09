@@ -4,6 +4,7 @@ import { getAllPaymentRequests } from "../services/paymentService";
 import { approvePaymentRequest, rejectPaymentRequest, suspendUser, unsuspendUser, assignAdminRole, removeAdminRole, cancelSubscription, extendSubscription, deleteUserProfile, getAllDeleteRequests, approveDeleteRequest, rejectDeleteRequest, dismissDeleteRequest, getAllCancellationRequests, approveCancellationRequest, rejectCancellationRequest } from "../services/adminService";
 import { SUPER_ADMIN_EMAIL } from "../data/packages";
 import { sendAdminMessage } from "../services/notificationService";
+import { subscribeToAllAdBanners, saveAdBanner, toggleAdBanner, removeAdBanner, AD_SLOT_LABELS, DEFAULT_AD_BANNER } from "../services/adService";
 
 function Badge({ status }) {
   const map = {
@@ -58,6 +59,10 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
   const [msgTarget, setMsgTarget] = useState("all"); // "all" | "specific"
   const [msgTargetUid, setMsgTargetUid] = useState("");
   const [msgSending, setMsgSending] = useState(false);
+  // Ads tab state
+  const [adBanners, setAdBanners] = useState({});
+  const [adEditing, setAdEditing] = useState({}); // slotId -> draft
+  const [adSaving, setAdSaving]   = useState({});  // slotId -> bool
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -80,6 +85,11 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
   }, []);
 
   useEffect(() => { reload(); }, [reload]);
+
+  useEffect(() => {
+    const unsub = subscribeToAllAdBanners(setAdBanners);
+    return unsub;
+  }, []);
 
   const flash = (msg) => { setActionMsg(msg); setTimeout(() => setActionMsg(""), 3000); };
 
@@ -237,7 +247,39 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
     { id: "delete",        label: ar ? `حذف (${pendingDeleteReqs.length})` : `Delete (${pendingDeleteReqs.length})` },
     { id: "all",           label: ar ? "كل الطلبات" : "All" },
     { id: "messages",      label: ar ? "📢 رسائل" : "📢 Msgs" },
+    { id: "ads",           label: ar ? "📣 إعلانات" : "📣 Ads" },
   ];
+
+  // ── Ad helpers ─────────────────────────────────────────────────────────────
+  const getAdDraft = (slotId) => adEditing[slotId] ?? adBanners[slotId] ?? { ...DEFAULT_AD_BANNER };
+  const setAdDraft = (slotId, field, value) =>
+    setAdEditing((prev) => ({ ...prev, [slotId]: { ...getAdDraft(slotId), [field]: value } }));
+
+  const handleAdSave = async (slotId) => {
+    setAdSaving((p) => ({ ...p, [slotId]: true }));
+    try {
+      await saveAdBanner(slotId, getAdDraft(slotId));
+      setAdEditing((p) => { const n = { ...p }; delete n[slotId]; return n; });
+      flash(ar ? "✅ تم حفظ الإعلان" : "✅ Ad saved");
+    } catch { flash(ar ? "فشل الحفظ" : "Save failed"); }
+    setAdSaving((p) => ({ ...p, [slotId]: false }));
+  };
+
+  const handleAdToggle = async (slotId, enabled) => {
+    try {
+      await toggleAdBanner(slotId, enabled);
+      flash(enabled ? (ar ? "✅ الإعلان مُفعَّل" : "✅ Ad enabled") : (ar ? "⏸ الإعلان مُعطَّل" : "⏸ Ad disabled"));
+    } catch { flash(ar ? "فشلت العملية" : "Operation failed"); }
+  };
+
+  const handleAdRemove = async (slotId) => {
+    if (!window.confirm(ar ? "هل تريد إزالة محتوى هذا الإعلان؟" : "Remove this ad?")) return;
+    try {
+      await removeAdBanner(slotId);
+      setAdEditing((p) => { const n = { ...p }; delete n[slotId]; return n; });
+      flash(ar ? "🗑 تمت الإزالة" : "🗑 Removed");
+    } catch { flash(ar ? "فشلت الإزالة" : "Remove failed"); }
+  };
 
   return (
     <div
@@ -602,6 +644,111 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
                       ? (ar ? "جارٍ الإرسال…" : "Sending…")
                       : (ar ? "📢 إرسال الرسالة" : "📢 Send Message")}
                   </button>
+                </div>
+              </Section>
+            )}
+
+            {/* ── Ads Tab ── */}
+            {tab === "ads" && (
+              <Section title={ar ? "إدارة المساحات الإعلانية" : "Ad Spaces Management"}>
+                <div className="space-y-3">
+                  {Object.entries(AD_SLOT_LABELS).map(([slotId, label]) => {
+                    const banner  = adBanners[slotId];
+                    const draft   = getAdDraft(slotId);
+                    const isDirty = !!adEditing[slotId];
+                    const saving  = adSaving[slotId];
+                    const active  = banner?.enabled && banner?.imageUrl;
+                    return (
+                      <div key={slotId} className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                        {/* Header row */}
+                        <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-black text-[#082555]">{label}</p>
+                            <p className="text-[10px] text-slate-400 font-mono">{slotId}</p>
+                          </div>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${active ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500"}`}>
+                            {active ? (ar ? "نشط" : "Active") : (ar ? "غير نشط" : "Inactive")}
+                          </span>
+                        </div>
+
+                        {/* Image preview */}
+                        {banner?.imageUrl && (
+                          <div className="px-4 py-2">
+                            <img src={banner.imageUrl} alt={banner.alt || label} className="h-24 w-full rounded-xl object-cover border border-slate-200" />
+                          </div>
+                        )}
+
+                        {/* Edit form */}
+                        <div className="px-4 py-3 space-y-2">
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-1">{ar ? "رابط الصورة" : "Image URL"}</label>
+                            <input
+                              value={draft.imageUrl || ""}
+                              onChange={(e) => setAdDraft(slotId, "imageUrl", e.target.value)}
+                              placeholder="https://..."
+                              dir="ltr"
+                              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus:border-[#082555]"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-1">{ar ? "رابط الوجهة" : "Target URL"}</label>
+                            <input
+                              value={draft.targetUrl || ""}
+                              onChange={(e) => setAdDraft(slotId, "targetUrl", e.target.value)}
+                              placeholder="https://..."
+                              dir="ltr"
+                              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus:border-[#082555]"
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <div className="flex-1">
+                              <label className="text-[10px] font-bold text-slate-500 block mb-1">{ar ? "عنوان (اختياري)" : "Title (optional)"}</label>
+                              <input
+                                value={draft.title || ""}
+                                onChange={(e) => setAdDraft(slotId, "title", e.target.value)}
+                                placeholder={ar ? "نص ظاهر تحت الإعلان" : "Caption below the ad"}
+                                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus:border-[#082555]"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <label className="text-[10px] font-bold text-slate-500 block mb-1">Alt text</label>
+                              <input
+                                value={draft.alt || ""}
+                                onChange={(e) => setAdDraft(slotId, "alt", e.target.value)}
+                                placeholder="..."
+                                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus:border-[#082555]"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex gap-2 px-4 pb-4">
+                          <button
+                            onClick={() => handleAdSave(slotId)}
+                            disabled={saving}
+                            className={`flex-1 rounded-xl py-2 text-xs font-black text-white transition ${isDirty ? "bg-[#082555]" : "bg-slate-300"}`}
+                          >
+                            {saving ? "…" : (ar ? "💾 حفظ" : "💾 Save")}
+                          </button>
+                          <button
+                            onClick={() => handleAdToggle(slotId, !banner?.enabled)}
+                            className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600"
+                          >
+                            {banner?.enabled ? (ar ? "⏸ إيقاف" : "⏸ Disable") : (ar ? "▶ تفعيل" : "▶ Enable")}
+                          </button>
+                          {banner && (
+                            <button
+                              onClick={() => handleAdRemove(slotId)}
+                              className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600"
+                            >
+                              🗑
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </Section>
             )}

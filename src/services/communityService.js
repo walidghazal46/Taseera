@@ -1,6 +1,6 @@
 import {
   collection, addDoc, query, where, orderBy, limit,
-  onSnapshot, getDoc, doc, updateDoc, deleteDoc,
+  onSnapshot, getDoc, doc, updateDoc, deleteDoc, setDoc,
   increment, serverTimestamp, Timestamp, arrayUnion, arrayRemove,
 } from "firebase/firestore";
 import { db } from "../firebase";
@@ -181,7 +181,13 @@ export async function updateRequestStatus(requestId, status) {
 // ─── USER LOCATION ────────────────────────────────────────────────────────
 
 export async function saveUserLocation(uid, { country, city, district }) {
-  await updateDoc(doc(db, "users", uid), { communityCountry: country, communityCity: city, communityDistrict: district || "" });
+  const ref = doc(db, "users", uid);
+  await setDoc(ref, {
+    communityCountry: country,
+    communityCity: city,
+    communityDistrict: district || "",
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
 }
 
 export async function getUserLocation(uid) {

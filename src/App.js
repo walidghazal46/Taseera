@@ -11,6 +11,7 @@ import TrialBanner from "./components/TrialBanner";
 import AdminDashboard from "./components/AdminDashboard";
 import NotificationsPanel from "./components/NotificationsPanel";
 import { subscribeToNotifications } from "./services/notificationService";
+import { subscribeToAllAdBanners } from "./services/adService";
 
 import useAndroidBridge from "./hooks/useAndroidBridge";
 import usePersistentState from "./hooks/usePersistentState";
@@ -33,7 +34,7 @@ import SuppliersPage from "./pages/SuppliersPage";
 import { getAppText } from "./data/appText";
 
 const APP_STORAGE_PREFIX = "taseera.v3";
-const APP_VERSION = "1.0.0.20";
+const APP_VERSION = "1.0.0.26";
 
 function makeSeedMergeKey(entry) {
   const name    = String(entry?.name    || "").trim().toLowerCase();
@@ -246,6 +247,13 @@ export default function App() {
   // In-app notifications (Firestore real-time)
   const [notifications, setNotifications] = useState([]);
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  // Ad banners (Firestore real-time — for all users)
+  const [adBanners, setAdBanners] = useState({});
+  useEffect(() => {
+    const unsub = subscribeToAllAdBanners(setAdBanners);
+    return unsub;
+  }, []);
 
   useEffect(() => {
     setCompanies((c) => mergeSeedData(c, sampleCompanies));
@@ -604,6 +612,9 @@ export default function App() {
     // Notifications
     notifications,
     onOpenNotifications: isFirebaseAuthenticated && !isAdmin ? () => setShowNotifications(true) : undefined,
+    // Ad banners
+    adBanners,
+    canManageAds: isAdmin,
   };
 
   const renderedPage = {
@@ -611,7 +622,7 @@ export default function App() {
     pricing:   <PricingPage   key={`pric-${pageResetVersion.pricing}`}   {...pageProps} />,
     suppliers: <SuppliersPage key={`supp-${pageResetVersion.suppliers}`} {...pageProps} />,
     settings:  <SettingsPage  key={`sett-${pageResetVersion.settings}`}  {...pageProps} />,
-    community: <CommunityPage key={`comm-${pageResetVersion.community || 0}`} {...pageProps} profile={profile} />,
+    community: <CommunityPage key={`comm-${pageResetVersion.community || 0}`} {...pageProps} profile={profile} firebaseUser={firebaseUser} />,
   }[activePage];
 
   const ExitModal = () => (

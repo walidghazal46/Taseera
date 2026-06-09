@@ -22,7 +22,7 @@ const CATEGORIES_EN = [
   "HVAC & Ventilation", "Finishing Works", "Suspended Ceilings",
   "Doors, Windows & Glazing", "Roads & Pavements", "Pools & Landscaping", "Other",
 ];
-const COUNTRIES = ["السعودية","الإمارات","مصر","الكويت","قطر","البحرين","عُمان","الأردن","العراق","ليبيا","المغرب","تونس","الجزائر","اليمن","السودان","أخرى"];
+const COUNTRIES = ["السعودية", "الإمارات", "مصر"];
 const CURRENCIES = ["SAR","AED","EGP","KWD","QAR","BHD","OMR","JOD","IQD","LYD","MAD","TND","DZD","YER","SDG","USD","EUR"];
 const UNITS_AR = ["م²","م³","متر طولي","طن","كيلو","قطعة","م.ج","م.د","لتر","كيس","وحدة"];
 const UNITS_EN = ["m²","m³","lm","ton","kg","pcs","lump sum","lump sum","liter","bag","unit"];
@@ -55,19 +55,30 @@ function Avatar({ name = "?", size = 9 }) {
 }
 
 // ─── Location Setup ───────────────────────────────────────────────────────
-function LocationSetup({ ar, uid, onDone }) {
+function LocationSetup({ ar, uid, onDone, onShowStatus }) {
   const [country, setCountry]   = useState("");
   const [city, setCity]         = useState("");
   const [district, setDistrict] = useState("");
   const [saving, setSaving]     = useState(false);
 
   const save = async () => {
-    if (!country || !city) return;
+    if (!country || !city) {
+      if (onShowStatus) onShowStatus(ar ? "يرجى إكمال البيانات المطلوبة" : "Please fill required fields", "warning");
+      return;
+    }
+    if (!uid) {
+      if (onShowStatus) onShowStatus(ar ? "خطأ: لم يتم العثور على معرف المستخدم" : "Error: User ID not found", "warning");
+      return;
+    }
+
     setSaving(true);
     try {
       await saveUserLocation(uid, { country, city, district });
       onDone({ country, city, district });
-    } catch {}
+    } catch (err) {
+      console.error("Failed to save location:", err);
+      if (onShowStatus) onShowStatus(ar ? "فشل حفظ البيانات. يرجى المحاولة لاحقاً" : "Failed to save. Please try again later", "warning");
+    }
     setSaving(false);
   };
 
@@ -107,26 +118,36 @@ function LocationSetup({ ar, uid, onDone }) {
 }
 
 // ─── Create Post Modal ────────────────────────────────────────────────────
-function CreatePostModal({ ar, uid, userName, location, onClose, onCreated }) {
-  const [itemName, setItemName]       = useState("");
+function CreatePostModal({ ar, uid, userName, location, onClose, onCreated, onLocationSaved }) {
+  const [itemName, setItemName]         = useState("");
   const [itemCategory, setItemCategory] = useState("");
-  const [description, setDescription] = useState("");
-  const [submitting, setSubmitting]   = useState(false);
+  const [description, setDescription]   = useState("");
+  const [country, setCountry]           = useState(location?.country || "");
+  const [city, setCity]                 = useState(location?.city || "");
+  const [submitting, setSubmitting]     = useState(false);
   const categories = ar ? CATEGORIES_AR : CATEGORIES_EN;
+  const needsLoc   = !location;
 
   const submit = async () => {
-    if (!itemName || !itemCategory) return;
+    const loc = location || { country, city, district: "" };
+    if (!itemName || !itemCategory || !loc.country || !loc.city) return;
     setSubmitting(true);
     try {
+      if (needsLoc && uid) {
+        await saveUserLocation(uid, loc);
+        onLocationSaved?.(loc);
+      }
       await createPost({
         uid, userName,
-        userCountry: location.country, userCity: location.city,
+        userCountry: loc.country, userCity: loc.city,
         itemName, itemCategory, description,
       });
       onCreated();
     } catch {}
     setSubmitting(false);
   };
+
+  const canSubmit = itemName && itemCategory && (location || (country && city));
 
   return (
     <div className="fixed inset-0 z-[200] flex flex-col bg-black/60" onClick={onClose}>
@@ -137,6 +158,21 @@ function CreatePostModal({ ar, uid, userName, location, onClose, onCreated }) {
           <h3 className="text-lg font-black text-[#0d2545]">{ar ? "منشور جديد" : "New Post"}</h3>
           <button onClick={onClose} className="text-slate-400 text-xl">✕</button>
         </div>
+
+        {needsLoc && (
+          <div className="rounded-xl bg-indigo-50 border border-indigo-100 p-3 space-y-2">
+            <p className="text-xs font-bold text-indigo-700">📍 {ar ? "حدّد موقعك أولاً" : "Set your location first"}</p>
+            <div className="flex gap-2">
+              <select value={country} onChange={(e) => setCountry(e.target.value)}
+                className="flex-1 rounded-xl border border-slate-200 bg-white px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                <option value="">{ar ? "الدولة *" : "Country *"}</option>
+                {COUNTRIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <input value={city} onChange={(e) => setCity(e.target.value)} placeholder={ar ? "المدينة *" : "City *"}
+                className="flex-1 rounded-xl border border-slate-200 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+            </div>
+          </div>
+        )}
 
         <div>
           <label className="text-xs font-bold text-slate-500 block mb-1">{ar ? "اسم البند *" : "Item Name *"}</label>
@@ -160,12 +196,14 @@ function CreatePostModal({ ar, uid, userName, location, onClose, onCreated }) {
             className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-400" />
         </div>
 
-        <div className="flex items-center gap-2 rounded-xl bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
-          📍 <span>{location.city}، {location.country}</span>
-          <span className="mr-auto text-indigo-400">{ar ? "يُضاف تلقائياً" : "auto-added"}</span>
-        </div>
+        {!needsLoc && (
+          <div className="flex items-center gap-2 rounded-xl bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
+            📍 <span>{location.city}، {location.country}</span>
+            <span className="mr-auto text-indigo-400">{ar ? "يُضاف تلقائياً" : "auto-added"}</span>
+          </div>
+        )}
 
-        <button onClick={submit} disabled={!itemName || !itemCategory || submitting}
+        <button onClick={submit} disabled={!canSubmit || submitting}
           className="w-full rounded-2xl bg-[#4f46e5] py-3 text-sm font-black text-white disabled:opacity-40">
           {submitting ? "..." : (ar ? "نشر" : "Post")}
         </button>
@@ -639,10 +677,10 @@ function TermsPage({ ar, onBack }) {
 }
 
 // ─── Main CommunityPage ───────────────────────────────────────────────────
-export default function CommunityPage({ settings, authMode, sessionMeta, onNavigate, profile }) {
+export default function CommunityPage({ settings, authMode, sessionMeta, onNavigate, profile, onShowStatus, firebaseUser }) {
   const ar              = settings?.language !== "en";
   const isAuthenticated = authMode === "authenticated";
-  const uid             = sessionMeta?.uid || null;
+  const uid             = profile?.uid || sessionMeta?.uid || firebaseUser?.uid || null;
   const userName        = profile?.displayName || sessionMeta?.userName || (ar ? "مستخدم" : "User");
 
   const [view, setView]           = useState("feed"); // feed | post-detail | how | privacy | terms
@@ -653,13 +691,16 @@ export default function CommunityPage({ settings, authMode, sessionMeta, onNavig
   const [showMarket, setShowMarket] = useState(false);
   const [priceRequest, setPriceRequest] = useState(null); // { comment, post }
   const [catFilter, setCatFilter] = useState("");
+  const [countryFilter, setCountryFilter] = useState("");
   const [flash, setFlash]         = useState("");
   const categories = ar ? CATEGORIES_AR : CATEGORIES_EN;
 
   // Load user location
   useEffect(() => {
     if (!uid) return;
-    getUserLocation(uid).then((loc) => { if (loc) setLocation(loc); });
+    getUserLocation(uid)
+      .then((loc) => { if (loc) setLocation(loc); })
+      .catch((err) => console.error("Failed to load user location:", err));
   }, [uid]);
 
   // Subscribe to posts
@@ -687,16 +728,24 @@ export default function CommunityPage({ settings, authMode, sessionMeta, onNavig
     setView("post-detail");
   };
 
-  const needsLocation = isAuthenticated && !location && view === "feed";
+  // ── Auth Gate ───────────────────────────────────────────────────────────
+  if (!isAuthenticated) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[80vh] px-6 gap-6 text-center" dir={ar ? "rtl" : "ltr"} style={{ fontFamily: F }}>
+        <div className="text-6xl">👥</div>
+        <h2 className="text-xl font-black text-[#0d2545]">{ar ? "مجتمع التسعير" : "Pricing Community"}</h2>
+        <p className="text-sm text-slate-500 max-w-xs">{ar ? "يجب تسجيل الدخول للانضمام للمجتمع والمشاركة في المناقشات." : "You must be signed in to join the community and participate in discussions."}</p>
+        <button onClick={() => onNavigate?.("settings")} className="rounded-2xl bg-[#4f46e5] px-10 py-3.5 text-sm font-black text-white">
+          {ar ? "تسجيل الدخول" : "Sign In"}
+        </button>
+      </div>
+    );
+  }
 
   // ── Sub-pages ───────────────────────────────────────────────────────────
   if (view === "how")     return <HowItWorksPage ar={ar} onBack={() => setView("feed")} />;
   if (view === "privacy") return <PrivacyPage ar={ar} onBack={() => setView("feed")} />;
   if (view === "terms")   return <TermsPage ar={ar} onBack={() => setView("feed")} />;
-
-  if (needsLocation) {
-    return <LocationSetup ar={ar} uid={uid} onDone={(loc) => setLocation(loc)} />;
-  }
 
   if (view === "post-detail" && selectedPost) {
     return (
@@ -742,14 +791,27 @@ export default function CommunityPage({ settings, authMode, sessionMeta, onNavig
         </div>
 
         {/* Category Filter */}
-        <div className="flex gap-2 mt-3 overflow-x-auto scrollbar-none">
+        <div className="flex gap-2 mt-3 overflow-x-auto scrollbar-none pb-1">
           <button onClick={() => setCatFilter("")} className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold border transition ${!catFilter ? "bg-[#4f46e5] text-white border-[#4f46e5]" : "bg-white text-slate-600 border-slate-200"}`}>
             {ar ? "الكل" : "All"}
           </button>
-          {categories.slice(0,6).map((c) => (
+          {categories.map((c) => (
             <button key={c} onClick={() => setCatFilter(c === catFilter ? "" : c)}
               className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold border transition ${catFilter === c ? "bg-[#4f46e5] text-white border-[#4f46e5]" : "bg-white text-slate-600 border-slate-200"}`}>
               {c}
+            </button>
+          ))}
+        </div>
+
+        {/* Country Filter */}
+        <div className="flex gap-2 mt-2 overflow-x-auto scrollbar-none">
+          <button onClick={() => setCountryFilter("")} className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold border transition ${!countryFilter ? "bg-slate-700 text-white border-slate-700" : "bg-white text-slate-600 border-slate-200"}`}>
+            🌍 {ar ? "كل الدول" : "All"}
+          </button>
+          {COUNTRIES.map((c) => (
+            <button key={c} onClick={() => setCountryFilter(c === countryFilter ? "" : c)}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold border transition ${countryFilter === c ? "bg-slate-700 text-white border-slate-700" : "bg-white text-slate-600 border-slate-200"}`}>
+              📍 {c}
             </button>
           ))}
         </div>
@@ -772,15 +834,25 @@ export default function CommunityPage({ settings, authMode, sessionMeta, onNavig
 
       {/* Feed */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-        {posts.length === 0 ? (
-          <div className="flex flex-col items-center py-20 gap-3 text-slate-400">
-            <span className="text-6xl">🏗️</span>
-            <p className="text-sm font-semibold text-center">
-              {ar ? "لا توجد منشورات بعد.\nكن أول من ينشر استفساراً!" : "No posts yet.\nBe the first to post an inquiry!"}
-            </p>
-          </div>
-        ) : (
-          posts.map((post) => (
+        {(() => {
+          const visiblePosts = posts.filter((p) =>
+            (!countryFilter || p.userCountry === countryFilter)
+          );
+          if (posts.length === 0) return (
+            <div className="flex flex-col items-center py-20 gap-3 text-slate-400">
+              <span className="text-6xl">🏗️</span>
+              <p className="text-sm font-semibold text-center">
+                {ar ? "لا توجد منشورات بعد.\nكن أول من ينشر استفساراً!" : "No posts yet.\nBe the first to post an inquiry!"}
+              </p>
+            </div>
+          );
+          if (visiblePosts.length === 0) return (
+            <div className="flex flex-col items-center py-16 gap-3 text-slate-400">
+              <span className="text-5xl">🔍</span>
+              <p className="text-sm font-semibold text-center">{ar ? "لا توجد منشورات لهذا الفلتر" : "No posts match this filter"}</p>
+            </div>
+          );
+          return visiblePosts.map((post) => (
             <PostCard
               key={post.id}
               post={post} ar={ar} uid={uid}
@@ -788,8 +860,8 @@ export default function CommunityPage({ settings, authMode, sessionMeta, onNavig
               onLike={handleLike}
               onDelete={handleDelete}
             />
-          ))
-        )}
+          ));
+        })()}
 
         {/* Bottom links */}
         <div className="flex justify-center gap-3 py-4">
@@ -799,7 +871,7 @@ export default function CommunityPage({ settings, authMode, sessionMeta, onNavig
       </div>
 
       {/* FAB — new post */}
-      {isAuthenticated && location && (
+      {isAuthenticated && (
         <button
           onClick={() => setShowCreate(true)}
           className="absolute bottom-20 left-1/2 -translate-x-1/2 flex items-center gap-2 rounded-full bg-[#4f46e5] px-5 py-3 text-sm font-black text-white shadow-lg shadow-indigo-300/50 active:scale-95 transition"
@@ -816,6 +888,7 @@ export default function CommunityPage({ settings, authMode, sessionMeta, onNavig
           ar={ar} uid={uid} userName={userName} location={location}
           onClose={() => setShowCreate(false)}
           onCreated={() => { setShowCreate(false); showFlash(ar ? "✅ تم النشر" : "✅ Posted"); }}
+          onLocationSaved={(loc) => setLocation(loc)}
         />
       )}
 
