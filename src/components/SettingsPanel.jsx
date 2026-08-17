@@ -1,4 +1,5 @@
 import { useMemo, useState, useCallback } from "react";
+import AdSenseUnit from "./AdSenseUnit";
 import { submitDeleteRequest } from "../services/adminService";
 import { submitCancellationRequest } from "../services/paymentService";
 import { getAppText } from "../data/appText";
@@ -440,6 +441,8 @@ export default function SettingsPanel({
           {isAr ? "🔐 لوحة الإدارة" : "🔐 Admin Dashboard"}
         </button>
       )}
+
+      <AdSenseUnit className="min-h-[96px]" />
 
       {/* Row 1 */}
       <div className="grid gap-3 sm:grid-cols-3">

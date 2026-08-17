@@ -5,6 +5,7 @@ import {
   SettingsIcon,
   SuppliersIcon,
 } from "./icons";
+import ManagedAdBanner from "./ManagedAdBanner";
 import taseeraLogo from "../assets/taseera-logo-light.png";
 
 const AR = "'IBM Plex Sans Arabic','Cairo','Tajawal',sans-serif";
@@ -59,6 +60,11 @@ export default function AppShell({
   theme = "dark",
   unreadCount = 0,
   onOpenNotifications,
+  globalAdBanner,
+  canManageAds = false,
+  onManageGlobalAd,
+  onToggleGlobalAdVisibility,
+  onRemoveGlobalAd,
 }) {
   const isRtl = language !== "en";
   const mainRef = useRef(null);
@@ -161,6 +167,16 @@ export default function AppShell({
       >
         <div className="app-content-safe mx-auto flex w-full max-w-2xl lg:max-w-6xl flex-1 flex-col py-4 lg:py-6">
           {children}
+          <ManagedAdBanner
+            slotId="globalBottomAllPages"
+            adBanner={globalAdBanner}
+            canManageAds={canManageAds}
+            onManageAds={onManageGlobalAd}
+            onToggleVisibility={onToggleGlobalAdVisibility}
+            onRemove={onRemoveGlobalAd}
+            className="mt-4 mb-2 shrink-0"
+            placeholderTitle="إعلان أسفل كل صفحات التطبيق"
+          />
         </div>
       </main>
 

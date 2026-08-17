@@ -17,6 +17,8 @@ const defaultCapabilities = {
   canShare: typeof navigator !== "undefined" && typeof navigator.share === "function",
   canDial: true,
   canEmail: true,
+  canNotify: typeof Notification !== "undefined",
+  canPush: false,
   canOpenExternal: true,
   canOpenSettings: false,
   canRateApp: false,
@@ -164,7 +166,33 @@ export default function useAndroidBridge() {
 
   const requestNotificationsPermission = useCallback(() => {
     const bridge = getBridge();
-    bridge?.requestNotificationsPermission?.();
+    if (bridge?.requestNotificationsPermission) {
+      bridge.requestNotificationsPermission();
+      return;
+    }
+    if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+  }, []);
+
+  const requestPushToken = useCallback((uid) => {
+    const bridge = getBridge();
+    bridge?.requestPushToken?.(uid);
+  }, []);
+
+  const showLocalNotification = useCallback((title, body = "") => {
+    const bridge = getBridge();
+    if (bridge?.showLocalNotification) {
+      bridge.showLocalNotification(title, body);
+      return true;
+    }
+
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      new Notification(title, { body });
+      return true;
+    }
+
+    return false;
   }, []);
 
   const openAppSettings = useCallback(() => {
@@ -204,6 +232,8 @@ export default function useAndroidBridge() {
       openEmail,
       shareText,
       requestNotificationsPermission,
+      requestPushToken,
+      showLocalNotification,
       openAppSettings,
       rateApp,
       exitApp,
@@ -219,6 +249,8 @@ export default function useAndroidBridge() {
       openEmail,
       shareText,
       requestNotificationsPermission,
+      requestPushToken,
+      showLocalNotification,
       openAppSettings,
       rateApp,
       exitApp,

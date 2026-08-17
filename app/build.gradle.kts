@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.taseera.app"
-    compileSdk = 35
+    compileSdk = 36
 
     signingConfigs {
         getByName("debug") {
@@ -25,9 +25,9 @@ android {
     defaultConfig {
         applicationId = "com.taseera.app"
         minSdk = 24
-        targetSdk = 35
-        versionCode = 20
-        versionName = "1.0.0.20"
+        targetSdk = 36
+        versionCode = 23
+        versionName = "1.0.0.23"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -61,6 +61,7 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.12.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-messaging")
     implementation("com.google.android.gms:play-services-auth:21.3.0")
 
     // Google Mobile Ads (AdMob)

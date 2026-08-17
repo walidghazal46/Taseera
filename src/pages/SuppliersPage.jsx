@@ -1,5 +1,7 @@
 import { useState } from "react";
+import AdSenseUnit from "../components/AdSenseUnit";
 import CountryPicker from "../components/CountryPicker";
+import ManagedAdBanner from "../components/ManagedAdBanner";
 import PageHeader from "../components/PageHeader";
 import SuppliersPanel from "../components/SuppliersPanel";
 import { getAppText } from "../data/appText";
@@ -21,6 +23,20 @@ export default function SuppliersPage(props) {
         sessionMeta={props.sessionMeta}
         authMode={props.authMode}
         section="suppliers"
+        renderAfterCountry={(country) => (
+          country.value === "السعودية" || country.value === "مصر" ? (
+            <AdSenseUnit className="mt-2 shrink-0" />
+          ) : country.value === "الإمارات" ? (
+            <ManagedAdBanner
+              slotId="suppliersCountryPickerAfterUae"
+              adBanner={props.adBanners?.suppliersCountryPickerAfterUae}
+              canManageAds={props.canManageAds}
+              onManageAds={props.onOpenAdSettings}
+              className="mt-2 mb-24 shrink-0 lg:mb-6"
+              placeholderTitle="إعلان بعد مربع الإمارات في صفحة الموردين"
+            />
+          ) : null
+        )}
       />
     );
   }

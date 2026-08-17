@@ -14,6 +14,10 @@ export const AD_SLOT_LABELS = {
   selfPricingAfterActions:     "شاشة سعّر بنفسك",
   companiesMain:               "دليل الشركات",
   suppliersMain:               "دليل الموردين",
+  globalBottomAllPages:         "إعلان أسفل كل صفحات التطبيق",
+  pricingCountryPickerAfterUae: "بعد مربع الإمارات في صفحة التسعير",
+  companiesCountryPickerAfterUae: "بعد مربع الإمارات في صفحة الشركات",
+  suppliersCountryPickerAfterUae: "بعد مربع الإمارات في صفحة الموردين",
 };
 
 export const DEFAULT_AD_BANNER = {

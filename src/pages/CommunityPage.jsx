@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import AdSenseUnit from "../components/AdSenseUnit";
 import {
   subscribeToPosts, createPost, toggleLike, deletePost,
   subscribeToComments, addComment,
@@ -839,27 +840,35 @@ export default function CommunityPage({ settings, authMode, sessionMeta, onNavig
             (!countryFilter || p.userCountry === countryFilter)
           );
           if (posts.length === 0) return (
-            <div className="flex flex-col items-center py-20 gap-3 text-slate-400">
-              <span className="text-6xl">🏗️</span>
-              <p className="text-sm font-semibold text-center">
-                {ar ? "لا توجد منشورات بعد.\nكن أول من ينشر استفساراً!" : "No posts yet.\nBe the first to post an inquiry!"}
-              </p>
-            </div>
+            <>
+              <div className="flex flex-col items-center py-20 gap-3 text-slate-400">
+                <span className="text-6xl">🏗️</span>
+                <p className="text-sm font-semibold text-center">
+                  {ar ? "لا توجد منشورات بعد.\nكن أول من ينشر استفساراً!" : "No posts yet.\nBe the first to post an inquiry!"}
+                </p>
+              </div>
+              <AdSenseUnit className="min-h-[96px]" />
+            </>
           );
           if (visiblePosts.length === 0) return (
-            <div className="flex flex-col items-center py-16 gap-3 text-slate-400">
-              <span className="text-5xl">🔍</span>
-              <p className="text-sm font-semibold text-center">{ar ? "لا توجد منشورات لهذا الفلتر" : "No posts match this filter"}</p>
-            </div>
+            <>
+              <div className="flex flex-col items-center py-16 gap-3 text-slate-400">
+                <span className="text-5xl">🔍</span>
+                <p className="text-sm font-semibold text-center">{ar ? "لا توجد منشورات لهذا الفلتر" : "No posts match this filter"}</p>
+              </div>
+              <AdSenseUnit className="min-h-[96px]" />
+            </>
           );
-          return visiblePosts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post} ar={ar} uid={uid}
-              onOpen={handleOpenPost}
-              onLike={handleLike}
-              onDelete={handleDelete}
-            />
+          return visiblePosts.map((post, index) => (
+            <div key={post.id} className="space-y-3">
+              <PostCard
+                post={post} ar={ar} uid={uid}
+                onOpen={handleOpenPost}
+                onLike={handleLike}
+                onDelete={handleDelete}
+              />
+              {index === 0 && <AdSenseUnit className="min-h-[96px]" />}
+            </div>
           ));
         })()}
 

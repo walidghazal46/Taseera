@@ -36,11 +36,11 @@ function Section({ title, children }) {
   );
 }
 
-export default function AdminDashboard({ profile, isSuperAdmin, language = "ar", onBack }) {
+export default function AdminDashboard({ profile, isSuperAdmin, language = "ar", initialTab = "requests", onBack }) {
   const ar = language === "ar";
   const adminEmail = profile?.email || "";
 
-  const [tab, setTab]               = useState("requests");
+  const [tab, setTab]               = useState(initialTab);
   const [users, setUsers]           = useState([]);
   const [requests, setRequests]         = useState([]);
   const [deleteReqs, setDeleteReqs]     = useState([]);
@@ -85,6 +85,10 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
   }, []);
 
   useEffect(() => { reload(); }, [reload]);
+
+  useEffect(() => {
+    setTab(initialTab || "requests");
+  }, [initialTab]);
 
   useEffect(() => {
     const unsub = subscribeToAllAdBanners(setAdBanners);
@@ -233,9 +237,21 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
     }
     setMsgSending(true);
     try {
-      await sendAdminMessage({ uids, titleAr: msgTitle, titleEn: msgTitle, bodyAr: msgBody, bodyEn: msgBody });
+      const result = await sendAdminMessage({
+        uids,
+        titleAr: msgTitle,
+        titleEn: msgTitle,
+        bodyAr: msgBody,
+        bodyEn: msgBody,
+      });
       setMsgTitle(""); setMsgBody(""); setMsgTargetUid("");
-      flash(ar ? `✅ تم الإرسال لـ ${uids.length} مستخدم.` : `✅ Sent to ${uids.length} users.`);
+      const pushCount = result?.pushCount ?? 0;
+      const skipped = result?.pushSkipped;
+      flash(
+        ar
+          ? `✅ تم إرسال الرسالة لـ ${uids.length} مستخدم${skipped ? "، وسيظهر Push بعد فتح التطبيق وتفعيل الإشعارات." : `، ووصل Push إلى ${pushCount} جهاز.`}`
+          : `✅ Message sent to ${uids.length} user(s)${skipped ? "; push works after users open the app and enable notifications." : `; push delivered to ${pushCount} device(s).`}`
+      );
     } catch (err) { flash(err.message); }
     finally { setMsgSending(false); }
   };
@@ -665,6 +681,11 @@ export default function AdminDashboard({ profile, isSuperAdmin, language = "ar",
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-black text-[#082555]">{label}</p>
                             <p className="text-[10px] text-slate-400 font-mono">{slotId}</p>
+                            {slotId === "globalBottomAllPages" && (
+                              <p className="mt-1 text-[10px] font-bold text-sky-700">
+                                {ar ? "عند تفعيل هذه المساحة سيظهر الإعلان أسفل كل صفحات التطبيق." : "When enabled, this ad appears at the bottom of every app page."}
+                              </p>
+                            )}
                           </div>
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${active ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500"}`}>
                             {active ? (ar ? "نشط" : "Active") : (ar ? "غير نشط" : "Inactive")}

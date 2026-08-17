@@ -1,5 +1,5 @@
 import {
-  doc, getDoc, setDoc, updateDoc, serverTimestamp, Timestamp,
+  doc, getDoc, setDoc, updateDoc, serverTimestamp, Timestamp, arrayUnion,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import {
@@ -78,6 +78,16 @@ export async function ensureUserProfile(firebaseUser) {
 export async function getUserProfile(uid) {
   const snap = await getDoc(doc(db, "users", uid));
   return snap.exists() ? snap.data() : null;
+}
+
+export async function saveUserPushToken(uid, token) {
+  if (!uid || !token) return;
+  await updateDoc(doc(db, "users", uid), {
+    fcmToken: token,
+    fcmTokens: arrayUnion(token),
+    pushTokenUpdatedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
 }
 
 // Compute effective access status from the stored profile.

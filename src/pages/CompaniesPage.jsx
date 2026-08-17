@@ -1,6 +1,8 @@
 import { useState } from "react";
+import AdSenseUnit from "../components/AdSenseUnit";
 import CompaniesPanel from "../components/CompaniesPanel";
 import CountryPicker from "../components/CountryPicker";
+import ManagedAdBanner from "../components/ManagedAdBanner";
 import PageHeader from "../components/PageHeader";
 import { getAppText } from "../data/appText";
 
@@ -26,6 +28,20 @@ export default function CompaniesPage(props) {
         sessionMeta={props.sessionMeta}
         authMode={props.authMode}
         section="companies"
+        renderAfterCountry={(country) => (
+          country.value === "السعودية" || country.value === "مصر" ? (
+            <AdSenseUnit className="mt-2 shrink-0" />
+          ) : country.value === "الإمارات" ? (
+            <ManagedAdBanner
+              slotId="companiesCountryPickerAfterUae"
+              adBanner={props.adBanners?.companiesCountryPickerAfterUae}
+              canManageAds={props.canManageAds}
+              onManageAds={props.onOpenAdSettings}
+              className="mt-2 mb-24 shrink-0 lg:mb-6"
+              placeholderTitle="إعلان بعد مربع الإمارات في صفحة الشركات"
+            />
+          ) : null
+        )}
       />
     );
   }

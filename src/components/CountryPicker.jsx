@@ -314,6 +314,7 @@ export default function CountryPicker({
   sessionMeta,
   authMode,
   section = "companies",
+  renderAfterCountry,
 }) {
   const isAr = language !== "en";
   const pickerMinHeight = "min(604px, calc(75dvh - 89px))";
@@ -399,145 +400,147 @@ export default function CountryPicker({
         {COUNTRIES.map((country, idx) => {
           const { Landmark } = country;
           return (
-            <button
-              key={country.value}
-              type="button"
-              onClick={() => handleSelect(country)}
-              className={`cpicker-group cpicker-card-${idx + 1}`}
-              style={{
-                position: "relative",
-                width: "100%",
-                overflow: "hidden",
-                borderRadius: 22,
-                border: `1.5px solid ${country.border}`,
-                background: country.bg,
-                boxShadow: `0 6px 24px ${country.shadow}, 0 1px 6px rgba(0,0,0,0.06)`,
-                textAlign: "right",
-                cursor: "pointer",
-                padding: 0,
-                outline: "none",
-                minHeight: 80,
-              }}
-            >
-              {/* Landmark watermark – fills left half of card */}
-              {Landmark && (
+            <div key={country.value} className="contents">
+              <button
+                type="button"
+                onClick={() => handleSelect(country)}
+                className={`cpicker-group cpicker-card-${idx + 1}`}
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  overflow: "hidden",
+                  borderRadius: 22,
+                  border: `1.5px solid ${country.border}`,
+                  background: country.bg,
+                  boxShadow: `0 6px 24px ${country.shadow}, 0 1px 6px rgba(0,0,0,0.06)`,
+                  textAlign: "right",
+                  cursor: "pointer",
+                  padding: 0,
+                  outline: "none",
+                  minHeight: 80,
+                }}
+              >
+                {/* Landmark watermark – fills left half of card */}
+                {Landmark && (
+                  <div
+                    aria-hidden="true"
+                    style={{
+                      position: "absolute", bottom: 0, left: 0,
+                      width: "62%", height: "110%",
+                      opacity: 0.22,
+                      pointerEvents: "none",
+                    }}
+                  >
+                    <Landmark />
+                  </div>
+                )}
+
+                {/* Top gloss line */}
                 <div
                   aria-hidden="true"
                   style={{
-                    position: "absolute", bottom: 0, left: 0,
-                    width: "62%", height: "110%",
-                    opacity: 0.22,
+                    position: "absolute", top: 0, left: 16, right: 16, height: 1.5,
+                    background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.85), transparent)",
                     pointerEvents: "none",
-                  }}
-                >
-                  <Landmark />
-                </div>
-              )}
-
-              {/* Top gloss line */}
-              <div
-                aria-hidden="true"
-                style={{
-                  position: "absolute", top: 0, left: 16, right: 16, height: 1.5,
-                  background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.85), transparent)",
-                  pointerEvents: "none",
-                }}
-              />
-
-              {/* Shine sweep on hover */}
-              <div
-                aria-hidden="true"
-                className="cpicker-shine"
-                style={{
-                  position: "absolute", inset: "-30% 0",
-                  left: 0, width: "38%",
-                  opacity: 0,
-                  mixBlendMode: "screen",
-                  background: "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.45) 40%, rgba(255,255,255,0.88) 50%, rgba(255,255,255,0.45) 60%, rgba(255,255,255,0) 100%)",
-                  filter: "blur(2px)",
-                  pointerEvents: "none",
-                }}
-              />
-
-              {/* Card content row */}
-              <div
-                style={{
-                  position: "relative",
-                  display: "flex",
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "10px 14px",
-                  direction: "rtl",
-                }}
-              >
-                {/* RIGHT side: chevron arrow + flag circle */}
-                <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                  {/* Chevron */}
-                  <svg
-                    width="16" height="16" viewBox="0 0 16 16" fill="none"
-                    style={{ opacity: 0.55, flexShrink: 0 }}
-                  >
-                    <path d="M6 3L11 8L6 13" stroke={country.color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  {/* Metallic flag circle */}
-                  <FlagCircle
-                    flagUrl={country.flagUrl}
-                    code={country.code}
-                    shadow={country.shadow}
-                    offsetX={0}
-                  />
-                </div>
-
-                {/* Vertical divider */}
-                <div
-                  style={{
-                    width: 1, alignSelf: "stretch",
-                    background: `linear-gradient(180deg, transparent, ${country.border}, transparent)`,
-                    flexShrink: 0, opacity: 0.7,
                   }}
                 />
 
-                {/* Center text */}
-                <div style={{ flex: 1, minWidth: 0, textAlign: "right" }}>
-                  <p
-                    style={{
-                      fontFamily: AR, fontSize: 15, fontWeight: 800, lineHeight: 1.2,
-                      color: country.color, margin: 0,
-                    }}
-                  >
-                    {isAr ? country.labelAr : country.labelEn}
-                  </p>
-                  <p
-                    style={{
-                      fontFamily: AR, fontSize: 10.5, color: "#9CA3AF",
-                      marginTop: 2, marginBottom: 0, letterSpacing: "0.2px",
-                    }}
-                  >
-                    {isAr ? country.labelEn : country.subtitleEn}
-                  </p>
-                </div>
+                {/* Shine sweep on hover */}
+                <div
+                  aria-hidden="true"
+                  className="cpicker-shine"
+                  style={{
+                    position: "absolute", inset: "-30% 0",
+                    left: 0, width: "38%",
+                    opacity: 0,
+                    mixBlendMode: "screen",
+                    background: "linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.45) 40%, rgba(255,255,255,0.88) 50%, rgba(255,255,255,0.45) 60%, rgba(255,255,255,0) 100%)",
+                    filter: "blur(2px)",
+                    pointerEvents: "none",
+                  }}
+                />
 
-                {/* LEFT side: country code badge */}
+                {/* Card content row */}
                 <div
                   style={{
-                    flexShrink: 0,
-                    width: 44, height: 44,
-                    borderRadius: 12,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    background: country.badgeBg,
-                    fontFamily: MONO,
-                    fontSize: 12,
-                    fontWeight: 900,
-                    color: "#ffffff",
-                    letterSpacing: "0.5px",
-                    boxShadow: `0 4px 12px ${country.shadow}, inset 0 1px 0 rgba(255,255,255,0.22)`,
+                    position: "relative",
+                    display: "flex",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 10,
+                    padding: "10px 14px",
+                    direction: "rtl",
                   }}
                 >
-                  {country.code}
+                  {/* RIGHT side: chevron arrow + flag circle */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                    {/* Chevron */}
+                    <svg
+                      width="16" height="16" viewBox="0 0 16 16" fill="none"
+                      style={{ opacity: 0.55, flexShrink: 0 }}
+                    >
+                      <path d="M6 3L11 8L6 13" stroke={country.color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    {/* Metallic flag circle */}
+                    <FlagCircle
+                      flagUrl={country.flagUrl}
+                      code={country.code}
+                      shadow={country.shadow}
+                      offsetX={0}
+                    />
+                  </div>
+
+                  {/* Vertical divider */}
+                  <div
+                    style={{
+                      width: 1, alignSelf: "stretch",
+                      background: `linear-gradient(180deg, transparent, ${country.border}, transparent)`,
+                      flexShrink: 0, opacity: 0.7,
+                    }}
+                  />
+
+                  {/* Center text */}
+                  <div style={{ flex: 1, minWidth: 0, textAlign: "right" }}>
+                    <p
+                      style={{
+                        fontFamily: AR, fontSize: 15, fontWeight: 800, lineHeight: 1.2,
+                        color: country.color, margin: 0,
+                      }}
+                    >
+                      {isAr ? country.labelAr : country.labelEn}
+                    </p>
+                    <p
+                      style={{
+                        fontFamily: AR, fontSize: 10.5, color: "#9CA3AF",
+                        marginTop: 2, marginBottom: 0, letterSpacing: "0.2px",
+                      }}
+                    >
+                      {isAr ? country.labelEn : country.subtitleEn}
+                    </p>
+                  </div>
+
+                  {/* LEFT side: country code badge */}
+                  <div
+                    style={{
+                      flexShrink: 0,
+                      width: 44, height: 44,
+                      borderRadius: 12,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      background: country.badgeBg,
+                      fontFamily: MONO,
+                      fontSize: 12,
+                      fontWeight: 900,
+                      color: "#ffffff",
+                      letterSpacing: "0.5px",
+                      boxShadow: `0 4px 12px ${country.shadow}, inset 0 1px 0 rgba(255,255,255,0.22)`,
+                    }}
+                  >
+                    {country.code}
+                  </div>
                 </div>
-              </div>
-            </button>
+              </button>
+              {renderAfterCountry?.(country)}
+            </div>
           );
         })}
       </div>

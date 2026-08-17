@@ -2,7 +2,8 @@ import {
   collection, addDoc, query, where,
   onSnapshot, updateDoc, doc, getDocs, deleteDoc, serverTimestamp,
 } from "firebase/firestore";
-import { db } from "../firebase";
+import { httpsCallable } from "firebase/functions";
+import { db, functions } from "../firebase";
 
 export function subscribeToNotifications(uid, callback) {
   // No orderBy — avoids composite index requirement. Sort client-side.
@@ -56,11 +57,19 @@ export async function deleteAllNotifications(uid) {
   await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
 }
 
-// Admin: send a broadcast or targeted message to one or more users.
+// Admin: send a broadcast or targeted push message to one or more users.
 export async function sendAdminMessage({ uids, titleAr, titleEn, bodyAr, bodyEn }) {
-  await Promise.all(
-    uids.map((uid) =>
-      createNotification({ uid, type: "admin_message", titleAr, titleEn, bodyAr, bodyEn })
-    )
-  );
+  try {
+    const callable = httpsCallable(functions, "sendAdminMessage");
+    const result = await callable({ uids, titleAr, titleEn, bodyAr, bodyEn });
+    return result.data;
+  } catch (error) {
+    if (!uids?.length) throw error;
+    await Promise.all(
+      uids.map((uid) =>
+        createNotification({ uid, type: "admin_message", titleAr, titleEn, bodyAr, bodyEn })
+      )
+    );
+    return { notificationCount: uids.length, pushCount: 0, pushSkipped: true };
+  }
 }

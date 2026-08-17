@@ -11,11 +11,12 @@ import TrialBanner from "./components/TrialBanner";
 import AdminDashboard from "./components/AdminDashboard";
 import NotificationsPanel from "./components/NotificationsPanel";
 import { subscribeToNotifications } from "./services/notificationService";
-import { subscribeToAllAdBanners } from "./services/adService";
+import { removeAdBanner, subscribeToAllAdBanners, toggleAdBanner } from "./services/adService";
 
 import useAndroidBridge from "./hooks/useAndroidBridge";
 import usePersistentState from "./hooks/usePersistentState";
 import useAuth from "./hooks/useAuth";
+import { saveUserPushToken } from "./services/userService";
 
 import {
   importedPricingSource,
@@ -240,6 +241,7 @@ export default function App() {
 
   // Screens
   const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+  const [adminDashboardInitialTab, setAdminDashboardInitialTab] = useState("requests");
   const [showSubscriptionPage, setShowSubscriptionPage] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [paymentSubmittedMsg, setPaymentSubmittedMsg] = useState(false); // eslint-disable-line no-unused-vars
@@ -247,6 +249,8 @@ export default function App() {
   // In-app notifications (Firestore real-time)
   const [notifications, setNotifications] = useState([]);
   const unreadCount = notifications.filter((n) => !n.read).length;
+  const notificationHydratedRef = useRef(false);
+  const notifiedIdsRef = useRef(new Set());
 
   // Ad banners (Firestore real-time — for all users)
   const [adBanners, setAdBanners] = useState({});
@@ -267,13 +271,52 @@ export default function App() {
     return unsub;
   }, [firebaseUser, isAdmin]);
 
-  // Request browser/web notification permission once logged in.
+  useEffect(() => {
+    notificationHydratedRef.current = false;
+    notifiedIdsRef.current = new Set();
+  }, [firebaseUser?.uid]);
+
+  // Request system notification permission once logged in.
   useEffect(() => {
     if (!firebaseUser) return;
+    bridge.requestNotificationsPermission();
+    bridge.requestPushToken(firebaseUser.uid);
     if (typeof Notification !== "undefined" && Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
+  }, [bridge, firebaseUser]);
+
+  useEffect(() => {
+    if (!firebaseUser) return undefined;
+
+    const handlePushToken = (event) => {
+      const token = event?.detail?.token;
+      const uid = event?.detail?.uid || firebaseUser.uid;
+      if (!token || uid !== firebaseUser.uid) return;
+      saveUserPushToken(firebaseUser.uid, token).catch(() => {});
+    };
+
+    window.addEventListener("taseera:push-token", handlePushToken);
+    return () => window.removeEventListener("taseera:push-token", handlePushToken);
   }, [firebaseUser]);
+
+  useEffect(() => {
+    if (!firebaseUser || isAdmin) return;
+    if (!notificationHydratedRef.current) {
+      notifications.forEach((notification) => notifiedIdsRef.current.add(notification.id));
+      notificationHydratedRef.current = true;
+      return;
+    }
+
+    notifications
+      .filter((notification) => !notification.read && !notifiedIdsRef.current.has(notification.id))
+      .forEach((notification) => {
+        notifiedIdsRef.current.add(notification.id);
+        const title = settings.language === "en" ? notification.titleEn : notification.titleAr;
+        const body = settings.language === "en" ? notification.bodyEn : notification.bodyAr;
+        bridge.showLocalNotification(title || "Taseera", body || "");
+      });
+  }, [bridge, firebaseUser, isAdmin, notifications, settings.language]);
 
   const mergedCompanies = useMemo(() => mergeSeedData(companies, sampleCompanies), [companies]);
   const mergedSuppliers = useMemo(() => mergeSeedData(suppliers, sampleSuppliers), [suppliers]);
@@ -577,10 +620,22 @@ export default function App() {
   }, [bridge, openDialog, savedAnalyses.length, settings.appName, settings.appVersion, settings.language, systemText]);
 
   const handleOpenAdSettings = useCallback(() => {
-    setActivePage("settings");
-    setSettings((c) => ({ ...c, settingsPanelSection: "account" }));
-    setRouteStack([createRoute(authMode, "settings")]);
-  }, [authMode, setActivePage, setRouteStack, setSettings]);
+    setAdminDashboardInitialTab("ads");
+    setShowAdminDashboard(true);
+  }, []);
+
+  const handleToggleGlobalAdVisibility = useCallback(async (slotId, currentBanner, nextEnabled) => {
+    try {
+      await toggleAdBanner(slotId, nextEnabled);
+    } catch {}
+  }, []);
+
+  const handleRemoveGlobalAd = useCallback(async (slotId) => {
+    if (!window.confirm("هل تريد إزالة محتوى هذا الإعلان؟")) return;
+    try {
+      await removeAdBanner(slotId);
+    } catch {}
+  }, []);
 
   const navigationBridge = useMemo(() => ({
     registerBackHandler: registerPageBackHandler,
@@ -608,7 +663,10 @@ export default function App() {
     isAdmin,
     isSuperAdmin,
     onOpenSubscription: () => setShowSubscriptionPage(true),
-    onOpenAdminDashboard: () => setShowAdminDashboard(true),
+    onOpenAdminDashboard: (initialTab = "requests") => {
+      setAdminDashboardInitialTab(initialTab);
+      setShowAdminDashboard(true);
+    },
     // Notifications
     notifications,
     onOpenNotifications: isFirebaseAuthenticated && !isAdmin ? () => setShowNotifications(true) : undefined,
@@ -697,6 +755,7 @@ export default function App() {
           profile={profile}
           isSuperAdmin={isSuperAdmin}
           language={settings.language}
+          initialTab={adminDashboardInitialTab}
           onBack={() => setShowAdminDashboard(false)}
         />
       </>
@@ -822,6 +881,11 @@ export default function App() {
           theme={settings.theme}
           unreadCount={unreadCount}
           onOpenNotifications={isFirebaseAuthenticated && !isAdmin ? () => setShowNotifications(true) : undefined}
+          globalAdBanner={adBanners.globalBottomAllPages}
+          canManageAds={isAdmin}
+          onManageGlobalAd={handleOpenAdSettings}
+          onToggleGlobalAdVisibility={handleToggleGlobalAdVisibility}
+          onRemoveGlobalAd={handleRemoveGlobalAd}
         >
           {renderedPage}
         </AppShell>

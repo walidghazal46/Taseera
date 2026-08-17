@@ -8,6 +8,9 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -22,7 +25,6 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.google.android.gms.ads.AdRequest;
@@ -31,10 +33,15 @@ import com.google.android.gms.ads.AdView;
 import com.google.android.gms.ads.MobileAds;
 
 import java.io.OutputStream;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.splashscreen.SplashScreen;
@@ -49,8 +56,10 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 import org.json.JSONException;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class MainActivity extends AppCompatActivity {
@@ -59,13 +68,14 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_NOTIFICATIONS_PERMISSION = 4102;
     private static final int REQUEST_GOOGLE_SIGN_IN = 4103;
     private static final int REQUEST_SAVE_FILE = 4104;
-
     private static final String ADMOB_BANNER_UNIT_ID = "ca-app-pub-6810176545596111/3409229133";
+    private static final String NOTIFICATION_CHANNEL_ID = "taseera_admin_messages";
 
+    private FrameLayout rootFrame;
     private WebView webView;
-    private AdView adView;
     private GoogleSignInClient googleSignInClient;
     private FirebaseAuth firebaseAuth;
+    private final Map<String, FrameLayout> adSlotViews = new HashMap<>();
 
     private String mPendingFileName;
     private String mPendingBase64Data;
@@ -92,38 +102,21 @@ public class MainActivity extends AppCompatActivity {
         SplashScreen.installSplashScreen(this);
         super.onCreate(savedInstanceState);
 
-        // Initialize AdMob SDK
         MobileAds.initialize(this, initializationStatus -> {});
+        ensureNotificationChannel();
 
-        // Root: vertical LinearLayout — WebView on top, AdMob banner at bottom
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.parseColor("#001F3F"));
+        rootFrame = new FrameLayout(this);
+        rootFrame.setBackgroundColor(Color.parseColor("#001F3F"));
 
-        // WebView fills all remaining space above the banner
         webView = new WebView(this);
         webView.setBackgroundColor(Color.TRANSPARENT);
-        root.addView(
-            webView,
-            new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                0,
-                1f  // weight=1 → takes all space above banner
-            )
-        );
-
-        // AdMob Banner at the bottom
-        adView = new AdView(this);
-        adView.setAdUnitId(ADMOB_BANNER_UNIT_ID);
-        adView.setAdSize(AdSize.BANNER);
-        LinearLayout.LayoutParams bannerParams = new LinearLayout.LayoutParams(
+        webView.setLayoutParams(new ViewGroup.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        );
-        root.addView(adView, bannerParams);
-        adView.loadAd(new AdRequest.Builder().build());
+            ViewGroup.LayoutParams.MATCH_PARENT
+        ));
+        rootFrame.addView(webView);
 
-        setContentView(root);
+        setContentView(rootFrame);
 
         firebaseAuth = FirebaseAuth.getInstance();
 
@@ -214,6 +207,61 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void ensureNotificationChannel() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return;
+        }
+
+        NotificationChannel channel = new NotificationChannel(
+            NOTIFICATION_CHANNEL_ID,
+            "رسائل الإدارة",
+            NotificationManager.IMPORTANCE_DEFAULT
+        );
+        channel.setDescription("تنبيهات الرسائل المرسلة من إدارة تسعيرة.");
+
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        if (manager != null) {
+            manager.createNotificationChannel(channel);
+        }
+    }
+
+    private boolean canPostNotifications() {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU
+            || ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void showLocalNotification(String title, String body) {
+        if (!canPostNotifications()) {
+            return;
+        }
+
+        Intent intent = new Intent(this, MainActivity.class)
+            .setFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle((title == null || title.trim().isEmpty()) ? "Taseera" : title)
+            .setContentText(body == null ? "" : body)
+            .setStyle(new NotificationCompat.BigTextStyle().bigText(body == null ? "" : body))
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+
+        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        if (manager != null) {
+            manager.notify((int) (System.currentTimeMillis() % Integer.MAX_VALUE), builder.build());
+        }
+    }
+
     private JSONObject buildPermissionsPayload() throws JSONException {
         JSONObject payload = new JSONObject();
         JSONObject notifications = new JSONObject();
@@ -250,6 +298,8 @@ public class MainActivity extends AppCompatActivity {
         payload.put("canShare", true);
         payload.put("canDial", true);
         payload.put("canEmail", true);
+        payload.put("canNotify", true);
+        payload.put("canPush", true);
         payload.put("canOpenExternal", true);
         payload.put("canOpenSettings", true);
         payload.put("canRateApp", true);
@@ -415,19 +465,109 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
-        if (adView != null) adView.pause();
         super.onPause();
+    }
+
+    private FrameLayout createAdSlotView(String slotId) {
+        FrameLayout slot = new FrameLayout(this);
+        slot.setVisibility(FrameLayout.GONE);
+        slot.setElevation(18f);
+        rootFrame.addView(slot, new FrameLayout.LayoutParams(1, 1));
+        adSlotViews.put(slotId, slot);
+        loadBannerAd(slot);
+        return slot;
+    }
+
+    private void loadBannerAd(FrameLayout slot) {
+        AdView banner = new AdView(this);
+        banner.setAdUnitId(ADMOB_BANNER_UNIT_ID);
+        banner.setAdSize(AdSize.BANNER);
+        slot.removeAllViews();
+        slot.addView(banner, new FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ));
+        banner.loadAd(new AdRequest.Builder().build());
+    }
+
+    private void updateAdMobSlots(String payload) {
+        try {
+            JSONArray slots = new JSONArray(payload);
+            Set<String> seen = new HashSet<>();
+
+            for (int i = 0; i < slots.length(); i++) {
+                JSONObject item = slots.getJSONObject(i);
+                String id = item.optString("id");
+                if (id.isEmpty()) continue;
+
+                seen.add(id);
+                FrameLayout slot = adSlotViews.get(id);
+                if (slot == null) {
+                    slot = createAdSlotView(id);
+                }
+
+                int left = item.optInt("left", 0);
+                int top = item.optInt("top", 0);
+                int width = Math.max(1, item.optInt("width", 1));
+                int height = Math.max(1, item.optInt("height", 1));
+                boolean visible = item.optBoolean("visible", false);
+
+                FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(width, height);
+                params.leftMargin = left;
+                params.topMargin = top;
+                slot.setLayoutParams(params);
+                slot.setVisibility(visible ? FrameLayout.VISIBLE : FrameLayout.GONE);
+            }
+
+            for (Map.Entry<String, FrameLayout> entry : adSlotViews.entrySet()) {
+                if (!seen.contains(entry.getKey())) {
+                    entry.getValue().setVisibility(FrameLayout.GONE);
+                }
+            }
+        } catch (JSONException exception) {
+            Log.w(TAG, "Invalid AdMob slot payload", exception);
+        }
+    }
+
+    private void emitPushToken(String uid) {
+        FirebaseMessaging.getInstance().getToken()
+            .addOnSuccessListener(token -> {
+                if (webView == null || token == null || token.isEmpty()) {
+                    return;
+                }
+
+                try {
+                    JSONObject payload = new JSONObject();
+                    payload.put("uid", uid != null ? uid : "");
+                    payload.put("token", token);
+                    String escapedPayload = JSONObject.quote(payload.toString());
+                    webView.post(() ->
+                        webView.evaluateJavascript(
+                            "(function(){var payload=JSON.parse(" + escapedPayload + ");window.dispatchEvent(new CustomEvent('taseera:push-token',{detail:payload}));})();",
+                            null
+                        )
+                    );
+                } catch (JSONException exception) {
+                    Log.w(TAG, "Unable to emit push token", exception);
+                }
+            })
+            .addOnFailureListener(exception -> Log.w(TAG, "Unable to get FCM token", exception));
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if (adView != null) adView.resume();
     }
 
     @Override
     protected void onDestroy() {
-        if (adView != null) adView.destroy();
+        for (FrameLayout slot : adSlotViews.values()) {
+            for (int i = 0; i < slot.getChildCount(); i++) {
+                if (slot.getChildAt(i) instanceof AdView) {
+                    ((AdView) slot.getChildAt(i)).destroy();
+                }
+            }
+        }
         if (webView != null) webView.destroy();
         super.onDestroy();
     }
@@ -478,6 +618,11 @@ public class MainActivity extends AppCompatActivity {
                 new String[]{Manifest.permission.POST_NOTIFICATIONS},
                 REQUEST_NOTIFICATIONS_PERMISSION
             ));
+        }
+
+        @JavascriptInterface
+        public void requestPushToken(String uid) {
+            runOnUiThread(() -> MainActivity.this.emitPushToken(uid));
         }
 
         @JavascriptInterface
@@ -553,6 +698,16 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void showToast(String message) {
             runOnUiThread(() -> Toast.makeText(context, message, Toast.LENGTH_SHORT).show());
+        }
+
+        @JavascriptInterface
+        public void showLocalNotification(String title, String body) {
+            runOnUiThread(() -> MainActivity.this.showLocalNotification(title, body));
+        }
+
+        @JavascriptInterface
+        public void updateAdMobSlots(String payload) {
+            runOnUiThread(() -> MainActivity.this.updateAdMobSlots(payload));
         }
 
         @JavascriptInterface

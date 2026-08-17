@@ -50,9 +50,27 @@
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
 
-    <!-- Google AdSense -->
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6810176545596111"
-     crossorigin="anonymous"></script>
+    <!-- Google AdSense: load only on public web domains, not localhost/app preview. -->
+    <script>
+      (function () {
+        var host = window.location.hostname;
+        var protocol = window.location.protocol;
+        var isLocalPreview =
+          protocol === "file:" ||
+          host === "localhost" ||
+          host === "127.0.0.1" ||
+          host === "0.0.0.0" ||
+          host.endsWith(".local");
+
+        if (isLocalPreview) return;
+
+        var script = document.createElement("script");
+        script.async = true;
+        script.crossOrigin = "anonymous";
+        script.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6810176545596111";
+        document.head.appendChild(script);
+      })();
+    </script>
   </head>
   <body>
     <noscript>

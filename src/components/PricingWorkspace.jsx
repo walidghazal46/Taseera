@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from 'xlsx';
 import AdSenseUnit from "./AdSenseUnit";
 import CandyWorkspace from "./CandyWorkspace";
+import ManagedAdBanner from "./ManagedAdBanner";
 import { saveAdBanner, toggleAdBanner, removeAdBanner } from "../services/adService";
 import { SaveIcon, TagIcon, BuildingsIcon, PricingIcon, ChevronLeftIcon, ArrowRightIcon, ShareIcon, PrinterIcon, FileIcon } from "./icons";
 import { CSI_DIVISIONS, COUNTRIES, getDefaultResources, AREA_PRICING_BASE, CURRENCY_INFO } from "../data/csiData";
@@ -2266,6 +2267,10 @@ export default function PricingWorkspace({ authMode, onSaveAnalysis, onCreateRfq
                 itemRemaining={null}
                 onOpenFullAccess={notifyFullAccess}
                 afterDiv28AdBanner={csiAfterDiv28AdBanner}
+                canManageAds={canManageAds}
+                onManageAds={handleOpenAdEditor}
+                onToggleAdVisibility={handleToggleAdVisibility}
+                onRemoveAd={handleRemoveAd}
                 isGuest={isGuest}
                 onOpenAuthScreen={onOpenAuthScreen}
               />
@@ -2824,7 +2829,21 @@ function HistoryScreen({ savedAnalyses, onView }) {
   );
 }
 
-function CSIScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, itemRemaining = null, onOpenFullAccess, afterDiv28AdBanner, isGuest = false, onOpenAuthScreen }) {
+function CSIScreen({
+  country,
+  onSelectItem,
+  onSelfPrice,
+  itemLocked = false,
+  itemRemaining = null,
+  onOpenFullAccess,
+  afterDiv28AdBanner,
+  canManageAds = false,
+  onManageAds,
+  onToggleAdVisibility,
+  onRemoveAd,
+  isGuest = false,
+  onOpenAuthScreen,
+}) {
   const [search, setSearch] = useState("");
   const [openDiv, setOpenDiv] = useState(null);
   const [showGuestPrompt, setShowGuestPrompt] = useState(false);
@@ -2988,15 +3007,23 @@ function CSIScreen({ country, onSelectItem, onSelfPrice, itemLocked = false, ite
             </div>
           );
 
-          /* ── AdSense after division 28 ── */
+          /* ── Managed ad after division 28 ── */
           if (div.num === "28") {
             return (
               <div key={`${div.num}-wrap`}>
                 {card}
-                {(!afterDiv28AdBanner || afterDiv28AdBanner.enabled !== false) && (
-                  <div className="mt-2 overflow-hidden rounded-2xl border border-[#E2D8C4] bg-white shadow-sm">
-                    <AdSenseUnit className="min-h-[100px]" />
-                  </div>
+                {(canManageAds || !afterDiv28AdBanner || afterDiv28AdBanner.enabled !== false) && (
+                  <ManagedAdBanner
+                    adBanner={afterDiv28AdBanner}
+                    slotId={AD_SLOT_IDS.csiAfterDiv28}
+                    className="mt-2"
+                    canManageAds={canManageAds}
+                    onManageAds={onManageAds}
+                    onToggleVisibility={onToggleAdVisibility}
+                    onRemove={onRemoveAd}
+                    fallback={<AdSenseUnit className="min-h-[100px]" />}
+                    placeholderTitle="إعلان بعد القسم 28"
+                  />
                 )}
               </div>
             );
